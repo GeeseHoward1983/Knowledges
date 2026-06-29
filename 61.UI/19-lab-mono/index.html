@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>19 · 暗色实验室 — Northwind Cloud 控制台</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --bg:#161823;            /* 灰蓝近黑 */
+    --bg-2:#1B1E2C;
+    --panel:#21243A;
+    --panel-2:#272B45;
+    --ink:#EDE8D8;           /* 米米字色 */
+    --ink-2:#9A95A8;
+    --ink-3:#5C5B72;
+    --line:rgba(237,232,216,.08);
+    --line-2:rgba(237,232,216,.18);
+    --formula:#E8DFC3;       /* 公式色 */
+    --vivid:#7A9CFF;         /* 学术蓝 */
+    --vivid-2:#5C7BD9;
+    --teal:#5CB8B3;
+    --ok:#7ACC8F;
+    --warn:#E2B86A;
+    --bad:#E68080;
+    --gold:#C6A560;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;color:var(--ink);
+    font-family:"EB Garamond","Crimson Pro","STSong","Source Han Serif SC",serif;background:var(--bg)}
+  body{min-height:100vh;font-size:14.5px;line-height:1.6}
+  .app{display:grid;grid-template-columns:230px 1fr;min-height:100vh}
+
+  /* 边栏 */
+  aside{
+    background:var(--bg-2);border-right:1px solid var(--line);padding:24px 18px;
+  }
+  .brand{display:flex;align-items:center;gap:12px;padding-bottom:14px;border-bottom:1px solid var(--line-2);margin-bottom:18px}
+  .brand-mark{
+    width:42px;height:42px;border:1px solid var(--ink);border-radius:50%;color:var(--ink);
+    display:flex;align-items:center;justify-content:center;font-family:"EB Garamond",serif;font-style:italic;font-size:22px;font-weight:500;
+    background:radial-gradient(circle at 40% 40%, rgba(237,232,216,.06), transparent 60%);
+  }
+  .brand-name{font-family:"EB Garamond",serif;font-weight:500;font-size:18px;letter-spacing:.02em;font-style:italic}
+  .brand-name small{display:block;font-family:"Inter",sans-serif;font-style:normal;font-weight:400;font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-2);margin-top:3px}
+
+  .nav-section{
+    font-family:"Inter",sans-serif;font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--ink-3);margin:18px 4px 6px;font-weight:600;
+  }
+  .nav a{
+    display:flex;justify-content:space-between;align-items:baseline;padding:6px 4px;
+    text-decoration:none;color:var(--ink-2);font-family:"EB Garamond",serif;font-size:16px;font-style:italic;
+    border-bottom:1px dotted var(--line);
+  }
+  .nav a:hover{color:var(--ink)}
+  .nav a.active{color:var(--vivid);font-style:italic;font-weight:600;border-bottom-color:var(--vivid)}
+  .nav a .n{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-3);font-style:normal}
+  .nav a.active .n{color:var(--vivid)}
+
+  /* 主区 */
+  main{padding:32px 40px 48px;min-width:0;position:relative}
+
+  /* 顶 header */
+  .header{
+    display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid var(--line-2);padding-bottom:22px;margin-bottom:30px;gap:24px;flex-wrap:wrap;
+  }
+  .header .left .eyebrow{
+    font-family:"Inter",sans-serif;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-3);font-weight:600;margin-bottom:6px;
+  }
+  .header h1{margin:0;font-family:"EB Garamond","STSong",serif;font-size:42px;font-weight:500;letter-spacing:-.01em;line-height:1.2}
+  .header h1 em{font-style:italic;color:var(--vivid)}
+  .header h1 sub{font-family:"JetBrains Mono",monospace;font-style:normal;font-size:12px;color:var(--ink-3);margin-left:8px;letter-spacing:.04em;vertical-align:0;font-weight:400}
+  .header .meta{
+    font-family:"Inter",sans-serif;font-size:11px;color:var(--ink-2);text-align:right;letter-spacing:.18em;text-transform:uppercase;line-height:1.8;
+  }
+  .header .meta b{display:block;color:var(--ink);font-family:"EB Garamond",serif;font-style:italic;font-weight:500;font-size:18px;letter-spacing:0;text-transform:none}
+  .header .meta .sig{font-family:"EB Garamond",serif;font-style:italic;font-weight:500;font-size:14px;color:var(--ink);text-transform:none;letter-spacing:0;margin-top:4px}
+
+  /* Abstract */
+  .abstract{
+    font-family:"EB Garamond","STSong",serif;font-size:16px;color:var(--ink);line-height:1.85;
+    max-width:780px;margin-bottom:30px;
+  }
+  .abstract::before{
+    content:"摘要 · Abstract.";font-family:"Inter",sans-serif;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-3);font-weight:700;display:block;margin-bottom:8px;
+  }
+  .abstract b{color:var(--ink);font-weight:600}
+  .abstract .key{font-family:"JetBrains Mono",monospace;font-size:13.5px;color:var(--formula);background:rgba(124,156,255,.06);padding:0 4px;border-radius:2px}
+
+  /* 公式风的指标卡 */
+  .equations{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-bottom:34px}
+  .eq{
+    padding:18px 20px;background:var(--panel);border-radius:4px;border:1px solid var(--line-2);position:relative;
+  }
+  .eq::before,.eq::after{
+    content:"";position:absolute;top:6px;bottom:6px;width:1.5px;background:var(--ink);
+  }
+  .eq::before{left:6px}
+  .eq::after{right:6px}
+  .eq .label{font-family:"Inter",sans-serif;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3);font-weight:600;margin-bottom:10px}
+  .eq .formula{
+    font-family:"EB Garamond",serif;font-style:italic;font-size:18px;color:var(--formula);font-weight:500;
+    display:flex;align-items:baseline;justify-content:space-between;gap:8px;letter-spacing:.01em;
+  }
+  .eq .formula .var{color:var(--ink)}
+  .eq .formula .num{
+    font-family:"EB Garamond",serif;font-style:normal;font-size:30px;font-weight:500;color:var(--ink);letter-spacing:-.01em;line-height:1;font-variant-numeric:tabular-nums;
+  }
+  .eq .formula .num small{font-family:"Inter",sans-serif;font-size:11px;font-weight:500;color:var(--ink-2);margin-left:3px;letter-spacing:.02em}
+  .eq .note{
+    font-family:"EB Garamond",serif;font-style:italic;font-size:13px;color:var(--ink-2);margin-top:10px;
+    display:flex;justify-content:space-between;gap:8px;
+  }
+  .eq .note .delta{font-style:normal;font-family:"JetBrains Mono",monospace;font-size:12px}
+  .delta.up{color:var(--ok)}
+  .delta.down{color:var(--bad)}
+
+  /* 主体两栏 */
+  .grid{display:grid;grid-template-columns:1.55fr 1fr;gap:34px}
+
+  .section-h{
+    display:flex;justify-content:space-between;align-items:baseline;
+    border-bottom:1px solid var(--line-2);padding-bottom:8px;margin-bottom:14px;
+  }
+  .section-h h3{
+    margin:0;font-family:"EB Garamond","STSong",serif;font-size:22px;font-weight:500;letter-spacing:.01em;
+  }
+  .section-h h3::before{content:"§ ";color:var(--gold);font-weight:400}
+  .section-h h3 small{display:block;font-family:"Inter",sans-serif;font-style:normal;font-size:11px;color:var(--ink-3);font-weight:500;letter-spacing:.14em;text-transform:uppercase;margin-top:2px}
+  .section-h .tools{font-family:"EB Garamond",serif;font-style:italic;font-size:14px;color:var(--ink-3)}
+  .section-h .tools span{margin-left:14px;cursor:pointer}
+  .section-h .tools .active{color:var(--vivid)}
+
+  /* 调用表 */
+  table{width:100%;border-collapse:collapse;font-family:"Inter",sans-serif;font-size:13.5px}
+  th{
+    text-align:left;font-family:"Inter",sans-serif;font-weight:600;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3);
+    padding:8px 10px;border-bottom:1px solid var(--line-2);
+  }
+  td{padding:11px 10px;border-bottom:1px dotted var(--line-2);font-variant-numeric:tabular-nums}
+  tr:last-child td{border-bottom:0}
+  td.mono{font-family:"JetBrains Mono",monospace;font-size:12.5px;color:var(--ink)}
+  td.caller{font-family:"EB Garamond",serif;font-style:italic;font-size:14.5px}
+  .stat{font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:600}
+  .stat.ok{color:var(--ok)}
+  .stat.warn{color:var(--warn)}
+  .stat.bad{color:var(--bad);text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:3px}
+  .lat{display:inline-flex;align-items:baseline;gap:8px;font-family:"JetBrains Mono",monospace;font-size:12px}
+  .lat .b{display:inline-block;width:60px;height:1px;background:var(--line-2);position:relative;vertical-align:middle}
+  .lat .b i{display:block;height:3px;margin-top:-1.5px;background:var(--ink-2)}
+  .lat .b.warn i{background:var(--warn)}
+  .lat .b.bad i{background:var(--bad);height:4px;margin-top:-2px}
+
+  /* 名册 */
+  .roster{display:flex;flex-direction:column}
+  .person{display:grid;grid-template-columns:32px 1fr auto;gap:12px;align-items:center;padding:11px 0;border-bottom:1px dotted var(--line-2)}
+  .person:last-child{border-bottom:0}
+  .initial{
+    width:32px;height:32px;border-radius:50%;border:1px solid var(--line-2);
+    display:flex;align-items:center;justify-content:center;font-family:"EB Garamond",serif;font-style:italic;font-weight:500;font-size:15px;color:var(--ink);
+    background:radial-gradient(circle at 40% 40%, rgba(237,232,216,.04), transparent 70%);
+  }
+  .person b{font-family:"EB Garamond",serif;font-weight:500;font-size:15.5px;letter-spacing:.01em}
+  .person small{display:block;font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-2);margin-top:2px}
+  .role{
+    font-family:"Inter",sans-serif;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;color:var(--ink-2);
+    border:1px solid var(--line-2);padding:3px 9px;
+  }
+  .role.acc{color:var(--vivid);border-color:var(--vivid)}
+
+  /* 账单 = 论文表 */
+  .bill .ln{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px dotted var(--line-2);font-size:14px;font-variant-numeric:tabular-nums}
+  .bill .ln span{font-family:"EB Garamond",serif;font-style:italic;font-size:15px;color:var(--ink)}
+  .bill .ln b{font-family:"EB Garamond",serif;font-weight:500;font-size:17px;color:var(--ink)}
+  .bill .total{
+    margin-top:10px;padding-top:14px;border-top:2px solid var(--line-2);display:flex;justify-content:space-between;align-items:baseline;
+  }
+  .bill .total span{font-family:"EB Garamond",serif;font-style:italic;font-size:16px}
+  .bill .total b{font-family:"EB Garamond",serif;font-size:30px;font-weight:500;color:var(--vivid);letter-spacing:-.01em}
+
+  /* 用量公式条 */
+  .quota{
+    margin-top:18px;padding:14px 16px;background:var(--panel);border:1px dashed var(--line-2);border-radius:3px;
+  }
+  .quota .lbl{font-family:"Inter",sans-serif;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3);font-weight:600;margin-bottom:8px;display:flex;justify-content:space-between}
+  .quota .formula{font-family:"EB Garamond",serif;font-style:italic;font-size:15px;color:var(--formula);margin-bottom:8px;letter-spacing:.01em}
+  .quota .formula .frac{display:inline-block;text-align:center;vertical-align:middle;margin:0 4px;line-height:1;font-size:13.5px}
+  .quota .formula .frac .top{border-bottom:1px solid var(--formula);padding-bottom:1px}
+  .quota .formula .frac .bot{padding-top:1px}
+  .quota .bar{height:3px;background:var(--line-2);position:relative;overflow:hidden}
+  .quota .bar i{display:block;height:100%;width:72%;background:var(--vivid)}
+  .quota .bar::after{content:"";position:absolute;top:-3px;bottom:-3px;left:72%;width:1px;background:var(--vivid)}
+
+  /* footer 引用风 */
+  footer{
+    margin-top:40px;padding-top:18px;border-top:1px solid var(--line-2);font-family:"EB Garamond",serif;font-style:italic;font-size:13px;color:var(--ink-3);
+    display:flex;justify-content:space-between;line-height:1.6;
+  }
+  footer b{color:var(--ink-2);font-style:normal;font-family:"JetBrains Mono",monospace;font-size:11px}
+
+  /* 按钮 */
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border:1px solid var(--line-2);background:transparent;color:var(--ink);
+    font:inherit;font-family:"EB Garamond",serif;font-style:italic;font-size:14px;cursor:pointer;
+  }
+  .btn:hover{border-color:var(--ink)}
+  .btn.acc{background:var(--vivid);border-color:var(--vivid);color:#0F1018}
+
+  @media (max-width:1100px){
+    .app{grid-template-columns:1fr}
+    aside{border-right:0;border-bottom:1px solid var(--line)}
+    main{padding:24px 20px}
+    .equations{grid-template-columns:1fr 1fr}
+    .grid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="brand">
+      <div class="brand-mark">N</div>
+      <div class="brand-name">Northwind<small>Lab Console</small></div>
+    </div>
+    <div class="nav-section">概览 · Overview</div>
+    <nav class="nav">
+      <a class="active"><span>仪表盘</span><span class="n">§ 1</span></a>
+      <a><span>实时调用</span><span class="n">§ 2</span></a>
+      <a><span>区域分布</span><span class="n">§ 3</span></a>
+    </nav>
+    <div class="nav-section">资源 · Resources</div>
+    <nav class="nav">
+      <a><span>API 密钥</span><span class="n">§ 4</span></a>
+      <a><span>Webhook</span><span class="n">§ 5</span></a>
+      <a><span>数据导出</span><span class="n">§ 6</span></a>
+    </nav>
+    <div class="nav-section">账户 · Account</div>
+    <nav class="nav">
+      <a><span>成员与角色</span><span class="n">§ 7</span></a>
+      <a><span>计费与发票</span><span class="n">§ 8</span></a>
+      <a><span>偏好设置</span><span class="n">§ 9</span></a>
+    </nav>
+    <div class="nav-section">参考 · Appendix</div>
+    <nav class="nav">
+      <a><span>事件回溯</span><span class="n">A</span></a>
+      <a><span>变更日志</span><span class="n">B</span></a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="header">
+      <div class="left">
+        <div class="eyebrow">Working Report · Sheet 01 · 2026 / 06 / 19</div>
+        <h1>关于本月运行情况的一份<em>简短观察</em><sub>v 2.18</sub></h1>
+      </div>
+      <div class="meta">
+        Lab Report<br>
+        <b>06 — 19, 2026</b>
+        Prod / ap-southeast-1
+        <div class="sig">— L. A. 林安琪 谨记</div>
+      </div>
+    </div>
+
+    <div class="abstract">
+      本月接入端共记录 <b>2,418,902</b> 次 API 调用，环比上月同期上升 <b>12.4%</b>；24 小时滚动错误率为
+      <span class="key">ε = 0.42%</span>，低于警戒阈值 <span class="key">ε* = 0.5%</span>。
+      成员名册新增 <b>4 人</b>，活跃席位 38 / 50；本期账单预计为 <b>¥ 2,879.50</b>，将于 <b>11 天</b> 后自动结算。
+      错误集中在顺丰侧 <span class="key">GET /v2/orders</span> 端点，建议在附录 A 追溯。
+    </div>
+
+    <section class="equations">
+      <div class="eq">
+        <div class="label">本月调用 · N(req)</div>
+        <div class="formula">
+          <span class="var">N <span style="color:var(--ink-2)">=</span></span>
+          <span class="num">2.42M</span>
+        </div>
+        <div class="note"><em>cf. 2.15M ult.</em><span class="delta up">▲ 12.4%</span></div>
+      </div>
+      <div class="eq">
+        <div class="label">活跃成员 · m</div>
+        <div class="formula">
+          <span class="var">m / M <span style="color:var(--ink-2)">=</span></span>
+          <span class="num">38<small>/50</small></span>
+        </div>
+        <div class="note"><em>idle 12</em><span class="delta up">▲ 4 wk</span></div>
+      </div>
+      <div class="eq">
+        <div class="label">错误率 · ε</div>
+        <div class="formula">
+          <span class="var">ε <span style="color:var(--ink-2)">=</span></span>
+          <span class="num" style="color:var(--bad)">0.42<small>%</small></span>
+        </div>
+        <div class="note"><em>thr ε* = 0.5%</em><span class="delta down">▲ 0.08</span></div>
+      </div>
+      <div class="eq">
+        <div class="label">本期账单 · B</div>
+        <div class="formula">
+          <span class="var">B <span style="color:var(--ink-2)">=</span></span>
+          <span class="num">¥ 2,879<small>.50</small></span>
+        </div>
+        <div class="note"><em>auto-renew</em><span class="delta">T – 11 d</span></div>
+      </div>
+    </section>
+
+    <div class="grid">
+      <div>
+        <div class="section-h">
+          <div><h3>调用流水<small>· access log · 实时 · 最近 100 条</small></h3></div>
+          <div class="tools"><span class="active">全部</span><span>错误</span><span>慢请求</span></div>
+        </div>
+        <table>
+          <thead><tr><th style="width:14%">t</th><th>调用方 · client</th><th>端点 · endpoint</th><th style="width:8%">状态</th><th style="width:18%">耗时 · Δt</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">14:02:11</td><td class="caller">京东数科</td><td class="mono">POST /v2/orders/sync</td>
+              <td><span class="stat ok">200</span></td>
+              <td><span class="lat">92 ms<span class="b"><i style="width:18%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:09</td><td class="caller">内部 dashboard</td><td class="mono">GET /v2/metrics/window</td>
+              <td><span class="stat ok">200</span></td>
+              <td><span class="lat">140 ms<span class="b"><i style="width:28%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:08</td><td class="caller">ACME</td><td class="mono">POST /v2/events/batch</td>
+              <td><span class="stat warn">429</span></td>
+              <td><span class="lat">318 ms<span class="b warn"><i style="width:65%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:07</td><td class="caller">Office</td><td class="mono">DELETE /v2/keys/ak_3f…</td>
+              <td><span class="stat ok">204</span></td>
+              <td><span class="lat">58 ms<span class="b"><i style="width:12%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:05</td><td class="caller">顺丰</td><td class="mono">GET /v2/orders?status=open</td>
+              <td><span class="stat bad">500</span></td>
+              <td><span class="lat">1.42 s<span class="b bad"><i style="width:88%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:03</td><td class="caller">京东数科</td><td class="mono">POST /v2/webhooks/test</td>
+              <td><span class="stat ok">200</span></td>
+              <td><span class="lat">110 ms<span class="b"><i style="width:22%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:01</td><td class="caller">平安</td><td class="mono">PUT /v2/orders/12489</td>
+              <td><span class="stat ok">200</span></td>
+              <td><span class="lat">181 ms<span class="b"><i style="width:34%"></i></span></span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div>
+        <div class="section-h">
+          <div><h3>名册<small>· 38 在岗 · 12 空缺</small></h3></div>
+          <button class="btn">邀请</button>
+        </div>
+        <div class="roster">
+          <div class="person"><div class="initial">L</div><div><b>林 安琪</b><small>liananqi · 2 min</small></div><span class="role acc">Owner</span></div>
+          <div class="person"><div class="initial">C</div><div><b>陈 维</b><small>chenwei · 1 h</small></div><span class="role">Admin</span></div>
+          <div class="person"><div class="initial">J</div><div><b>蒋 克</b><small>jiangke · 1 d</small></div><span class="role">Dev</span></div>
+          <div class="person"><div class="initial">Y</div><div><b>袁 倩</b><small>vendor · 待复</small></div><span class="role">Read</span></div>
+        </div>
+
+        <div class="section-h" style="margin-top:30px">
+          <div><h3>账目<small>· 2026 / 06 · 自动续费</small></h3></div>
+          <button class="btn acc">领发票</button>
+        </div>
+        <div class="bill">
+          <div class="ln"><span>Growth 套餐</span><b>¥ 1,980.00</b></div>
+          <div class="ln"><span>超量调用 · 418,902</span><b>¥ 837.80</b></div>
+          <div class="ln"><span>Webhook 重试 · 12,341</span><b>¥ 61.70</b></div>
+          <div class="total"><span>合计 · ∑ Bᵢ</span><b>¥ 2,879.50</b></div>
+
+          <div class="quota">
+            <div class="lbl"><span>套餐用量 · ρ</span><span>72%</span></div>
+            <div class="formula">
+              ρ = <span class="frac"><span class="top">N</span><span class="bot">N<sub>max</sub></span></span>
+              = <span class="frac"><span class="top">2,418,902</span><span class="bot">3,000,000</span></span>
+            </div>
+            <div class="bar"><i></i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <span><em>Cite as:</em> Northwind Lab Report, sheet 01, 2026.06.19.</span>
+      <span><b>SHEET 01 / 12 · UTC+8 14:02</b></span>
+    </footer>
+  </main>
+</div>
+</body>
+</html>

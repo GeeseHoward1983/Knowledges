@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>35 · 编织 — Northwind Cloud 控制台</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --bg:#F2E9D6;            /* 亚麻底 */
+    --bg-2:#E8DEC6;
+    --linen:#FDF7E8;
+    --ink:#2D2418;
+    --ink-2:#5C4F38;
+    --ink-3:#8C7E5E;
+    --line:#D6CAA8;
+    --line-2:#B8A878;
+    --terracotta:#C25A3C;
+    --terracotta-d:#9E4029;
+    --olive:#7A8C4A;
+    --rust:#B86838;
+    --berry:#A8546A;
+    --sky:#6B95B8;
+    --mustard:#D9A53E;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;color:var(--ink);font-family:"Outfit","Spectral","Inter","PingFang SC",sans-serif;background:var(--bg)}
+  body{
+    min-height:100vh;font-size:14.5px;line-height:1.55;
+    background:
+      /* 经纬交织底纹 */
+      repeating-linear-gradient(0deg, rgba(184,168,120,.12) 0 2px, transparent 2px 6px),
+      repeating-linear-gradient(90deg, rgba(184,168,120,.1) 0 2px, transparent 2px 6px),
+      linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
+  }
+
+  .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+
+  /* === 织物纹理工具 === */
+  .woven{
+    background:var(--linen);
+    background-image:
+      repeating-linear-gradient(0deg, rgba(184,168,120,.16) 0 1px, transparent 1px 4px),
+      repeating-linear-gradient(90deg, rgba(184,168,120,.14) 0 1px, transparent 1px 4px);
+    border:1px solid var(--line-2);border-radius:20px;
+    box-shadow:0 1px 0 rgba(255,255,255,.5) inset, 0 8px 20px rgba(45,36,24,.06);
+  }
+
+  /* 边栏 */
+  aside{margin:18px;padding:24px 18px}
+  .brand{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+  .brand-knot{
+    width:46px;height:46px;border-radius:14px;position:relative;overflow:hidden;
+    background:
+      repeating-linear-gradient(45deg, var(--terracotta) 0 4px, var(--mustard) 4px 8px, var(--olive) 8px 12px, var(--sky) 12px 16px);
+    border:1px solid var(--line-2);
+  }
+  .brand-knot::after{content:"";position:absolute;inset:4px;border-radius:10px;background:var(--linen);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .brand-knot::before{content:"N";position:absolute;inset:4px;border-radius:10px;background:var(--linen);
+    display:flex;align-items:center;justify-content:center;font-family:"Outfit",sans-serif;font-weight:800;font-size:20px;color:var(--ink);z-index:1;
+    padding-top:2px;text-align:center;line-height:38px;
+  }
+  .brand b{font-family:"Outfit",sans-serif;font-weight:700;font-size:18px;letter-spacing:-.01em;line-height:1.2}
+  .brand small{display:block;font-family:"Spectral",serif;font-style:italic;font-weight:400;font-size:13px;color:var(--ink-2);margin-top:2px}
+
+  .nav-section{font-family:"Outfit",sans-serif;font-weight:600;font-size:11px;letter-spacing:.24em;color:var(--ink-2);text-transform:uppercase;margin:16px 8px 6px;display:flex;align-items:center;gap:8px}
+  .nav-section::after{content:"";flex:1;height:1px;background:var(--line)}
+  .nav a{
+    display:flex;align-items:center;gap:11px;padding:8px 10px;border-radius:14px;text-decoration:none;color:var(--ink);font-family:"Outfit",sans-serif;font-size:14px;font-weight:500;
+  }
+  .nav a:hover{background:var(--bg-2)}
+  .nav a.active{
+    background:var(--terracotta);color:var(--linen);
+    box-shadow:0 4px 10px rgba(194,90,60,.3);
+  }
+  .nav a .thread{width:18px;height:3px;border-radius:99px;background:var(--ink-3)}
+  .nav a:nth-child(2) .thread{background:var(--olive)}
+  .nav a:nth-child(3) .thread{background:var(--berry)}
+  .nav a.active .thread{background:var(--linen)}
+
+  /* 主区 */
+  main{padding:18px 18px 32px 0;min-width:0}
+
+  .topbar{display:flex;align-items:center;gap:14px;margin-bottom:18px;padding:12px 20px;flex-wrap:wrap}
+  .greet h1{margin:0;font-family:"Spectral","Source Han Serif SC",serif;font-weight:500;font-size:26px;letter-spacing:-.01em;line-height:1.2}
+  .greet h1 em{font-style:italic;color:var(--terracotta)}
+  .greet p{margin:4px 0 0;font-family:"Outfit",sans-serif;font-size:13px;color:var(--ink-2);font-weight:500}
+  .topbar .spacer{flex:1}
+  .search{
+    display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:14px;background:var(--bg-2);border:1px solid var(--line);
+    font-family:"Outfit",sans-serif;font-size:13px;color:var(--ink-2);min-width:240px;
+  }
+  .search input{flex:1;background:transparent;border:0;outline:0;font:inherit;color:var(--ink);font-weight:500}
+  .btn{
+    display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:14px;border:1px solid var(--line-2);background:var(--linen);
+    color:var(--ink);font-family:"Outfit",sans-serif;font-weight:600;font-size:13px;cursor:pointer;
+  }
+  .btn.terra{background:var(--terracotta);border-color:var(--terracotta-d);color:var(--linen);box-shadow:0 4px 8px rgba(194,90,60,.25)}
+
+  /* Hero */
+  .hero{padding:28px 32px;margin-bottom:18px;display:grid;grid-template-columns:1.4fr 1fr;gap:24px;align-items:center}
+  .hero .eyebrow{font-family:"Outfit",sans-serif;font-weight:700;font-size:11px;letter-spacing:.26em;color:var(--terracotta);text-transform:uppercase;margin-bottom:8px}
+  .hero h2{margin:0;font-family:"Spectral","Source Han Serif SC",serif;font-weight:500;font-size:42px;letter-spacing:-.015em;line-height:1.1}
+  .hero h2 em{font-style:italic;color:var(--terracotta)}
+  .hero p{margin:14px 0 0;font-family:"Spectral",serif;font-style:italic;font-size:15px;color:var(--ink-2);max-width:480px;line-height:1.7}
+  .hero p b{font-style:normal;color:var(--ink);font-weight:600}
+  /* 织物挂毯 SVG */
+  .tapestry{display:flex;justify-content:center}
+  .tapestry svg{width:100%;max-width:240px;height:auto;display:block;border:1px solid var(--line-2);border-radius:12px;background:var(--bg-2);padding:14px}
+
+  /* KPI 织片 */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+  .kpi{padding:16px 18px;border-radius:18px;display:flex;flex-direction:column;gap:6px;position:relative;overflow:hidden}
+  .kpi::before{content:"";position:absolute;top:0;left:0;right:0;height:6px;border-radius:18px 18px 0 0}
+  .kpi.k1::before{background:repeating-linear-gradient(90deg, var(--terracotta) 0 8px, var(--mustard) 8px 16px)}
+  .kpi.k2::before{background:repeating-linear-gradient(90deg, var(--olive) 0 8px, var(--linen) 8px 16px)}
+  .kpi.k3::before{background:repeating-linear-gradient(90deg, var(--berry) 0 8px, var(--mustard) 8px 16px)}
+  .kpi.k4::before{background:repeating-linear-gradient(90deg, var(--sky) 0 8px, var(--linen) 8px 16px)}
+  .kpi .top{display:flex;align-items:center;gap:10px;padding-top:10px}
+  .kpi .em{
+    width:30px;height:30px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--linen);font-weight:700;font-size:14px;
+  }
+  .kpi.k1 .em{background:var(--terracotta)}
+  .kpi.k2 .em{background:var(--olive)}
+  .kpi.k3 .em{background:var(--berry)}
+  .kpi.k4 .em{background:var(--sky)}
+  .kpi .l{font-family:"Outfit",sans-serif;font-size:12px;color:var(--ink-2);font-weight:600;letter-spacing:.02em}
+  .kpi .v{font-family:"Spectral",serif;font-weight:500;font-size:32px;letter-spacing:-.02em;line-height:1.05;font-variant-numeric:tabular-nums}
+  .kpi .v small{font-family:"Outfit",sans-serif;font-size:12px;color:var(--ink-2);font-weight:500;margin-left:3px}
+  .kpi .d{font-family:"Outfit",sans-serif;font-size:11.5px;color:var(--ink-2);margin-top:2px;display:flex;justify-content:space-between;font-weight:600}
+  .up{color:var(--olive)}
+  .down{color:var(--terracotta-d)}
+
+  /* 主体 */
+  .grid{display:grid;grid-template-columns:1.55fr 1fr;gap:18px}
+  .panel{padding:0;overflow:hidden}
+  .panel-head{display:flex;justify-content:space-between;align-items:center;padding:18px 24px;border-bottom:1px solid var(--line)}
+  .panel-title{font-family:"Spectral","Source Han Serif SC",serif;font-weight:500;font-size:19px;letter-spacing:-.01em}
+  .panel-title small{display:block;font-family:"Outfit",sans-serif;font-weight:500;font-size:12px;color:var(--ink-2);margin-top:1px;letter-spacing:.04em}
+
+  table{width:100%;border-collapse:collapse;font-family:"Outfit",sans-serif;font-size:13.5px}
+  th{text-align:left;font-weight:600;font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-2);padding:11px 24px;border-bottom:1px solid var(--line)}
+  td{padding:13px 24px;border-bottom:1px dotted var(--line);font-variant-numeric:tabular-nums}
+  tr:last-child td{border-bottom:0}
+  td.mono{font-family:"JetBrains Mono",monospace;font-size:12.5px}
+  .chip{display:inline-flex;align-items:center;gap:5px;padding:3px 11px;border-radius:99px;font-size:11.5px;font-weight:700}
+  .chip.ok{background:rgba(122,140,74,.18);color:#445529}
+  .chip.warn{background:rgba(217,165,62,.22);color:#7A5818}
+  .chip.bad{background:rgba(194,90,60,.18);color:var(--terracotta-d)}
+  .lat{display:inline-flex;align-items:center;gap:10px;font-family:"JetBrains Mono",monospace;font-size:12px}
+  .lat .b{width:54px;height:8px;border-radius:99px;background:var(--bg-2);overflow:hidden;border:1px solid var(--line)}
+  .lat .b i{display:block;height:100%;border-radius:99px}
+  .lat .b i.ok{background:repeating-linear-gradient(90deg,var(--olive) 0 4px, #95A85F 4px 8px)}
+  .lat .b i.warn{background:repeating-linear-gradient(90deg,var(--mustard) 0 4px, #E8B95C 4px 8px)}
+  .lat .b i.bad{background:repeating-linear-gradient(90deg,var(--terracotta) 0 4px, var(--rust) 4px 8px)}
+
+  /* 名册 */
+  .members{padding:6px 0}
+  .person{display:grid;grid-template-columns:46px 1fr auto;gap:14px;align-items:center;padding:13px 24px;border-bottom:1px dotted var(--line)}
+  .person:last-child{border-bottom:0}
+  .woven-av{
+    width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--linen);font-family:"Spectral",serif;font-weight:500;font-size:19px;
+    background:repeating-linear-gradient(45deg, var(--terracotta) 0 4px, var(--rust) 4px 8px);
+    border:2px solid var(--linen);box-shadow:0 0 0 1px var(--line-2);
+  }
+  .woven-av.a2{background:repeating-linear-gradient(45deg, var(--olive) 0 4px, #95A85F 4px 8px)}
+  .woven-av.a3{background:repeating-linear-gradient(45deg, var(--berry) 0 4px, #C66D80 4px 8px)}
+  .woven-av.a4{background:repeating-linear-gradient(45deg, var(--sky) 0 4px, #84A9C8 4px 8px)}
+  .person b{font-family:"Spectral",serif;font-weight:500;font-size:17px;letter-spacing:-.01em}
+  .person small{display:block;font-family:"Outfit",sans-serif;font-size:11.5px;color:var(--ink-2);font-weight:500;margin-top:1px}
+  .role{padding:5px 12px;border-radius:99px;font-family:"Outfit",sans-serif;font-size:11.5px;font-weight:700;background:var(--bg-2);color:var(--ink);border:1px solid var(--line)}
+  .role.r{background:var(--terracotta);color:var(--linen);border-color:var(--terracotta-d)}
+
+  /* 账单 */
+  .bill{padding:18px 24px}
+  .bill .ln{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px dotted var(--line);font-family:"Outfit",sans-serif;font-size:14px}
+  .bill .ln b{font-family:"Spectral",serif;font-weight:500;font-size:17px}
+  .bill .total{
+    margin-top:12px;padding:14px 18px;border-radius:14px;background:var(--terracotta);color:var(--linen);
+    display:flex;justify-content:space-between;align-items:baseline;
+    box-shadow:0 6px 14px rgba(194,90,60,.3);
+  }
+  .bill .total span{font-family:"Outfit",sans-serif;font-weight:700;font-size:13px;letter-spacing:.04em}
+  .bill .total b{font-family:"Spectral",serif;font-weight:500;font-size:26px;letter-spacing:-.01em}
+  .gauge{margin-top:14px}
+  .gauge .top{display:flex;justify-content:space-between;font-family:"Outfit",sans-serif;font-size:11px;color:var(--ink-2);font-weight:600;letter-spacing:.14em;text-transform:uppercase;margin-bottom:6px}
+  .gauge .bar{height:10px;border-radius:99px;background:var(--bg-2);border:1px solid var(--line);overflow:hidden}
+  .gauge .bar i{display:block;height:100%;width:72%;border-radius:99px;background:repeating-linear-gradient(90deg,var(--terracotta) 0 6px, var(--mustard) 6px 12px, var(--olive) 12px 18px)}
+
+  @media (max-width:1100px){
+    .app{grid-template-columns:1fr}
+    aside{margin:14px 14px 0}
+    main{padding:14px}
+    .hero{grid-template-columns:1fr}
+    .tapestry{order:-1}
+    .kpis{grid-template-columns:1fr 1fr}
+    .grid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="woven">
+    <div class="brand">
+      <div class="brand-knot"></div>
+      <div><b>Northwind</b><small>Atelier · 卷一</small></div>
+    </div>
+    <div class="nav-section">总览</div>
+    <nav class="nav">
+      <a class="active"><span class="thread"></span>仪表盘</a>
+      <a><span class="thread"></span>实时调用</a>
+      <a><span class="thread"></span>区域分布</a>
+    </nav>
+    <div class="nav-section">资源</div>
+    <nav class="nav">
+      <a><span class="thread"></span>API 密钥</a>
+      <a><span class="thread"></span>Webhook</a>
+      <a><span class="thread"></span>数据导出</a>
+    </nav>
+    <div class="nav-section">账户</div>
+    <nav class="nav">
+      <a><span class="thread"></span>名册</a>
+      <a><span class="thread"></span>账目</a>
+      <a><span class="thread"></span>偏好</a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="topbar woven">
+      <div class="greet">
+        <h1>下午好，林安琪 — <em>这周织得不错</em></h1>
+        <p>06.19 · 周五 · 生产 / ap-southeast-1</p>
+      </div>
+      <div class="spacer"></div>
+      <div class="search">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg>
+        <input placeholder="搜索 API / 名册 / 调用…">
+      </div>
+      <button class="btn">通知 3</button>
+      <button class="btn terra">＋ 起一段</button>
+    </div>
+
+    <section class="hero woven">
+      <div>
+        <div class="eyebrow">本月经纬 · MTD</div>
+        <h2>已织出 <em>240 万行</em><br>布幅，距月末 11 天。</h2>
+        <p>对比上月 <b>+12.4%</b>。按当前速度，会在 <b>6 月 27 日</b> 织满 3,000,000 行的本月计划。
+          24h 颜色错置率 <b>0.42%</b>，仍在阈下；顺丰那一段经线略有打结，记得回头看看。</p>
+      </div>
+      <div class="tapestry">
+        <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+          <!-- 经纬挂毯：4×4 大方格，每个填不同条纹 -->
+          <defs>
+            <pattern id="p1" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+              <rect width="6" height="6" fill="#C25A3C"/>
+              <line x1="0" y1="3" x2="6" y2="3" stroke="#D9A53E" stroke-width="2"/>
+            </pattern>
+            <pattern id="p2" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+              <rect width="6" height="6" fill="#7A8C4A"/>
+              <line x1="0" y1="3" x2="6" y2="3" stroke="#FDF7E8" stroke-width="2"/>
+            </pattern>
+            <pattern id="p3" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+              <rect width="6" height="6" fill="#A8546A"/>
+              <line x1="0" y1="3" x2="6" y2="3" stroke="#D9A53E" stroke-width="2"/>
+            </pattern>
+            <pattern id="p4" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+              <rect width="6" height="6" fill="#6B95B8"/>
+              <line x1="0" y1="3" x2="6" y2="3" stroke="#FDF7E8" stroke-width="2"/>
+            </pattern>
+          </defs>
+          <!-- 4×4 方格 -->
+          <g>
+            <rect x="0" y="0" width="50" height="50" fill="url(#p1)"/>
+            <rect x="50" y="0" width="50" height="50" fill="url(#p2)"/>
+            <rect x="100" y="0" width="50" height="50" fill="url(#p3)"/>
+            <rect x="150" y="0" width="50" height="50" fill="url(#p4)"/>
+            <rect x="0" y="50" width="50" height="50" fill="url(#p2)"/>
+            <rect x="50" y="50" width="50" height="50" fill="url(#p1)"/>
+            <rect x="100" y="50" width="50" height="50" fill="url(#p4)"/>
+            <rect x="150" y="50" width="50" height="50" fill="url(#p3)"/>
+            <rect x="0" y="100" width="50" height="50" fill="url(#p3)"/>
+            <rect x="50" y="100" width="50" height="50" fill="url(#p4)"/>
+            <rect x="100" y="100" width="50" height="50" fill="url(#p1)"/>
+            <rect x="150" y="100" width="50" height="50" fill="url(#p2)"/>
+            <rect x="0" y="150" width="50" height="50" fill="url(#p4)"/>
+            <rect x="50" y="150" width="50" height="50" fill="url(#p3)"/>
+            <rect x="100" y="150" width="50" height="50" fill="url(#p2)"/>
+            <rect x="150" y="150" width="50" height="50" fill="url(#p1)"/>
+          </g>
+          <!-- 流苏 -->
+          <g stroke="#2D2418" stroke-width="1">
+            <line x1="6" y1="200" x2="6" y2="208"/><line x1="16" y1="200" x2="16" y2="206"/><line x1="26" y1="200" x2="26" y2="208"/><line x1="36" y1="200" x2="36" y2="206"/>
+            <line x1="60" y1="200" x2="60" y2="208"/><line x1="70" y1="200" x2="70" y2="206"/><line x1="80" y1="200" x2="80" y2="208"/><line x1="90" y1="200" x2="90" y2="206"/>
+            <line x1="114" y1="200" x2="114" y2="208"/><line x1="124" y1="200" x2="124" y2="206"/><line x1="134" y1="200" x2="134" y2="208"/><line x1="144" y1="200" x2="144" y2="206"/>
+            <line x1="168" y1="200" x2="168" y2="208"/><line x1="178" y1="200" x2="178" y2="206"/><line x1="188" y1="200" x2="188" y2="208"/>
+          </g>
+        </svg>
+      </div>
+    </section>
+
+    <section class="kpis">
+      <div class="kpi woven k1">
+        <div class="top"><div class="em">⚡</div><div class="l">本月行数</div></div>
+        <div class="v">2.42<small>M 行</small></div>
+        <div class="d"><span class="up">▲ 12.4%</span><span>tgt 3.0M</span></div>
+      </div>
+      <div class="kpi woven k2">
+        <div class="top"><div class="em">☘</div><div class="l">织工</div></div>
+        <div class="v">38<small>/50</small></div>
+        <div class="d"><span class="up">▲ 4 本周</span><span>idle 12</span></div>
+      </div>
+      <div class="kpi woven k3">
+        <div class="top"><div class="em">!</div><div class="l">错置 24h</div></div>
+        <div class="v" style="color:var(--terracotta-d)">0.42<small>%</small></div>
+        <div class="d"><span class="down">▲ 0.08%</span><span>thr 0.5%</span></div>
+      </div>
+      <div class="kpi woven k4">
+        <div class="top"><div class="em">¥</div><div class="l">本月成本</div></div>
+        <div class="v">¥ 2,879<small>.50</small></div>
+        <div class="d"><span>auto</span><span>T-11</span></div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="panel woven">
+        <div class="panel-head">
+          <div class="panel-title">织线日志<small>实时 · 最近 100 段 · 生产</small></div>
+          <button class="btn">仅看打结</button>
+        </div>
+        <table>
+          <thead><tr><th>时</th><th>来者</th><th>纹样</th><th>状</th><th>耗</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">14:02:11</td><td>京东数科</td><td class="mono">POST /v2/orders/sync</td>
+              <td><span class="chip ok">200</span></td>
+              <td><span class="lat">92 ms<span class="b"><i class="ok" style="width:18%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:09</td><td>内部 dashboard</td><td class="mono">GET /v2/metrics/window</td>
+              <td><span class="chip ok">200</span></td>
+              <td><span class="lat">140 ms<span class="b"><i class="ok" style="width:28%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:08</td><td>ACME</td><td class="mono">POST /v2/events/batch</td>
+              <td><span class="chip warn">429</span></td>
+              <td><span class="lat">318 ms<span class="b"><i class="warn" style="width:65%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:07</td><td>Office</td><td class="mono">DELETE /v2/keys/ak_3f…</td>
+              <td><span class="chip ok">204</span></td>
+              <td><span class="lat">58 ms<span class="b"><i class="ok" style="width:12%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:05</td><td>顺丰</td><td class="mono">GET /v2/orders?status=open</td>
+              <td><span class="chip bad">500</span></td>
+              <td><span class="lat">1.42 s<span class="b"><i class="bad" style="width:88%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:03</td><td>京东数科</td><td class="mono">POST /v2/webhooks/test</td>
+              <td><span class="chip ok">200</span></td>
+              <td><span class="lat">110 ms<span class="b"><i class="ok" style="width:22%"></i></span></span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:18px">
+        <div class="panel woven">
+          <div class="panel-head">
+            <div class="panel-title">织工<small>38 在席 · 12 空</small></div>
+            <button class="btn">招新工</button>
+          </div>
+          <div class="members">
+            <div class="person"><div class="woven-av">林</div><div><b>林安琪</b><small>liananqi · 2 分钟前</small></div><span class="role r">织长</span></div>
+            <div class="person"><div class="woven-av a2">陈</div><div><b>陈维</b><small>chenwei · 1 小时前</small></div><span class="role">组长</span></div>
+            <div class="person"><div class="woven-av a3">蒋</div><div><b>蒋克</b><small>jiangke · 昨日</small></div><span class="role">工匠</span></div>
+            <div class="person"><div class="woven-av a4">袁</div><div><b>袁倩</b><small>vendor · 待复</small></div><span class="role">学徒</span></div>
+          </div>
+        </div>
+
+        <div class="panel woven">
+          <div class="panel-head">
+            <div class="panel-title">本月成本<small>06.01 – 06.30</small></div>
+            <button class="btn">单据</button>
+          </div>
+          <div class="bill">
+            <div class="ln"><span>Growth 套餐</span><b>¥ 1,980.00</b></div>
+            <div class="ln"><span>超量行数 · 418,902</span><b>¥ 837.80</b></div>
+            <div class="ln"><span>Webhook 重织 · 12,341</span><b>¥ 61.70</b></div>
+            <div class="total"><span style="font-size:13px">合计</span><b>¥ 2,879.50</b></div>
+            <div class="gauge">
+              <div class="top"><span>本月用量 72%</span><span>2.42M / 3M</span></div>
+              <div class="bar"><i></i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+</body>
+</html>

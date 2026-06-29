@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>31 · 装饰艺术 — Northwind Cloud 控制台</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --bg:#1A1418;            /* 酒红近黑 */
+    --bg-2:#241A20;
+    --bg-3:#2E212A;
+    --panel:#291E26;
+    --ink:#EFE4CB;           /* 香槟米 */
+    --ink-2:#B89E7A;
+    --ink-3:#7A6A52;
+    --gold:#C6A560;          /* 烫金 */
+    --gold-2:#E5C886;
+    --gold-d:#8E7136;
+    --bordeaux:#7A2435;      /* 波尔多酒红 */
+    --bordeaux-2:#A03A4B;
+    --line:rgba(198,165,96,.22);
+    --line-2:rgba(198,165,96,.42);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;color:var(--ink);font-family:"Cormorant Garamond","Cinzel","Source Han Serif SC",serif;background:var(--bg)}
+  body{
+    min-height:100vh;font-size:14.5px;line-height:1.55;
+    background:
+      radial-gradient(800px 500px at 50% -80px, rgba(198,165,96,.06), transparent 60%),
+      linear-gradient(180deg, var(--bg) 0%, #100C10 100%);
+    background-attachment:fixed;
+  }
+
+  /* === Deco 边框工具：双线 + 内嵌细线 === */
+  .deco{
+    position:relative;
+    border:1.5px solid var(--gold);
+    background:var(--bg-2);
+  }
+  .deco::before{
+    content:"";position:absolute;inset:5px;border:1px solid var(--gold-d);pointer-events:none;
+  }
+  /* 顶部对称的几何花饰 */
+  .deco-cap{
+    position:absolute;left:50%;transform:translateX(-50%);
+    display:flex;align-items:center;gap:6px;
+    background:var(--bg-2);padding:0 14px;
+  }
+  .deco-cap.top{top:-9px}
+  .deco-cap.bot{bottom:-9px}
+  .deco-cap i{
+    width:0;height:0;border-style:solid;border-width:8px 6px;
+    border-color:transparent transparent var(--gold) transparent;
+    display:inline-block;
+  }
+  .deco-cap i.dot{
+    width:6px;height:6px;border-radius:50%;background:var(--gold);border:0;
+  }
+  .deco-cap i.diamond{
+    width:9px;height:9px;background:var(--gold);transform:rotate(45deg);border:0;
+  }
+  .deco-cap.bot i{transform:rotate(180deg)}
+  .deco-cap.bot i.dot,.deco-cap.bot i.diamond{transform:rotate(45deg)}
+
+  .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh;position:relative}
+
+  /* 边栏 */
+  aside{padding:24px 18px;border-right:1px solid var(--line)}
+  .brand{padding:18px 0;border-top:1px solid var(--gold);border-bottom:1px solid var(--gold);margin-bottom:20px;text-align:center;position:relative}
+  .brand::before,.brand::after{content:"";position:absolute;left:50%;transform:translateX(-50%);width:10px;height:10px;background:var(--gold);border-radius:50%}
+  .brand::before{top:-5px}.brand::after{bottom:-5px}
+  .brand b{
+    display:block;font-family:"Cinzel","Cormorant Garamond",serif;font-weight:600;font-size:21px;letter-spacing:.22em;color:var(--gold-2);text-transform:uppercase;line-height:1;
+  }
+  .brand small{display:block;font-family:"Cormorant Garamond",serif;font-style:italic;font-weight:500;font-size:13px;color:var(--ink-2);margin-top:6px;letter-spacing:.14em}
+
+  .nav-section{
+    text-align:center;font-family:"Cinzel",serif;font-weight:600;font-size:11px;letter-spacing:.32em;color:var(--gold);
+    margin:18px 0 6px;text-transform:uppercase;position:relative;
+  }
+  .nav-section::before,.nav-section::after{
+    content:"";position:absolute;top:50%;width:20px;height:1px;background:var(--gold-d);
+  }
+  .nav-section::before{left:24px}.nav-section::after{right:24px}
+  .nav a{
+    display:flex;justify-content:space-between;align-items:baseline;padding:8px 8px;
+    text-decoration:none;color:var(--ink);font-family:"Cormorant Garamond",serif;font-size:16px;letter-spacing:.06em;
+    border-bottom:1px dotted var(--line);
+  }
+  .nav a:hover{color:var(--gold-2)}
+  .nav a.active{color:var(--gold-2);font-style:italic;font-weight:600}
+  .nav a.active::before{content:"◆ ";color:var(--gold);margin-right:2px;font-size:9px;vertical-align:2px}
+  .nav a .n{font-family:"Cinzel",serif;font-size:11px;color:var(--ink-3);letter-spacing:.16em}
+
+  /* 主区 */
+  main{padding:32px 38px 40px;min-width:0}
+
+  /* Hero 对称 deco 框 */
+  .hero{padding:36px 40px;margin-bottom:30px;text-align:center}
+  .hero .eyebrow{font-family:"Cinzel",serif;font-weight:600;font-size:11px;letter-spacing:.42em;color:var(--gold);text-transform:uppercase;margin-bottom:14px}
+  .hero h1{
+    margin:0;font-family:"Cinzel","Source Han Serif SC",serif;font-weight:600;font-size:46px;letter-spacing:.06em;line-height:1.1;
+    background:linear-gradient(180deg, var(--gold-2) 0%, var(--gold) 50%, var(--gold-d) 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;text-transform:uppercase;
+  }
+  .hero h1 em{font-family:"Cormorant Garamond",serif;font-style:italic;font-weight:500;text-transform:none;letter-spacing:.02em}
+  .hero .divider{
+    display:flex;align-items:center;justify-content:center;gap:12px;margin:18px 0 14px;color:var(--gold);font-size:12px;
+  }
+  .hero .divider::before,.hero .divider::after{content:"";flex:0 0 80px;height:1px;background:var(--gold-d)}
+  .hero .sub{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:16px;color:var(--ink-2);max-width:640px;margin:0 auto;line-height:1.85}
+  .hero .sub b{color:var(--ink);font-style:normal;font-weight:600}
+
+  /* KPI 双线对称 */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-bottom:30px}
+  .kpi{padding:20px 22px 22px;text-align:center}
+  .kpi .l{font-family:"Cinzel",serif;font-weight:600;font-size:10.5px;letter-spacing:.32em;color:var(--gold);text-transform:uppercase;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  .kpi .v{
+    font-family:"Cormorant Garamond","Source Han Serif SC",serif;font-weight:500;font-size:38px;letter-spacing:-.01em;line-height:1;
+    color:var(--ink);font-variant-numeric:tabular-nums;
+  }
+  .kpi .v small{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:14px;color:var(--ink-2);margin-left:4px;font-weight:500}
+  .kpi .v.warn{color:var(--bordeaux-2)}
+  .kpi .d{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:13px;color:var(--ink-2);margin-top:10px;padding-top:8px;border-top:1px solid var(--line);display:flex;justify-content:space-between}
+  .up{color:#A5C29A}
+  .down{color:var(--bordeaux-2)}
+
+  /* 主体 */
+  .grid{display:grid;grid-template-columns:1.55fr 1fr;gap:26px}
+
+  .panel-head{
+    padding:14px 24px;border-bottom:1px solid var(--gold);background:linear-gradient(180deg,var(--bg-3),var(--bg-2));position:relative;
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .panel-head::before,.panel-head::after{
+    content:"";position:absolute;bottom:-1px;width:48px;height:1px;background:var(--gold);
+  }
+  .panel-head::before{left:0}.panel-head::after{right:0}
+  .panel-title{font-family:"Cinzel","Source Han Serif SC",serif;font-weight:600;font-size:14px;letter-spacing:.18em;color:var(--gold-2);text-transform:uppercase}
+  .panel-title small{display:block;font-family:"Cormorant Garamond",serif;font-style:italic;font-weight:500;font-size:13px;color:var(--ink-2);margin-top:2px;letter-spacing:.04em;text-transform:none}
+
+  table{width:100%;border-collapse:collapse;font-family:"Cormorant Garamond",serif;font-size:14.5px}
+  th{
+    text-align:left;font-family:"Cinzel",serif;font-weight:600;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);
+    padding:10px 24px;border-bottom:1px solid var(--line-2);background:var(--bg-3);
+  }
+  td{padding:13px 24px;border-bottom:1px dotted var(--line);font-variant-numeric:tabular-nums;color:var(--ink)}
+  tr:last-child td{border-bottom:0}
+  td.mono{font-family:"JetBrains Mono",monospace;font-size:12.5px;color:var(--ink-2)}
+  td.cl{font-style:italic;font-weight:500}
+  .stat{font-family:"Cinzel",serif;font-weight:600;font-size:11.5px;letter-spacing:.08em;padding:3px 10px;border:1px solid}
+  .stat.ok{color:#A5C29A;border-color:#5C7A4F}
+  .stat.warn{color:var(--gold-2);border-color:var(--gold-d)}
+  .stat.bad{color:var(--bordeaux-2);border-color:var(--bordeaux);background:rgba(122,36,53,.18)}
+  .lat{display:inline-flex;align-items:center;gap:10px;font-family:"JetBrains Mono",monospace;font-size:12px}
+  .lat .b{width:54px;height:1.5px;background:var(--line-2);position:relative}
+  .lat .b i{display:block;height:3px;margin-top:-.75px}
+  .lat .b i.ok{background:var(--gold)}
+  .lat .b i.warn{background:var(--gold-2)}
+  .lat .b i.bad{background:var(--bordeaux-2);height:4px;margin-top:-1.25px}
+
+  /* 名册 */
+  .person{display:grid;grid-template-columns:42px 1fr auto;gap:14px;align-items:center;padding:13px 24px;border-bottom:1px dotted var(--line)}
+  .person:last-child{border-bottom:0}
+  .medal{
+    width:42px;height:42px;
+    display:flex;align-items:center;justify-content:center;color:var(--ink);
+    font-family:"Cormorant Garamond",serif;font-weight:500;font-size:19px;font-style:italic;
+    background:radial-gradient(circle at 35% 30%, rgba(198,165,96,.18), transparent 60%);
+    border:1.5px solid var(--gold);position:relative;
+    clip-path:polygon(50% 0,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%);
+  }
+  .medal.acc{color:var(--gold-2);border-color:var(--gold-2);background:radial-gradient(circle at 35% 30%, rgba(198,165,96,.32), transparent 60%)}
+  .person b{font-family:"Cormorant Garamond",serif;font-style:italic;font-weight:600;font-size:17px;letter-spacing:.04em}
+  .person small{display:block;font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-2);margin-top:2px;letter-spacing:.02em}
+  .role{font-family:"Cinzel",serif;font-weight:600;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-2);border:1px solid var(--line-2);padding:3px 9px}
+  .role.r{color:var(--bordeaux-2);border-color:var(--bordeaux-2)}
+
+  /* 账单 */
+  .bill{padding:22px 24px}
+  .bill .ln{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px dotted var(--line);font-size:15px}
+  .bill .ln span{font-style:italic;color:var(--ink-2)}
+  .bill .ln b{font-family:"Cormorant Garamond",serif;font-weight:500;font-size:17px;font-variant-numeric:tabular-nums;color:var(--ink)}
+  .bill .total{
+    margin-top:12px;padding:16px 18px;border:1px solid var(--gold);background:linear-gradient(180deg,rgba(198,165,96,.06),transparent);
+    display:flex;justify-content:space-between;align-items:baseline;position:relative;
+  }
+  .bill .total::before,.bill .total::after{content:"";position:absolute;width:14px;height:14px;border:1px solid var(--gold)}
+  .bill .total::before{top:-1px;left:-1px;border-right:0;border-bottom:0}
+  .bill .total::after{bottom:-1px;right:-1px;border-left:0;border-top:0}
+  .bill .total span{font-family:"Cinzel",serif;font-weight:600;font-size:12px;letter-spacing:.24em;color:var(--gold);text-transform:uppercase}
+  .bill .total b{font-family:"Cormorant Garamond",serif;font-weight:500;font-size:30px;letter-spacing:-.01em;
+    background:linear-gradient(180deg,var(--gold-2),var(--gold-d));-webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .gauge{margin-top:18px}
+  .gauge .top{display:flex;justify-content:space-between;font-family:"Cinzel",serif;font-weight:600;font-size:10px;color:var(--ink-2);letter-spacing:.22em;text-transform:uppercase;margin-bottom:6px}
+  .gauge .bar{height:2px;background:var(--line-2);position:relative;overflow:hidden}
+  .gauge .bar i{display:block;height:100%;width:72%;background:linear-gradient(90deg,var(--gold-d),var(--gold) 60%,var(--gold-2))}
+
+  .btn{
+    display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid var(--line-2);
+    background:transparent;color:var(--gold);font:inherit;font-family:"Cormorant Garamond",serif;font-style:italic;font-size:14px;cursor:pointer;letter-spacing:.04em;
+  }
+  .btn:hover{border-color:var(--gold);color:var(--gold-2)}
+  .btn.b{background:var(--bordeaux);border-color:var(--bordeaux-2);color:var(--ink);font-style:normal;font-family:"Cinzel",serif;font-weight:600;font-size:11px;letter-spacing:.18em;text-transform:uppercase}
+
+  footer{
+    margin-top:36px;padding-top:18px;border-top:1px solid var(--gold);text-align:center;
+    font-family:"Cinzel",serif;font-weight:600;font-size:10px;letter-spacing:.42em;color:var(--gold);text-transform:uppercase;
+  }
+  footer::before,footer::after{content:"◆ ";color:var(--gold);}
+  footer::after{content:" ◆"}
+
+  /* 顶 */
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding-bottom:12px;border-bottom:1px solid var(--line);font-family:"Cormorant Garamond",serif;font-style:italic;font-size:14px;color:var(--ink-2);letter-spacing:.04em}
+  .topbar b{color:var(--gold);font-style:normal;font-family:"Cinzel",serif;font-weight:600;font-size:11px;letter-spacing:.22em;text-transform:uppercase}
+
+  @media (max-width:1100px){
+    .app{grid-template-columns:1fr}
+    aside{border-right:0;border-bottom:1px solid var(--line)}
+    .hero h1{font-size:30px}
+    .kpis{grid-template-columns:1fr 1fr}
+    .grid{grid-template-columns:1fr}
+    main{padding:24px 20px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="brand">
+      <b>NORTHWIND</b>
+      <small>Cloud · Vol. XII</small>
+    </div>
+    <div class="nav-section">Total</div>
+    <nav class="nav">
+      <a class="active"><span>Dashboard</span><span class="n">I</span></a>
+      <a><span>Live Calls</span><span class="n">II</span></a>
+      <a><span>Regions</span><span class="n">III</span></a>
+    </nav>
+    <div class="nav-section">Atelier</div>
+    <nav class="nav">
+      <a><span>Keys</span><span class="n">IV</span></a>
+      <a><span>Webhook</span><span class="n">V</span></a>
+      <a><span>Export</span><span class="n">VI</span></a>
+    </nav>
+    <div class="nav-section">Maison</div>
+    <nav class="nav">
+      <a><span>Members</span><span class="n">VII</span></a>
+      <a><span>Billing</span><span class="n">VIII</span></a>
+      <a><span>Settings</span><span class="n">IX</span></a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="topbar">
+      <span>Maison de <b>Northwind</b> · Folio XII · Sheet I</span>
+      <span><b>06 · 19 · 2026</b> · 14:02 · ap-southeast-1</span>
+    </div>
+
+    <section class="hero deco">
+      <span class="deco-cap top"><i class="dot"></i><i class="diamond"></i><i class="dot"></i></span>
+      <span class="deco-cap bot"><i class="dot"></i><i class="diamond"></i><i class="dot"></i></span>
+      <div class="eyebrow">— A Brief Report —</div>
+      <h1>Vol. XII / <em>Six · Dix-Neuf</em></h1>
+      <div class="divider">◆ ◆ ◆</div>
+      <div class="sub">本月接入端共录 <b>2,418,902</b> 次调用，较前月 <b>增百分之十二点四</b>。
+        24h 错误率 <b>0.42%</b>，仍在阈下。本期账目 <b>¥ 2,879.50</b>，将于 <b>十一日后</b> 自结。</div>
+    </section>
+
+    <section class="kpis">
+      <div class="kpi deco">
+        <span class="deco-cap top"><i class="dot"></i><i class="dot"></i><i class="dot"></i></span>
+        <div class="l">Calls · MTD</div>
+        <div class="v">2,418,902<small>req</small></div>
+        <div class="d"><span class="up">▲ 12.4%</span><span><em>tgt</em> 3.0M</span></div>
+      </div>
+      <div class="kpi deco">
+        <span class="deco-cap top"><i class="dot"></i><i class="dot"></i><i class="dot"></i></span>
+        <div class="l">Membres</div>
+        <div class="v">38<small>/50</small></div>
+        <div class="d"><span class="up">▲ 4</span><span><em>idle</em> 12</span></div>
+      </div>
+      <div class="kpi deco">
+        <span class="deco-cap top"><i class="dot"></i><i class="dot"></i><i class="dot"></i></span>
+        <div class="l">Erreur · 24h</div>
+        <div class="v warn">0.42<small>%</small></div>
+        <div class="d"><span class="down">▲ 0.08%</span><span><em>thr</em> 0.5%</span></div>
+      </div>
+      <div class="kpi deco">
+        <span class="deco-cap top"><i class="dot"></i><i class="dot"></i><i class="dot"></i></span>
+        <div class="l">Compte · MTD</div>
+        <div class="v">¥ 2,879<small>.50</small></div>
+        <div class="d"><span><em>auto</em></span><span><em>T-11</em></span></div>
+      </div>
+    </section>
+
+    <div class="grid">
+      <div class="deco">
+        <span class="deco-cap top"><i class="diamond"></i></span>
+        <div class="panel-head">
+          <div class="panel-title">Journal d'Accès<small>· last 100 · prod</small></div>
+          <button class="btn">仅看异常</button>
+        </div>
+        <table>
+          <thead><tr><th>T</th><th>Caller</th><th>Endpoint</th><th>État</th><th>Latence</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">14:02:11</td><td class="cl">京东数科</td><td class="mono">POST /v2/orders/sync</td>
+              <td><span class="stat ok">200</span></td>
+              <td><span class="lat">92 ms<span class="b"><i class="ok" style="width:18%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:09</td><td class="cl">dashboard</td><td class="mono">GET /v2/metrics/window</td>
+              <td><span class="stat ok">200</span></td>
+              <td><span class="lat">140 ms<span class="b"><i class="ok" style="width:28%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:08</td><td class="cl">ACME</td><td class="mono">POST /v2/events/batch</td>
+              <td><span class="stat warn">429</span></td>
+              <td><span class="lat">318 ms<span class="b"><i class="warn" style="width:65%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:07</td><td class="cl">Office</td><td class="mono">DELETE /v2/keys/ak_3f…</td>
+              <td><span class="stat ok">204</span></td>
+              <td><span class="lat">58 ms<span class="b"><i class="ok" style="width:12%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:05</td><td class="cl">顺丰</td><td class="mono">GET /v2/orders?status=open</td>
+              <td><span class="stat bad">500</span></td>
+              <td><span class="lat">1.42 s<span class="b"><i class="bad" style="width:88%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:03</td><td class="cl">京东数科</td><td class="mono">POST /v2/webhooks/test</td>
+              <td><span class="stat ok">200</span></td>
+              <td><span class="lat">110 ms<span class="b"><i class="ok" style="width:22%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:01</td><td class="cl">平安</td><td class="mono">PUT /v2/orders/12489</td>
+              <td><span class="stat ok">200</span></td>
+              <td><span class="lat">181 ms<span class="b"><i class="ok" style="width:34%"></i></span></span></td></tr>
+          </tbody>
+        </table>
+        <span class="deco-cap bot"><i class="diamond"></i></span>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:26px">
+        <div class="deco">
+          <span class="deco-cap top"><i class="diamond"></i></span>
+          <div class="panel-head">
+            <div class="panel-title">Membres<small>· 38 / 50</small></div>
+            <button class="btn">Inviter</button>
+          </div>
+          <div>
+            <div class="person"><div class="medal acc">林</div><div><b>林安琪</b><small>liananqi · 2 min</small></div><span class="role r">Owner</span></div>
+            <div class="person"><div class="medal">陈</div><div><b>陈维</b><small>chenwei · 1 hr</small></div><span class="role">Admin</span></div>
+            <div class="person"><div class="medal">蒋</div><div><b>蒋克</b><small>jiangke · 1 d</small></div><span class="role">Dev</span></div>
+            <div class="person"><div class="medal">袁</div><div><b>袁倩</b><small>vendor · pending</small></div><span class="role">Read</span></div>
+          </div>
+          <span class="deco-cap bot"><i class="diamond"></i></span>
+        </div>
+
+        <div class="deco">
+          <span class="deco-cap top"><i class="diamond"></i></span>
+          <div class="panel-head">
+            <div class="panel-title">Compte<small>· 06.01 – 06.30</small></div>
+            <button class="btn b">Reçu</button>
+          </div>
+          <div class="bill">
+            <div class="ln"><span>Forfait Growth</span><b>¥ 1,980.00</b></div>
+            <div class="ln"><span>Dépassement · 418,902</span><b>¥ 837.80</b></div>
+            <div class="ln"><span>Webhook · 12,341</span><b>¥ 61.70</b></div>
+            <div class="total"><span>Total</span><b>¥ 2,879.50</b></div>
+            <div class="gauge">
+              <div class="top"><span>Quota</span><span>72% · 2.42M / 3M</span></div>
+              <div class="bar"><i></i></div>
+            </div>
+          </div>
+          <span class="deco-cap bot"><i class="diamond"></i></span>
+        </div>
+      </div>
+    </div>
+
+    <footer>Maison de Northwind · MMXXVI · Folio XII</footer>
+  </main>
+</div>
+</body>
+</html>

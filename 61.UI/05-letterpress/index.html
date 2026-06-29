@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>05 · 信笺 — Northwind Cloud 控制台</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --paper:#F6F1E4;        /* 米黄纸 */
+    --paper-2:#EEE7D4;
+    --paper-edge:#D9CFB3;
+    --ink:#2A2620;
+    --ink-2:#6B5F4E;
+    --rule:#C7BB9E;
+    --rule-2:rgba(42,38,32,.12);
+    --seal:#7C3A2E;         /* 印章酒红，不是赤陶橙 */
+    --seal-2:#A8534A;
+    --ink-blue:#2E466E;     /* 钢笔墨蓝 */
+    --ok:#5B7A47;
+    --warn:#B58A1F;
+    --bad:#9B362E;
+  }
+  *{box-sizing:border-box}
+  html,body{
+    margin:0;padding:0;color:var(--ink);
+    font-family:"Source Han Serif SC","Songti SC","STSong","Noto Serif SC","Lora",serif;
+    background:var(--paper);
+  }
+  body{
+    min-height:100vh;
+    background:
+      /* 信纸横线 */
+      repeating-linear-gradient(180deg, transparent 0 31px, rgba(42,38,32,.05) 31px 32px),
+      /* 纸纹噪点 */
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 .12  0 0 0 0 .1  0 0 0 0 .08  0 0 0 .08 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
+      linear-gradient(180deg, var(--paper) 0%, var(--paper-2) 100%);
+    background-attachment: fixed;
+  }
+  .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+
+  /* 边栏 = 信笺左侧装订条 */
+  aside{
+    padding:24px 18px;border-right:1px solid var(--rule);
+    background:linear-gradient(90deg,var(--paper-2),transparent);
+    position:relative;
+  }
+  aside::after{
+    content:"";position:absolute;top:24px;bottom:24px;right:-1px;width:1px;
+    background:repeating-linear-gradient(180deg,var(--rule) 0 6px, transparent 6px 12px);
+  }
+  .letterhead{padding:0 4px 20px;border-bottom:1px solid var(--rule);margin-bottom:18px}
+  .letterhead .mark{
+    display:flex;align-items:center;gap:10px;
+  }
+  .seal{
+    width:36px;height:36px;border-radius:50%;border:1.5px solid var(--seal);
+    color:var(--seal);font-family:"Source Han Serif SC",serif;font-weight:700;
+    display:flex;align-items:center;justify-content:center;font-size:18px;
+    position:relative;flex-shrink:0;
+    background:
+      radial-gradient(circle at 30% 30%, rgba(124,58,46,.08), transparent 60%);
+  }
+  .seal::after{
+    content:"";position:absolute;inset:3px;border-radius:50%;border:1px solid rgba(124,58,46,.4);
+  }
+  .letterhead .name{
+    font-family:"Source Han Serif SC",serif;font-weight:600;font-size:18px;letter-spacing:.04em;
+  }
+  .letterhead .name small{
+    display:block;font-family:"Inter",sans-serif;font-weight:400;font-size:10.5px;color:var(--ink-2);
+    letter-spacing:.22em;text-transform:uppercase;margin-top:3px;
+  }
+  .from{
+    font-size:12px;color:var(--ink-2);font-family:"Inter",sans-serif;margin-top:14px;line-height:1.6;
+  }
+  .from b{color:var(--ink);font-weight:600}
+
+  .nav-section{
+    font-family:"Inter",sans-serif;font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--ink-2);margin:20px 4px 8px;
+  }
+  .nav a{
+    display:flex;align-items:center;gap:10px;padding:7px 8px;text-decoration:none;color:var(--ink);
+    font-size:14px;border-bottom:1px dotted transparent;
+  }
+  .nav a:hover{border-bottom-color:var(--rule)}
+  .nav a.active{
+    color:var(--seal);font-weight:600;
+    border-bottom:1px solid var(--seal);
+  }
+  .nav a .pen{color:var(--ink-2);width:10px;display:inline-block;text-align:center}
+  .nav a.active .pen{color:var(--seal)}
+
+  /* 主区 = 信笺正文 */
+  main{padding:32px 40px 48px;max-width:none;min-width:0}
+
+  .head{margin-bottom:14px;display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap}
+  .head .salute{
+    font-family:"Source Han Serif SC",serif;font-size:30px;font-weight:500;letter-spacing:.01em;line-height:1.3;margin:0;
+  }
+  .head .salute em{font-style:italic;color:var(--seal)}
+  .head .date{
+    font-family:"Inter",sans-serif;font-size:12px;color:var(--ink-2);
+    letter-spacing:.18em;text-transform:uppercase;text-align:right;line-height:1.7;
+  }
+  .head .date b{display:block;color:var(--ink);font-family:"Source Han Serif SC",serif;font-size:22px;font-weight:500;letter-spacing:.04em;text-transform:none}
+
+  .lead{
+    font-size:15px;line-height:1.85;margin:14px 0 28px;color:var(--ink);max-width:760px;
+  }
+  .lead b{font-weight:600;color:var(--ink)}
+  .lead .ink{color:var(--ink-blue);font-style:italic}
+
+  /* 段落分隔花饰 */
+  .ornament{
+    display:flex;align-items:center;gap:14px;color:var(--ink-2);margin:22px 0;
+  }
+  .ornament::before,.ornament::after{content:"";flex:1;border-top:1px solid var(--rule)}
+  .ornament .glyph{font-family:"Source Han Serif SC",serif;font-size:16px;letter-spacing:.4em}
+
+  /* KPI 卡片 = 邮票/印花感 */
+  .stamps{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:30px}
+  .stamp-card{
+    padding:18px 18px 14px;background:var(--paper);
+    border:1px solid var(--rule);
+    box-shadow:0 1px 0 #fff inset, 0 2px 6px rgba(42,38,32,.05);
+    position:relative;
+  }
+  .stamp-card::before,.stamp-card::after{
+    content:"";position:absolute;left:0;right:0;height:8px;
+    background:radial-gradient(circle at center,transparent 3.2px,var(--paper) 3.2px) 0 0/12px 8px;
+  }
+  .stamp-card::before{top:-4px}
+  .stamp-card::after{bottom:-4px;transform:scaleY(-1)}
+  .stamp-card .l{
+    font-family:"Inter",sans-serif;font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-2);
+    margin-bottom:6px;
+  }
+  .stamp-card .v{
+    font-family:"Source Han Serif SC",serif;font-size:30px;font-weight:500;letter-spacing:-.01em;line-height:1.05;
+  }
+  .stamp-card .v small{font-size:12.5px;color:var(--ink-2);font-weight:400;font-family:"Inter",sans-serif;margin-left:4px}
+  .stamp-card .d{
+    font-family:"Inter",sans-serif;font-size:12px;color:var(--ink-2);margin-top:10px;display:flex;justify-content:space-between;align-items:center;
+  }
+  .d .up{color:var(--ok)}
+  .d .down{color:var(--bad)}
+
+  /* 主体两栏 */
+  .grid{display:grid;grid-template-columns:1.55fr 1fr;gap:30px}
+
+  .doc{
+    background:var(--paper);border:1px solid var(--rule);padding:0;
+    box-shadow:0 1px 0 #fff inset, 0 2px 8px rgba(42,38,32,.04);
+  }
+  .doc-head{
+    padding:14px 20px;border-bottom:1px solid var(--rule);
+    display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;
+  }
+  .doc-title{
+    font-family:"Source Han Serif SC",serif;font-weight:600;font-size:16px;
+  }
+  .doc-title small{
+    display:block;font-family:"Inter",sans-serif;font-weight:400;font-size:12px;color:var(--ink-2);margin-top:2px;letter-spacing:.04em;
+  }
+
+  /* 调用日志：模仿手写流水账，每行像信笺一行 */
+  .ledger{padding:6px 0}
+  .row{
+    display:grid;grid-template-columns:120px 1fr 80px 70px;gap:18px;
+    padding:11px 20px;border-bottom:1px dotted var(--rule);align-items:baseline;
+    font-size:13.5px;
+  }
+  .row:last-child{border-bottom:0}
+  .row .t{font-family:"Inter",sans-serif;font-size:12px;color:var(--ink-2);letter-spacing:.04em}
+  .row .body b{font-weight:600;color:var(--ink-blue);font-style:italic}
+  .row .body .ep{font-family:"JetBrains Mono",monospace;font-size:12.5px;color:var(--ink)}
+  .row .st{font-family:"Inter",sans-serif;font-size:12px}
+  .row .st .ink-stamp{
+    display:inline-block;padding:2px 7px;border:1px solid;border-radius:2px;font-family:"Inter",sans-serif;font-size:11px;font-weight:600;letter-spacing:.06em;
+  }
+  .ink-stamp.ok{color:var(--ok);border-color:var(--ok);background:rgba(91,122,71,.06)}
+  .ink-stamp.warn{color:var(--warn);border-color:var(--warn);background:rgba(181,138,31,.07)}
+  .ink-stamp.bad{color:var(--bad);border-color:var(--bad);background:rgba(155,54,46,.07)}
+  .row .lat{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--ink-2);text-align:right}
+
+  /* 成员卡：通讯录 */
+  .roster .row2{
+    display:grid;grid-template-columns:40px 1fr auto;gap:14px;align-items:center;padding:12px 20px;border-bottom:1px dotted var(--rule);
+  }
+  .roster .row2:last-child{border-bottom:0}
+  .name-ini{
+    width:40px;height:40px;border:1px solid var(--rule);border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-family:"Source Han Serif SC",serif;
+    font-weight:600;background:var(--paper-2);color:var(--ink);
+  }
+  .roster b{font-weight:600;font-family:"Source Han Serif SC",serif}
+  .roster small{display:block;font-family:"Inter",sans-serif;font-size:11.5px;color:var(--ink-2);margin-top:2px}
+  .roster .seal-tag{
+    width:46px;height:46px;border-radius:50%;border:1.5px solid var(--seal);
+    display:flex;align-items:center;justify-content:center;color:var(--seal);
+    font-family:"Source Han Serif SC",serif;font-weight:700;font-size:13px;
+    position:relative;background:radial-gradient(circle at 30% 30%, rgba(124,58,46,.08), transparent 60%);
+  }
+  .roster .seal-tag::after{content:"";position:absolute;inset:3px;border-radius:50%;border:.5px solid rgba(124,58,46,.4)}
+  .seal-tag.owner{color:var(--seal);border-color:var(--seal)}
+  .seal-tag.admin{color:var(--ink-blue);border-color:var(--ink-blue)}
+  .seal-tag.dev{color:var(--ok);border-color:var(--ok)}
+  .seal-tag.read{color:var(--ink-2);border-color:var(--ink-2)}
+
+  /* 账单：手写账目 */
+  .bill{padding:18px 24px}
+  .bill .ln{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px dotted var(--rule);font-size:13.5px}
+  .bill .ln:last-child{border-bottom:0}
+  .bill .ln b{font-family:"Source Han Serif SC",serif;font-weight:500;font-size:15px}
+  .bill .total{margin-top:6px;padding-top:12px;border-top:1.5px double var(--ink);display:flex;justify-content:space-between;align-items:baseline}
+  .bill .total b{font-family:"Source Han Serif SC",serif;font-weight:600;font-size:26px;color:var(--seal)}
+  .quota{margin-top:16px;padding:12px 14px;border:1px solid var(--rule);background:var(--paper-2)}
+  .quota .top{display:flex;justify-content:space-between;font-family:"Inter",sans-serif;font-size:12px;color:var(--ink-2);margin-bottom:6px}
+  .quota .bar{height:10px;border:1px solid var(--rule);background:#fff;position:relative}
+  .quota .bar i{display:block;height:100%;width:72%;background:repeating-linear-gradient(135deg,var(--seal) 0 3px,var(--seal-2) 3px 6px)}
+
+  /* 按钮 */
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;padding:7px 14px;
+    border:1px solid var(--rule);background:var(--paper);color:var(--ink);font:inherit;font-family:"Inter",sans-serif;font-size:13px;cursor:pointer;
+  }
+  .btn.primary{background:var(--seal);color:#F6F1E4;border-color:var(--seal)}
+  .btn.primary::before{content:"✒"; margin-right:4px}
+
+  /* 落款 */
+  .sign-off{
+    margin-top:34px;padding:0 4px;display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap;
+  }
+  .sign-off .closing{font-family:"Source Han Serif SC",serif;font-size:16px;color:var(--ink-2)}
+  .sign-off .signer{font-family:"Source Han Serif SC",serif;font-size:18px;font-weight:600;letter-spacing:.04em}
+  .sign-off .signer small{display:block;font-family:"Inter",sans-serif;font-weight:400;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-2);margin-top:3px}
+
+  @media (max-width: 960px){
+    .app{grid-template-columns:1fr}
+    .stamps{grid-template-columns:1fr 1fr}
+    .grid{grid-template-columns:1fr}
+    main{padding:24px 18px 30px}
+    aside::after{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="letterhead">
+      <div class="mark">
+        <div class="seal">北</div>
+        <div class="name">Northwind<small>Cloud Console</small></div>
+      </div>
+      <div class="from">
+        发件人 <b>系统</b><br>
+        收件人 <b>林安琪</b> · 所有者<br>
+        组织 上海 Northwind 信息科技
+      </div>
+    </div>
+    <div class="nav-section">总览</div>
+    <nav class="nav">
+      <a class="active"><span class="pen">·</span>仪表盘</a>
+      <a><span class="pen">·</span>实时调用</a>
+      <a><span class="pen">·</span>区域分布</a>
+    </nav>
+    <div class="nav-section">资源</div>
+    <nav class="nav">
+      <a><span class="pen">·</span>API 密钥</a>
+      <a><span class="pen">·</span>Webhook</a>
+      <a><span class="pen">·</span>数据导出</a>
+    </nav>
+    <div class="nav-section">账户</div>
+    <nav class="nav">
+      <a><span class="pen">·</span>成员与角色</a>
+      <a><span class="pen">·</span>计费与发票</a>
+      <a><span class="pen">·</span>偏好设置</a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="head">
+      <h1 class="salute">致 <em>林安琪</em> 启：<br>本月的运行小记</h1>
+      <div class="date">
+        发自上海<br>
+        <b>六月十九日</b>
+        星期五 · 14:02
+      </div>
+    </div>
+
+    <p class="lead">
+      过去三十日，您的接入端共接收 <b>2,418,902</b> 次调用，较上月同期上扬 <span class="ink">百分之十二点四</span>；
+      错误率维持在 <b>0.42%</b>，尚在阈值以内。成员名册新增四员，本期账单将于 <b>11 日后</b> 结清。
+      下方是详尽账目，烦请过目。
+    </p>
+
+    <div class="ornament"><span class="glyph">❦ ❦ ❦</span></div>
+
+    <section class="stamps">
+      <div class="stamp-card">
+        <div class="l">本月调用</div>
+        <div class="v">2,418,902<small>req</small></div>
+        <div class="d"><span class="up">▲ 12.4% MoM</span><span>目标 3,000,000</span></div>
+      </div>
+      <div class="stamp-card">
+        <div class="l">活跃成员</div>
+        <div class="v">38<small>/ 50 席</small></div>
+        <div class="d"><span class="up">▲ 4 · 本周</span><span>空闲 12</span></div>
+      </div>
+      <div class="stamp-card">
+        <div class="l">错误率 · 24h</div>
+        <div class="v">0.42<small>%</small></div>
+        <div class="d"><span class="down">▲ 0.08%</span><span>阈值 0.5%</span></div>
+      </div>
+      <div class="stamp-card">
+        <div class="l">本月账单</div>
+        <div class="v">¥ 2,879<small>.50</small></div>
+        <div class="d"><span>自动续费</span><span>结算 T-11</span></div>
+      </div>
+    </section>
+
+    <div class="grid">
+      <div class="doc">
+        <div class="doc-head">
+          <div class="doc-title">流水实录<small>最近 100 条 · 生产环境 · 实时更新</small></div>
+          <div style="display:flex;gap:8px">
+            <button class="btn">仅看错误</button>
+            <button class="btn primary">封缄导出</button>
+          </div>
+        </div>
+        <div class="ledger">
+          <div class="row">
+            <span class="t">14:02:11</span>
+            <span class="body"><b>京东数科</b> 经 sdk-node@1.8 调用 <span class="ep">POST /v2/orders/sync</span></span>
+            <span class="st"><span class="ink-stamp ok">已受 · 200</span></span>
+            <span class="lat">92 ms</span>
+          </div>
+          <div class="row">
+            <span class="t">14:02:09</span>
+            <span class="body"><b>内部 web-dashboard</b> 取阅 <span class="ep">GET /v2/metrics/window</span></span>
+            <span class="st"><span class="ink-stamp ok">已受 · 200</span></span>
+            <span class="lat">140 ms</span>
+          </div>
+          <div class="row">
+            <span class="t">14:02:08</span>
+            <span class="body"><b>ACME</b> 经 sdk-python@2.3 批量 <span class="ep">POST /v2/events/batch</span></span>
+            <span class="st"><span class="ink-stamp warn">限流 · 429</span></span>
+            <span class="lat">318 ms</span>
+          </div>
+          <div class="row">
+            <span class="t">14:02:07</span>
+            <span class="body"><b>Office curl</b> 注销 <span class="ep">DELETE /v2/keys/ak_3f…</span></span>
+            <span class="st"><span class="ink-stamp ok">已受 · 204</span></span>
+            <span class="lat">58 ms</span>
+          </div>
+          <div class="row">
+            <span class="t">14:02:05</span>
+            <span class="body"><b>顺丰</b> 经 sdk-go@1.1 查询 <span class="ep">GET /v2/orders?status=open</span></span>
+            <span class="st"><span class="ink-stamp bad">骤断 · 500</span></span>
+            <span class="lat">1.42 s</span>
+          </div>
+          <div class="row">
+            <span class="t">14:02:03</span>
+            <span class="body"><b>京东数科</b> 验签 <span class="ep">POST /v2/webhooks/test</span></span>
+            <span class="st"><span class="ink-stamp ok">已受 · 200</span></span>
+            <span class="lat">110 ms</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:30px">
+        <div class="doc">
+          <div class="doc-head">
+            <div class="doc-title">通讯录<small>38 在册 · 12 席空闲</small></div>
+            <button class="btn">邀请</button>
+          </div>
+          <div class="roster">
+            <div class="row2">
+              <div class="name-ini">林</div>
+              <div><b>林安琪</b><small>liananqi@northwind.io · 二分钟前</small></div>
+              <div class="seal-tag owner">主</div>
+            </div>
+            <div class="row2">
+              <div class="name-ini">陈</div>
+              <div><b>陈维</b><small>chenwei@northwind.io · 一小时前</small></div>
+              <div class="seal-tag admin">管</div>
+            </div>
+            <div class="row2">
+              <div class="name-ini">蒋</div>
+              <div><b>蒋克</b><small>jiangke@northwind.io · 昨日</small></div>
+              <div class="seal-tag dev">研</div>
+            </div>
+            <div class="row2">
+              <div class="name-ini">袁</div>
+              <div><b>袁倩</b><small>yuanqian@vendor.com · 受邀待复</small></div>
+              <div class="seal-tag read">阅</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="doc">
+          <div class="doc-head">
+            <div class="doc-title">本期账目<small>六月初一 至 六月卅 · 自动续约</small></div>
+            <button class="btn primary">领回执</button>
+          </div>
+          <div class="bill">
+            <div class="ln"><span>Growth 套餐 月费</span><b>¥ 1,980.00</b></div>
+            <div class="ln"><span>超量调用 · 418,902 次</span><b>¥ 837.80</b></div>
+            <div class="ln"><span>Webhook 重试 · 12,341 次</span><b>¥ 61.70</b></div>
+            <div class="total"><span style="font-weight:500">合计应付</span><b>¥ 2,879.50</b></div>
+            <div class="quota">
+              <div class="top"><span>套餐用量</span><span>72% · 2,418,902 / 3,000,000</span></div>
+              <div class="bar"><i></i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sign-off">
+      <span class="closing">敬颂 时祺</span>
+      <div class="signer">Northwind 系统 谨启<small>SHEET 01 / 06.19 · 14:02</small></div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

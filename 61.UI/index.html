@@ -1,0 +1,757 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>40 套后台 UI 方案 · Northwind Cloud</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --bg:#0E1015;
+    --bg-2:#15181F;
+    --panel:#1B1F28;
+    --panel-2:#222732;
+    --ink:#ECEEF2;
+    --ink-2:#9BA1AC;
+    --ink-3:#5A626E;
+    --line:#262C36;
+    --line-2:#363D49;
+    --accent:#F2C66B;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;color:var(--ink);font-family:"Inter","PingFang SC","Microsoft YaHei",system-ui,sans-serif;background:var(--bg)}
+  body{min-height:100vh;font-size:14.5px;line-height:1.6}
+
+  header{
+    padding:48px 48px 32px;border-bottom:1px solid var(--line);
+    background:
+      radial-gradient(900px 500px at 100% 0%, rgba(242,198,107,.10), transparent 60%),
+      radial-gradient(700px 400px at 0% 0%, rgba(124,156,255,.12), transparent 60%),
+      var(--bg-2);
+  }
+  header .eyebrow{font-size:11.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-2);font-weight:600;margin-bottom:10px}
+  header h1{margin:0;font-size:38px;font-weight:800;letter-spacing:-.02em;line-height:1.15;max-width:760px}
+  header h1 em{font-style:normal;color:var(--accent)}
+  header p{margin:12px 0 0;font-size:15px;color:var(--ink-2);max-width:720px;line-height:1.8}
+  header p b{color:var(--ink);font-weight:600}
+
+  .meta{display:flex;gap:32px;margin-top:18px;flex-wrap:wrap}
+  .meta b{display:block;font-family:"JetBrains Mono",monospace;font-size:22px;font-weight:700;color:var(--ink);letter-spacing:-.02em;line-height:1}
+  .meta small{display:block;font-size:11.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-2);margin-top:4px;font-weight:600}
+
+  /* 工具栏 */
+  .toolbar{
+    padding:18px 48px;border-bottom:1px solid var(--line);background:var(--bg-2);
+    display:flex;gap:18px;align-items:center;flex-wrap:wrap;
+  }
+  .toolbar .label{font-size:11.5px;color:var(--ink-2);letter-spacing:.18em;text-transform:uppercase;font-weight:600}
+  .filters{display:flex;gap:6px;flex-wrap:wrap}
+  .filters .chip{
+    padding:6px 12px;border-radius:99px;border:1px solid var(--line-2);
+    background:transparent;color:var(--ink-2);font-size:12.5px;font-weight:600;cursor:pointer;
+  }
+  .filters .chip.active{background:var(--accent);color:#15181F;border-color:var(--accent)}
+
+  /* 网格 */
+  main{padding:32px 48px 64px}
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(380px,1fr));
+    gap:22px;
+  }
+  .card{
+    background:var(--panel);border:1px solid var(--line);border-radius:18px;overflow:hidden;
+    display:flex;flex-direction:column;text-decoration:none;color:inherit;transition:transform .15s, border-color .15s;
+    position:relative;
+  }
+  .card:hover{transform:translateY(-3px);border-color:var(--line-2)}
+
+  .swatch{
+    height:160px;position:relative;overflow:hidden;
+    display:flex;align-items:flex-end;padding:14px 16px;
+  }
+  .swatch .palette{display:flex;gap:0;width:100%;height:8px;border-radius:99px;overflow:hidden;box-shadow:0 1px 0 rgba(0,0,0,.2)}
+  .swatch .palette i{flex:1;display:block}
+  .swatch .num{
+    position:absolute;top:14px;left:16px;font-family:"JetBrains Mono",monospace;
+    font-size:11.5px;letter-spacing:.18em;color:rgba(255,255,255,.85);font-weight:700;
+  }
+  .swatch .tag{
+    position:absolute;top:14px;right:16px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    background:rgba(0,0,0,.5);color:#fff;padding:3px 9px;border-radius:99px;font-weight:600;backdrop-filter:blur(6px);
+  }
+
+  .info{padding:18px 18px 20px;display:flex;flex-direction:column;gap:8px}
+  .info h3{margin:0;font-size:18px;font-weight:800;letter-spacing:-.01em;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .info h3 small{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-2);font-weight:500;letter-spacing:.06em}
+  .info p{margin:0;font-size:13.5px;color:var(--ink-2);line-height:1.65}
+  .info .feat{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+  .feat span{
+    padding:3px 8px;border-radius:6px;background:var(--panel-2);font-size:11.5px;color:var(--ink-2);font-weight:500;
+  }
+  .info .open{
+    margin-top:8px;display:flex;justify-content:space-between;align-items:center;
+    font-size:13px;color:var(--accent);font-weight:700;
+  }
+  .info .open .docs{color:var(--ink-2);font-weight:500}
+  .info .open .docs:hover{color:var(--ink)}
+
+  /* 各方案的色板 swatch（手工配色，与方案一致） */
+  .sw-01{background:linear-gradient(135deg,#C7DCEF 0%,#DDE5F2 50%,#ECDDEB 100%)}
+  .sw-02{background:#E8E4DA}
+  .sw-03{background:#0F3251;background-image:linear-gradient(rgba(230,239,247,.14) 1px, transparent 1px),linear-gradient(90deg, rgba(230,239,247,.14) 1px, transparent 1px);background-size:24px 24px}
+  .sw-04{background:radial-gradient(800px 500px at 0% 0%, rgba(255,79,216,.4), transparent 60%),radial-gradient(700px 400px at 100% 100%, rgba(54,226,255,.3), transparent 55%),#0B0820}
+  .sw-05{background:#F6F1E4;background-image:repeating-linear-gradient(180deg, transparent 0 28px, rgba(42,38,32,.07) 28px 29px)}
+  .sw-06{background:linear-gradient(135deg,#FFB59E 0%,#B6E0C2 25%,#B4D6F2 50%,#FFE08A 75%,#D6BFE8 100%)}
+  .sw-07{background:#0A0F0A;background-image:repeating-linear-gradient(0deg, rgba(126,231,135,.08) 0 1px, transparent 1px 3px)}
+  .sw-08{background:linear-gradient(135deg,#FFB58F,#A78BFA 50%,#A8E6CF)}
+  .sw-09{background:#FFFFFF;border-bottom:24px solid #E63A2E;position:relative}
+  .sw-09::after{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:#0A0A0A}
+  .sw-10{background:#FAF7F2;background-image:radial-gradient(circle at 80% 30%, rgba(230,105,133,.25), transparent 40%)}
+  .sw-11{background:#0E1116;background-image:repeating-linear-gradient(0deg,rgba(232,165,71,.1) 0 1px, transparent 1px 8px),repeating-linear-gradient(90deg,rgba(232,165,71,.06) 0 1px, transparent 1px 8px)}
+  .sw-12{background:#EFE4CF}
+  .sw-12::before{content:"";position:absolute;left:0;right:0;bottom:0;height:60%;background:radial-gradient(120% 80px at 50% 100%, #F3C97C 0 6%, transparent 7%),radial-gradient(140% 100px at 30% 100%, #7B8D55 0 6%, transparent 7%),radial-gradient(120% 80px at 70% 100%, #C56A4A 0 5%, transparent 6%);opacity:.7}
+  .sw-13{background:#FCFBF7;background-image:repeating-linear-gradient(0deg, transparent 0 27px, rgba(31,26,20,.08) 27px 28px),repeating-linear-gradient(90deg, transparent 0 27px, rgba(31,26,20,.06) 27px 28px)}
+  .sw-14{background:#F4F0E6;position:relative}
+  .sw-14::before{content:"";position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:38px;background:#15203E}
+  .sw-15{background:linear-gradient(135deg,#F5F7FB 0%,#E7F1FF 100%)}
+  .sw-16{background:#1A1D22;position:relative}
+  .sw-16::before{content:"";position:absolute;left:14px;top:14px;width:46px;height:24px;background:#FF7A1A;clip-path:polygon(15% 0,100% 0,85% 100%,0 100%)}
+  .sw-17{background:#0F385C;background-image:radial-gradient(circle,rgba(255,255,255,.18) 1.2px, transparent 1.5px);background-size:8px 8px}
+  .sw-18{background:#FFFFFF;position:relative}
+  .sw-18::before{content:"";position:absolute;left:14px;right:14px;top:14px;height:48px;border-radius:6px;background:linear-gradient(135deg,#FFE9D6 0%,#FAD8B6 35%,#FFCC8A 70%,#FFB36B 100%)}
+  .sw-19{background:#161823;position:relative}
+  .sw-19::after{content:"ε = N⁻¹ Σ eᵢ";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'EB Garamond',serif;font-style:italic;color:#E8DFC3;font-size:28px;font-weight:500;letter-spacing:.04em}
+  .sw-20{background:radial-gradient(420px 280px at 20% 20%, rgba(124,91,255,.6), transparent 60%),radial-gradient(360px 240px at 80% 80%, rgba(61,194,255,.5), transparent 60%),radial-gradient(320px 220px at 75% 30%, rgba(255,111,174,.5), transparent 60%),radial-gradient(280px 200px at 30% 85%, rgba(255,208,111,.5), transparent 60%),linear-gradient(180deg,#F5F4FF 0%,#FFF4F8 100%)}
+
+  /* === 21-40 色板 === */
+  .sw-21{background:radial-gradient(420px 300px at 18% 22%, #C9D8E0 0%, transparent 55%),radial-gradient(360px 240px at 82% 28%, #E2D2DE 0%, transparent 60%),radial-gradient(380px 280px at 30% 88%, #D6E0C2 0%, transparent 55%),linear-gradient(180deg,#E8EAF0,#F0E6E2)}
+  .sw-21::before{content:"";position:absolute;inset:0;background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='280' height='160'><g opacity='.65'><ellipse cx='60' cy='40' rx='22' ry='5' fill='%237BA665' transform='rotate(18 60 40)'/><ellipse cx='200' cy='30' rx='18' ry='4' fill='%23D8A3C4' transform='rotate(-12 200 30)'/><ellipse cx='130' cy='90' rx='24' ry='5' fill='%235A8FA8' transform='rotate(28 130 90)'/><ellipse cx='240' cy='110' rx='20' ry='4' fill='%23E8C76B' transform='rotate(-8 240 110)'/><ellipse cx='40' cy='130' rx='22' ry='5' fill='%236E7BB8' transform='rotate(36 40 130)'/></g></svg>") center/cover}
+  .sw-22{background:#0E1F1A;background-image:linear-gradient(rgba(212,168,90,.06) 1px, transparent 1px),linear-gradient(90deg, rgba(212,168,90,.06) 1px, transparent 1px);background-size:32px 32px;position:relative}
+  .sw-22::after{content:"北";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'Source Han Serif SC',serif;font-weight:500;font-size:42px;background:linear-gradient(180deg,#F5D88F,#9E7A33);-webkit-background-clip:text;background-clip:text;color:transparent;letter-spacing:.04em}
+  .sw-23{background:#F1ECDB;position:relative;overflow:hidden}
+  .sw-23::before{content:"";position:absolute;top:-30px;right:-20px;width:140px;height:140px;background:#D63125;transform:rotate(18deg);box-shadow:6px 6px 0 #0A0A0A}
+  .sw-23::after{content:"";position:absolute;bottom:-12px;left:30px;width:60px;height:60px;background:#F2C82F}
+  .sw-24{background:#F3EFE3;position:relative;overflow:hidden}
+  .sw-24::before{content:"";position:absolute;left:8px;top:8px;width:30%;height:60%;background:linear-gradient(135deg,#3a6ea0,#2E5A8A 50%,#1d3e63);border:1px solid #1A1810}
+  .sw-24::after{content:"";position:absolute;right:8px;bottom:8px;width:30%;height:60%;background:linear-gradient(135deg,#5a9472,#3E7855 50%,#23553b);border:1px solid #1A1810}
+  .sw-25{background:#F4EFE4;position:relative;overflow:hidden}
+  .sw-25::before{content:"";position:absolute;left:0;right:0;bottom:0;height:55%;background:linear-gradient(180deg,transparent 0%,#5A5448 70%,#2E2A23 100%)}
+  .sw-25::after{content:"";position:absolute;top:14px;right:24px;width:18px;height:18px;border-radius:50%;background:#A8362C;opacity:.8}
+  .sw-26{background:#16161E;background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);background-size:20px 20px;position:relative;display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(3,1fr);gap:3px;padding:14px}
+  .sw-26::after{content:"";display:none}
+  .sw-26 .ttile{display:block}
+  /* 改用伪元素铺色块组 */
+  .sw-26{background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px),repeating-conic-gradient(from 0deg at 50% 50%, #2E5BCF 0deg 30deg, #C8294B 30deg 60deg, #178A55 60deg 90deg, #E8A222 90deg 120deg, #7E4B98 120deg 150deg, #E08AB3 150deg 180deg, #1C8A9A 180deg 210deg, #2E5BCF 210deg 240deg, #C8294B 240deg 270deg, #178A55 270deg 300deg, #E8A222 300deg 330deg, #7E4B98 330deg 360deg);background-size:20px 20px,20px 20px,100% 100%;background-position:0 0,0 0,center}
+  .sw-27{background:linear-gradient(180deg,#3A3D3F,#2A2D2F);position:relative}
+  .sw-27::before{content:"";position:absolute;inset:14px;border-radius:4px;background:radial-gradient(ellipse at 50% 30%,#1F3A3A 0%,#1B2A2A 60%,#0E1A1A 100%);border:2px solid #0A0B0C}
+  .sw-27::after{content:"2,418,902";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'VT323',monospace;font-weight:700;font-size:30px;color:#7FEBA0;text-shadow:0 0 8px rgba(127,235,160,.6);letter-spacing:.04em}
+  .sw-28{background:#F7F4EE;position:relative;overflow:hidden}
+  .sw-28::before{content:"";position:absolute;top:8px;left:8px;width:60%;height:60%;background:#FF7A5C;box-shadow:5px 5px 0 #1F2433}
+  .sw-28::after{content:"";position:absolute;top:8px;left:8px;width:60%;height:60%;background:linear-gradient(135deg,transparent 49%,#1F2433 49.5%,#1F2433 50.5%,transparent 51%)}
+  .sw-29{background:linear-gradient(180deg,#3D1A6B 0%,#7434C8 40%,#FF6FC2 60%,#FFA85C 85%);position:relative;overflow:hidden}
+  .sw-29::before{content:"";position:absolute;left:50%;top:20%;transform:translateX(-50%);width:96px;height:96px;border-radius:50%;background:radial-gradient(circle,#FFEB3D,#FF6FC2 60%);filter:blur(2px)}
+  .sw-29::after{content:"";position:absolute;left:0;right:0;bottom:0;height:50%;background:linear-gradient(180deg,transparent,rgba(255,102,196,.25)),repeating-linear-gradient(90deg,transparent 0 calc(100% / 12 - 1px),#FF66C4 calc(100% / 12 - 1px) calc(100% / 12));transform:perspective(180px) rotateX(50deg);transform-origin:50% 0%}
+  .sw-30{background:#8C5A3C;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2'/><feColorMatrix values='0 0 0 0 .4  0 0 0 0 .25  0 0 0 0 .14  0 0 0 .14 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");position:relative}
+  .sw-30::before{content:"已抵";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-12deg);width:64px;height:64px;border:2px solid #A8362C;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#A8362C;font-family:'Caveat',cursive;font-weight:700;font-size:18px;background:radial-gradient(circle at 30% 25%,rgba(168,54,44,.18),transparent 65%)}
+  .sw-31{background:linear-gradient(180deg,#1A1418 0%,#100C10 100%);position:relative;overflow:hidden}
+  .sw-31::before{content:"";position:absolute;inset:14px;border:1.5px solid #C6A560}
+  .sw-31::after{content:"NW · MMXXVI";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:.32em;background:linear-gradient(180deg,#E5C886,#8E7136);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sw-32{background:#0E0F11;background-image:repeating-linear-gradient(180deg,#16181C 0 22px,#1D2026 22px 24px,#16181C 24px 46px);position:relative}
+  .sw-32::after{content:"";position:absolute;left:14px;top:50%;transform:translateY(-50%);width:8px;height:8px;border-radius:50%;background:#34D38A;box-shadow:0 0 6px #34D38A, 16px 0 0 #4FA8E8,32px 0 0 #E8A841,48px 0 0 #E54B5B}
+  .sw-33{background:radial-gradient(700px 400px at 50% -50px,rgba(60,208,255,.16),transparent 60%),linear-gradient(180deg,#070A14,#050811);position:relative;overflow:hidden}
+  .sw-33::before{content:"";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:96px;height:96px;border-radius:50%;border:2px solid #3CD0FF;background:radial-gradient(circle at 30% 30%,rgba(60,208,255,.2),transparent 65%);box-shadow:0 0 30px rgba(60,208,255,.4)}
+  .sw-33::after{content:"72%";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'Space Mono',monospace;font-weight:700;font-size:24px;color:#80E8FF;text-shadow:0 0 8px rgba(60,208,255,.5)}
+  .sw-34{background:#E0BC85;background-image:linear-gradient(rgba(26,20,8,.55) 1.5px,transparent 1.5px),linear-gradient(90deg,rgba(26,20,8,.55) 1.5px,transparent 1.5px);background-size:24px 24px;background-position:12px 12px;position:relative}
+  .sw-34::before{content:"";position:absolute;top:38px;left:38px;width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#2E2818,#1A1408 70%);box-shadow:60px 0 0 radial-gradient(#fff,#F8F2E2 70%),0 60px 0 radial-gradient(#fff,#F8F2E2 70%)}
+  .sw-34::after{content:"";position:absolute;top:38px;left:122px;width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#FFFFFF,#F8F2E2 70%);box-shadow:0 60px 0 0 #1A1408,-60px 60px 0 0 #1A1408}
+  .sw-35{background:#F2E9D6;background-image:repeating-linear-gradient(0deg,rgba(184,168,120,.16) 0 2px,transparent 2px 6px),repeating-linear-gradient(90deg,rgba(184,168,120,.14) 0 2px,transparent 2px 6px);position:relative;overflow:hidden}
+  .sw-35::before{content:"";position:absolute;left:10%;top:10%;right:10%;bottom:10%;background:repeating-linear-gradient(45deg,#C25A3C 0 8px,#D9A53E 8px 16px,#7A8C4A 16px 24px,#6B95B8 24px 32px)}
+  .sw-36{background:linear-gradient(180deg,#000307,#010204);position:relative;overflow:hidden}
+  .sw-36::before{content:"";position:absolute;inset:50% 50% 50% 50%;width:88px;height:88px;border-radius:50%;border:1.5px solid #5EE9FF;transform:translate(-50%,-50%);box-shadow:0 0 0 1px rgba(94,233,255,.2) inset,inset 0 0 24px rgba(94,233,255,.18);left:50%;top:50%;background:repeating-linear-gradient(0deg,transparent 0 16px,rgba(94,233,255,.18) 16px 17px)}
+  .sw-36::after{content:"●";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#5EE9FF;font-size:14px;text-shadow:0 0 10px #5EE9FF}
+  .sw-37{background:#FAFAF7;position:relative;overflow:hidden}
+  .sw-37::before{content:"";position:absolute;left:18px;top:24px;right:18px;height:1px;background:#1A1A18}
+  .sw-37::after{content:"Vol. XII";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:500;font-size:40px;color:#1A1A18;letter-spacing:-.02em}
+  .sw-38{background:#0F1115;background-image:repeating-linear-gradient(0deg,#161A22 0 28px,#1B1F28 28px 30px);position:relative;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:18px}
+  .sw-38::after{content:"";display:none}
+  .sw-38{background:#0F1115}
+  .sw-38{background:#0F1115 url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><g><rect x='10' y='10' width='30' height='30' fill='none' stroke='%236BD5FF' stroke-width='1.5'/><rect x='45' y='10' width='30' height='30' fill='none' stroke='%2379E089' stroke-width='1.5'/><rect x='80' y='10' width='30' height='30' fill='none' stroke='%23FFC75C' stroke-width='1.5'/><rect x='115' y='10' width='30' height='30' fill='none' stroke='%23A56BFF' stroke-width='1.5'/><rect x='10' y='45' width='30' height='30' fill='none' stroke='%23FF8FB8' stroke-width='1.5'/><rect x='45' y='45' width='30' height='30' fill='none' stroke='%23FF7A6B' stroke-width='1.5'/><rect x='80' y='45' width='30' height='30' fill='none' stroke='%236BD5FF' stroke-width='1.5'/><rect x='115' y='45' width='30' height='30' fill='none' stroke='%2379E089' stroke-width='1.5'/><text x='25' y='32' text-anchor='middle' fill='%236BD5FF' font-family='Inter' font-weight='700' font-size='16'>Vol</text><text x='60' y='32' text-anchor='middle' fill='%2379E089' font-family='Inter' font-weight='700' font-size='16'>Cr</text><text x='95' y='32' text-anchor='middle' fill='%23FFC75C' font-family='Inter' font-weight='700' font-size='16'>Er</text><text x='130' y='32' text-anchor='middle' fill='%23A56BFF' font-family='Inter' font-weight='700' font-size='16'>Bl</text></g></svg>") no-repeat center;background-size:auto 70%}
+  .sw-39{background:#F0E2BE;background-image:radial-gradient(ellipse 200px 140px at 30% 40%,transparent 30%,rgba(182,138,58,.18) 31%,transparent 32%,rgba(182,138,58,.14) 50%,transparent 51%,rgba(182,138,58,.1) 70%,transparent 71%),radial-gradient(ellipse 160px 110px at 75% 75%,transparent 30%,rgba(182,138,58,.18) 31%,transparent 32%,rgba(182,138,58,.14) 50%,transparent 51%);position:relative}
+  .sw-39::before{content:"";position:absolute;top:18px;left:18px;width:46px;height:46px;border-radius:50%;border:1.5px solid #3D2818;background:radial-gradient(circle,#F0E2BE,#E5D49E)}
+  .sw-39::after{content:"⚑";position:absolute;top:50%;right:30px;transform:translateY(-50%);color:#A02B1F;font-size:32px}
+  .sw-40{background:radial-gradient(420px 300px at 14% 18%,#A8D4FF,transparent 60%),radial-gradient(380px 260px at 86% 14%,#FFC9DD,transparent 55%),radial-gradient(420px 300px at 50% 100%,#FFE5A8,transparent 60%),linear-gradient(180deg,#DDE9FF,#FFEBF1 50%,#FFF3D6);position:relative;overflow:hidden}
+  .sw-40::before{content:"";position:absolute;left:30%;bottom:20px;width:100px;height:24px;border-radius:50%;background:#86E6B5;box-shadow:0 -8px 0 -2px #86E6B5}
+  .sw-40::after{content:"";position:absolute;right:18px;top:18px;width:36px;height:36px;border-radius:50%;background:#FFE5A8;box-shadow:inset 0 0 0 6px #FFD08C}
+
+  footer{padding:30px 48px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-2);display:flex;justify-content:space-between;letter-spacing:.04em;flex-wrap:wrap;gap:14px}
+  footer b{color:var(--ink);font-weight:600}
+  footer code{font-family:"JetBrains Mono",monospace;background:var(--panel-2);padding:2px 6px;border-radius:4px;color:var(--accent)}
+
+  @media (max-width:720px){
+    header,main,.toolbar,footer{padding-left:20px;padding-right:20px}
+    header h1{font-size:28px}
+    .grid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="eyebrow">UI Pattern Library · 后台管理界面</div>
+  <h1>40 套面向客户开放的后台 UI 方案<br>· <em>Northwind Cloud Console</em></h1>
+  <p>同一组业务数据（SaaS 多租户控制台 · 仪表盘 / 调用日志 / 成员 / 账单）的 40 种视觉解释。
+    每一套在<b>配色温度</b>、<b>字体气质</b>、<b>布局密度</b>、<b>签名元素</b>上都明显不同，
+    并刻意避开 AI 默认套路（奶油+衬线+赤陶 / 近黑+酸绿 / 报纸排版）。点击任一方案打开预览页。</p>
+  <div class="meta">
+    <div><b>40</b><small>套方案</small></div>
+    <div><b>40</b><small>预览页面</small></div>
+    <div><b>40</b><small>份 README</small></div>
+    <div><b>1</b><small>统一业务素材</small></div>
+  </div>
+</header>
+
+<div class="toolbar">
+  <span class="label">气质</span>
+  <div class="filters">
+    <span class="chip active">全部</span>
+    <span class="chip">明亮</span>
+    <span class="chip">暗色</span>
+    <span class="chip">极简</span>
+    <span class="chip">繁密</span>
+    <span class="chip">特种</span>
+  </div>
+</div>
+
+<main>
+  <div class="grid">
+
+    <a class="card" href="01-polar-glass/index.html">
+      <div class="swatch sw-01">
+        <span class="num">01</span><span class="tag" style="color:#0B1726;background:rgba(255,255,255,.7)">明亮 / 玻璃</span>
+        <span class="palette"><i style="background:#A9C7E8"></i><i style="background:#D6E3F2"></i><i style="background:#F2E4F0"></i><i style="background:#3D7BFF"></i><i style="background:#7EC8FF"></i></span>
+      </div>
+      <div class="info">
+        <h3>极地玻璃<small>Polar-Glass</small></h3>
+        <p>冷蓝渐变 + 磨砂玻璃面板，整页漂浮在极地天光上，靠模糊与高光分层而不是阴影。</p>
+        <div class="feat"><span>Fraunces × Inter</span><span>玻璃 / blur 22</span><span>无衬线 + 衬线大数字</span></div>
+        <div class="open">打开预览 →<a class="docs" href="01-polar-glass/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="02-tundra/index.html">
+      <div class="swatch sw-02">
+        <span class="num" style="color:#2C3A2E">02</span><span class="tag" style="color:#2C3A2E;background:rgba(255,255,255,.75)">繁密 / 暖灰</span>
+        <span class="palette"><i style="background:#E8E4DA"></i><i style="background:#F2EFE7"></i><i style="background:#4A6B3A"></i><i style="background:#6B8F4E"></i><i style="background:#9B3F3F"></i></span>
+      </div>
+      <div class="info">
+        <h3>苔原<small>Tundra</small></h3>
+        <p>暖灰底纸 + 苔藓绿 + 莓红，像一份内部周报。H1 句子里直接嵌行内 sparkline。</p>
+        <div class="feat"><span>IBM Plex Serif/Sans/Mono</span><span>报刊指标横条</span><span>苔藓配色</span></div>
+        <div class="open">打开预览 →<a class="docs" href="02-tundra/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="03-blueprint/index.html">
+      <div class="swatch sw-03">
+        <span class="num">03</span><span class="tag">暗色 / 蓝图</span>
+        <span class="palette"><i style="background:#0F3251"></i><i style="background:#103A5C"></i><i style="background:#7BD5E0"></i><i style="background:#F3C56B"></i><i style="background:#F08AA1"></i></span>
+      </div>
+      <div class="info">
+        <h3>蓝图<small>Blueprint</small></h3>
+        <p>工程蓝底 + 等距网格 + 标注引线 + 标题栏。每张 KPI 四角带"铆钉"小圆点。</p>
+        <div class="feat"><span>Space Grotesk / JetBrains Mono</span><span>等距网格</span><span>圆角 = 0</span></div>
+        <div class="open">打开预览 →<a class="docs" href="03-blueprint/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="04-midnight-neon/index.html">
+      <div class="swatch sw-04">
+        <span class="num">04</span><span class="tag">暗色 / 霓虹</span>
+        <span class="palette"><i style="background:#0B0820"></i><i style="background:#FF4FD8"></i><i style="background:#7B5BFF"></i><i style="background:#36E2FF"></i><i style="background:#36FFC4"></i></span>
+      </div>
+      <div class="info">
+        <h3>子夜霓虹<small>Midnight-Neon</small></h3>
+        <p>子夜紫底 + 紫红/紫/青三色霓虹辉光，大数字用渐变文字。Sora + Space Grotesk。</p>
+        <div class="feat"><span>Sora / Space Grotesk</span><span>mask-composite 渐变描边</span><span>霓虹辉光</span></div>
+        <div class="open">打开预览 →<a class="docs" href="04-midnight-neon/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="05-letterpress/index.html">
+      <div class="swatch sw-05">
+        <span class="num" style="color:#2A2620">05</span><span class="tag" style="color:#2A2620;background:rgba(255,255,255,.75)">极简 / 公文</span>
+        <span class="palette"><i style="background:#F6F1E4"></i><i style="background:#EEE7D4"></i><i style="background:#7C3A2E"></i><i style="background:#2E466E"></i><i style="background:#5B7A47"></i></span>
+      </div>
+      <div class="info">
+        <h3>信笺<small>Letterpress</small></h3>
+        <p>米黄信纸 + 思源宋体 + 圆形印章 + 中式公函体。"敬启者…敬颂时祺"完整结构。</p>
+        <div class="feat"><span>思源宋体</span><span>纸纹噪点</span><span>印章 SVG</span></div>
+        <div class="open">打开预览 →<a class="docs" href="05-letterpress/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="06-tile-grid/index.html">
+      <div class="swatch sw-06">
+        <span class="num" style="color:#1A1A1A">06</span><span class="tag" style="color:#1A1A1A;background:rgba(255,255,255,.85)">明亮 / Bento</span>
+        <span class="palette"><i style="background:#FFB59E"></i><i style="background:#B6E0C2"></i><i style="background:#B4D6F2"></i><i style="background:#FFE08A"></i><i style="background:#D6BFE8"></i><i style="background:#F5C7D5"></i><i style="background:#1A1A1A"></i></span>
+      </div>
+      <div class="info">
+        <h3>立方瓷砖<small>Tile-Grid</small></h3>
+        <p>Bento 瓷砖墙，7 色暖瓷砖中嵌一块深黑标题块作为视觉锚点。开场是一句完整人话。</p>
+        <div class="feat"><span>DM Sans</span><span>6 列 Bento 网格</span><span>多色瓷砖</span></div>
+        <div class="open">打开预览 →<a class="docs" href="06-tile-grid/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="07-terminal-crt/index.html">
+      <div class="swatch sw-07">
+        <span class="num">07</span><span class="tag" style="background:rgba(126,231,135,.2);color:#7EE787">特种 / 终端</span>
+        <span class="palette"><i style="background:#0A0F0A"></i><i style="background:#7EE787"></i><i style="background:#B5FFC0"></i><i style="background:#FFB454"></i><i style="background:#FF6B7E"></i></span>
+      </div>
+      <div class="info">
+        <h3>终端 CRT<small>Terminal-CRT</small></h3>
+        <p>整页全等宽字 + CRT 扫描线 + 磷光文字阴影。日志即 tail -f，账单是 &lt;pre&gt; ASCII 进度条。</p>
+        <div class="feat"><span>JetBrains Mono only</span><span>scanline + glow</span><span>$ nwctl …</span></div>
+        <div class="open">打开预览 →<a class="docs" href="07-terminal-crt/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="08-claymorphism/index.html">
+      <div class="swatch sw-08">
+        <span class="num" style="color:#3D2752">08</span><span class="tag" style="color:#3D2752;background:rgba(255,255,255,.85)">明亮 / 黏土</span>
+        <span class="palette"><i style="background:#A78BFA"></i><i style="background:#FFB58F"></i><i style="background:#A8E6CF"></i><i style="background:#FFD66B"></i><i style="background:#FFA0B8"></i><i style="background:#A4D2F4"></i></span>
+      </div>
+      <div class="info">
+        <h3>黏土<small>Claymorphism</small></h3>
+        <p>淡薰衣草底 + 凸/凹双向阴影体系 + 圆角彩色图标球。所有按钮都从材质里"凸起"。</p>
+        <div class="feat"><span>Nunito 600+</span><span>neumorphism shadow</span><span>糖果色</span></div>
+        <div class="open">打开预览 →<a class="docs" href="08-claymorphism/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="09-swiss-grid/index.html">
+      <div class="swatch sw-09">
+        <span class="num" style="color:#0A0A0A">09</span><span class="tag" style="color:#0A0A0A;background:rgba(255,255,255,.85);border:1px solid #0A0A0A">极简 / 瑞士</span>
+        <span class="palette"><i style="background:#FFFFFF;border:1px solid #ddd"></i><i style="background:#0A0A0A"></i><i style="background:#5C5C5C"></i><i style="background:#D6D6D6"></i><i style="background:#E63A2E"></i></span>
+      </div>
+      <div class="info">
+        <h3>瑞士格<small>Swiss-Grid</small></h3>
+        <p>纯白 + 纯黑 + 单一瑞士红。128px 大数字，红色只点 4 处。tabular-nums 严格对齐。</p>
+        <div class="feat"><span>Inter only</span><span>12 栏严格网格</span><span>border-radius: 0</span></div>
+        <div class="open">打开预览 →<a class="docs" href="09-swiss-grid/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="10-sakura-sumi/index.html">
+      <div class="swatch sw-10">
+        <span class="num" style="color:#1A1A1A">10</span><span class="tag" style="color:#1A1A1A;background:rgba(255,255,255,.85)">极简 / 日式</span>
+        <span class="palette"><i style="background:#FAF7F2"></i><i style="background:#F2EDE3"></i><i style="background:#1A1A1A"></i><i style="background:#E66985"></i><i style="background:#F2A8B8"></i></span>
+      </div>
+      <div class="info">
+        <h3>樱与墨<small>Sakura-Sumi</small></h3>
+        <p>和纸米白 + 墨黑 + 唯一樱粉。右上竖排日期 "令和八年 / 六月十九日"。</p>
+        <div class="feat"><span>思源宋体</span><span>writing-mode 竖排</span><span>飘落樱花瓣</span></div>
+        <div class="open">打开预览 →<a class="docs" href="10-sakura-sumi/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="11-obsidian-data/index.html">
+      <div class="swatch sw-11">
+        <span class="num">11</span><span class="tag">繁密 / 交易终端</span>
+        <span class="palette"><i style="background:#0E1116"></i><i style="background:#1A1F28"></i><i style="background:#E8A547"></i><i style="background:#7CB87B"></i><i style="background:#D86A6A"></i></span>
+      </div>
+      <div class="info">
+        <h3>黑曜数据<small>Obsidian-Data</small></h3>
+        <p>Bloomberg 交易终端式 4 象限工作台 + 滚动 ticker + 7×24 调用热力图 + 表内微型条形图。</p>
+        <div class="feat"><span>IBM Plex Sans / JBM</span><span>tabular-nums</span><span>168 格热力图</span></div>
+        <div class="open">打开预览 →<a class="docs" href="11-obsidian-data/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="12-dune-pastel/index.html">
+      <div class="swatch sw-12">
+        <span class="num" style="color:#3A2E1F">12</span><span class="tag" style="color:#3A2E1F;background:rgba(255,255,255,.7)">明亮 / 插画</span>
+        <span class="palette"><i style="background:#EFE4CF"></i><i style="background:#F3C97C"></i><i style="background:#7B8D55"></i><i style="background:#C56A4A"></i><i style="background:#D67A8C"></i><i style="background:#9A7CA6"></i></span>
+      </div>
+      <div class="info">
+        <h3>沙丘<small>Dune-Pastel</small></h3>
+        <p>沙漠绘本：手绘沙丘 + 骆驼 SVG 插画 + 鹅卵石不规则圆角图标。Fraunces 标题 + Quicksand 正文。</p>
+        <div class="feat"><span>Fraunces / Quicksand</span><span>手绘 SVG 插画</span><span>不规则圆角</span></div>
+        <div class="open">打开预览 →<a class="docs" href="12-dune-pastel/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="13-sketch-wireframe/index.html">
+      <div class="swatch sw-13">
+        <span class="num" style="color:#1F1A14">13</span><span class="tag" style="color:#1F1A14;background:#FFE66B">特种 / 草图</span>
+        <span class="palette"><i style="background:#FCFBF7"></i><i style="background:#FFE66B"></i><i style="background:#E04A3C"></i><i style="background:#3060A8"></i><i style="background:#3A8650"></i></span>
+      </div>
+      <div class="info">
+        <h3>草图<small>Sketch-Wireframe</small></h3>
+        <p>方格本背景 + 手写字 + 抖动圆角 + 旋转便签 + 红笔手写注释。"低保真感的高保真"。</p>
+        <div class="feat"><span>Caveat / Kalam</span><span>不规则圆角 + 倾斜</span><span>便签便利贴</span></div>
+        <div class="open">打开预览 →<a class="docs" href="13-sketch-wireframe/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="14-tickertape/index.html">
+      <div class="swatch sw-14">
+        <span class="num" style="color:#15203E">14</span><span class="tag" style="color:#15203E;background:rgba(255,255,255,.85)">繁密 / 日报</span>
+        <span class="palette"><i style="background:#F4F0E6"></i><i style="background:#15203E"></i><i style="background:#A88728"></i><i style="background:#1E7A4F"></i><i style="background:#B83838"></i></span>
+      </div>
+      <div class="info">
+        <h3>数据华尔街<small>Tickertape</small></h3>
+        <p>金融日报版式：报头 + 滚动股票条 + 头版头条 + 双栏正文 (column-count:2) + 指数行。</p>
+        <div class="feat"><span>Playfair / Source Serif / Inter / JBM</span><span>真在滚动的 ticker</span><span>双栏正文</span></div>
+        <div class="open">打开预览 →<a class="docs" href="14-tickertape/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="15-toss-style/index.html">
+      <div class="swatch sw-15">
+        <span class="num" style="color:#191F28">15</span><span class="tag" style="color:#191F28;background:rgba(255,255,255,.85)">明亮 / 韩系</span>
+        <span class="palette"><i style="background:#F5F7FB"></i><i style="background:#3182F6"></i><i style="background:#1AB36A"></i><i style="background:#FF9800"></i><i style="background:#F04452"></i></span>
+      </div>
+      <div class="info">
+        <h3>韩系明亮<small>Toss-style</small></h3>
+        <p>白底 + Toss 蓝 + 大字 + 友好 SVG（笑脸数据点 + 上升曲线 + 小旗）。对话式 H1。</p>
+        <div class="feat"><span>Pretendard 800</span><span>韩中双语分区</span><span>建议式文案</span></div>
+        <div class="open">打开预览 →<a class="docs" href="15-toss-style/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="16-material-dark-pro/index.html">
+      <div class="swatch sw-16">
+        <span class="num">16</span><span class="tag">暗色 / 工业</span>
+        <span class="palette"><i style="background:#1A1D22"></i><i style="background:#2A2F36"></i><i style="background:#FF7A1A"></i><i style="background:#7390B0"></i><i style="background:#6CC388"></i></span>
+      </div>
+      <div class="info">
+        <h3>暗黑材料<small>Material-Dark-Pro</small></h3>
+        <p>石板灰底 + 工程橙焦点 + 梯形 clip-path 头像/铭牌 + 厚 2px 分隔线 + 警示斜纹进度条。</p>
+        <div class="feat"><span>Roboto / Roboto Mono</span><span>clip-path 梯形</span><span>UPPERCASE 按钮</span></div>
+        <div class="open">打开预览 →<a class="docs" href="16-material-dark-pro/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="17-retro-compute/index.html">
+      <div class="swatch sw-17">
+        <span class="num">17</span><span class="tag" style="background:#000080">特种 / PC-98</span>
+        <span class="palette"><i style="background:#0F385C"></i><i style="background:#E6E4D4"></i><i style="background:#000080"></i><i style="background:#C00000"></i><i style="background:#008000"></i></span>
+      </div>
+      <div class="info">
+        <h3>复古运算<small>Retro-Compute</small></h3>
+        <p>PC-98 / Win 3.1：双线像素窗口 + 米黄窗体 + 蓝色标题栏 + 任务栏 + Start 按钮 + 时钟。</p>
+        <div class="feat"><span>VT323 / MS PGothic</span><span>box-shadow 双线像素</span><span>窗中窗 KPI</span></div>
+        <div class="open">打开预览 →<a class="docs" href="17-retro-compute/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="18-notion-like/index.html">
+      <div class="swatch sw-18">
+        <span class="num" style="color:#37352F">18</span><span class="tag" style="color:#37352F;background:rgba(255,255,255,.8)">极简 / 文档</span>
+        <span class="palette"><i style="background:#FFFFFF;border:1px solid #ddd"></i><i style="background:#F7F6F3"></i><i style="background:#37352F"></i><i style="background:#2383E2"></i><i style="background:#DDEDEA"></i><i style="background:#F5E0E9"></i></span>
+      </div>
+      <div class="info">
+        <h3>文档式<small>Notion-like</small></h3>
+        <p>把控制台做成 Notion 文档：封面 + 64px emoji + 属性面板 + 数据库视图 + 行内 /命令。</p>
+        <div class="feat"><span>System UI</span><span>属性表 + 数据库视图</span><span>/upgrade 斜杠命令</span></div>
+        <div class="open">打开预览 →<a class="docs" href="18-notion-like/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="19-lab-mono/index.html">
+      <div class="swatch sw-19">
+        <span class="num">19</span><span class="tag">暗色 / 学术</span>
+        <span class="palette"><i style="background:#161823"></i><i style="background:#21243A"></i><i style="background:#EDE8D8"></i><i style="background:#7A9CFF"></i><i style="background:#C6A560"></i></span>
+      </div>
+      <div class="info">
+        <h3>暗色实验室<small>Lab-Mono</small></h3>
+        <p>论文报告气质：italic 衬线 + 公式化 KPI (N / m / ε / B) + Abstract 摘要 + § 章节符 + 真分式 ρ = N/N_max。</p>
+        <div class="feat"><span>EB Garamond italic</span><span>公式化 KPI</span><span>Cite as: 脚注</span></div>
+        <div class="open">打开预览 →<a class="docs" href="19-lab-mono/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="20-aurora-gradient/index.html">
+      <div class="swatch sw-20">
+        <span class="num" style="color:#0E1130">20</span><span class="tag" style="color:#0E1130;background:rgba(255,255,255,.7)">明亮 / 流光</span>
+        <span class="palette"><i style="background:#7C5BFF"></i><i style="background:#3DC2FF"></i><i style="background:#FF6FAE"></i><i style="background:#FFD06F"></i><i style="background:#28C285"></i></span>
+      </div>
+      <div class="info">
+        <h3>渐变流光<small>Aurora-Gradient</small></h3>
+        <p>4 团彩色 blob 在背景里持续慢动 + 玻璃面板 + 渐变文字大数字 + conic 流光环。</p>
+        <div class="feat"><span>Manrope</span><span>真动画背景</span><span>backdrop-filter 28px</span></div>
+        <div class="open">打开预览 →<a class="docs" href="20-aurora-gradient/README.md">README</a></div>
+      </div>
+    </a>
+
+    <!-- ===== 21-40 ===== -->
+
+    <a class="card" href="21-monet-garden/index.html">
+      <div class="swatch sw-21">
+        <span class="num" style="color:#2A3142">21</span><span class="tag" style="color:#2A3142;background:rgba(255,255,255,.7)">明亮 / 油画</span>
+        <span class="palette"><i style="background:#D8A3C4"></i><i style="background:#5A8FA8"></i><i style="background:#7BA665"></i><i style="background:#E8C76B"></i><i style="background:#6E7BB8"></i></span>
+      </div>
+      <div class="info">
+        <h3>莫奈花园<small>Monet-Garden</small></h3>
+        <p>4 团印象派油画色斑 + 厚涂玻璃 + 抒情衬线大字。睡莲粉/池蓝/柳绿/日金/鸢尾紫。</p>
+        <div class="feat"><span>DM Serif Display</span><span>SVG 笔触斑点</span><span>backdrop-filter</span></div>
+        <div class="open">打开预览 →<a class="docs" href="21-monet-garden/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="22-liujin/index.html">
+      <div class="swatch sw-22">
+        <span class="num">22</span><span class="tag">暗色 / 鎏金</span>
+        <span class="palette"><i style="background:#0E1F1A"></i><i style="background:#D4A85A"></i><i style="background:#F5D88F"></i><i style="background:#C73A2E"></i><i style="background:#7CA67D"></i></span>
+      </div>
+      <div class="info">
+        <h3>鎏金<small>Liujin / Goldleaf</small></h3>
+        <p>深松石绿 + 鎏金细线 + 朱砂印章。渐变金大字 + 四角金色 L 形切角 + 汉字数词。</p>
+        <div class="feat"><span>Cormorant + 思源宋</span><span>四角金边</span><span>渐变金字</span></div>
+        <div class="open">打开预览 →<a class="docs" href="22-liujin/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="23-constructivist/index.html">
+      <div class="swatch sw-23">
+        <span class="num" style="color:#181818">23</span><span class="tag" style="color:#181818;background:#F2C82F">特种 / 构成</span>
+        <span class="palette"><i style="background:#D63125"></i><i style="background:#0A0A0A"></i><i style="background:#F2C82F"></i><i style="background:#F1ECDB"></i></span>
+      </div>
+      <div class="info">
+        <h3>苏维埃构成<small>Constructivist</small></h3>
+        <p>1920s 宣传海报：红黑黄三色 + 倾斜几何块 + 极重大字 + 厚实分隔。</p>
+        <div class="feat"><span>Archivo Black + Bebas Neue</span><span>5px 实线</span><span>倾斜方块</span></div>
+        <div class="open">打开预览 →<a class="docs" href="23-constructivist/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="24-mineral/index.html">
+      <div class="swatch sw-24">
+        <span class="num" style="color:#1A1810">24</span><span class="tag" style="color:#1A1810;background:rgba(255,255,255,.75)">极简 / 标本</span>
+        <span class="palette"><i style="background:#F3EFE3"></i><i style="background:#2E5A8A"></i><i style="background:#3E7855"></i><i style="background:#C5A23A"></i><i style="background:#A8392C"></i><i style="background:#6B4C8C"></i></span>
+      </div>
+      <div class="info">
+        <h3>矿物标本<small>Mineral</small></h3>
+        <p>博物馆抽屉柜 + 矿物标本卡 + 拉丁文学名。每个角色对应一种矿物（Azurite/Malachite/Pyrite/Amethyst）。</p>
+        <div class="feat"><span>Cormorant + 思源宋</span><span>六边形头像</span><span>罗马数字</span></div>
+        <div class="open">打开预览 →<a class="docs" href="24-mineral/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="25-tang-landscape/index.html">
+      <div class="swatch sw-25">
+        <span class="num" style="color:#1F1B17">25</span><span class="tag" style="color:#1F1B17;background:rgba(255,255,255,.75)">极简 / 水墨</span>
+        <span class="palette"><i style="background:#F4EFE4"></i><i style="background:#1F1B17"></i><i style="background:#5A5448"></i><i style="background:#A8362C"></i><i style="background:#5D7D5A"></i></span>
+      </div>
+      <div class="info">
+        <h3>唐风山水<small>Tang-Landscape</small></h3>
+        <p>远山泼墨 SVG + 朱砂落日 + 鸟点 + 竖排题字 + 朱印。留白主导。</p>
+        <div class="feat"><span>思源宋体</span><span>4 层泼墨 path</span><span>writing-mode 竖排</span></div>
+        <div class="open">打开预览 →<a class="docs" href="25-tang-landscape/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="26-stained-glass/index.html">
+      <div class="swatch sw-26">
+        <span class="num">26</span><span class="tag">特种 / 彩窗</span>
+        <span class="palette"><i style="background:#2E5BCF"></i><i style="background:#C8294B"></i><i style="background:#178A55"></i><i style="background:#E8A222"></i><i style="background:#7E4B98"></i><i style="background:#1C8A9A"></i></span>
+      </div>
+      <div class="info">
+        <h3>像素彩窗<small>Stained-Glass</small></h3>
+        <p>教堂彩绘玻璃 × 8-bit：黑铅条 + 12×6 高饱和马赛克 + Press Start 2P 像素字。</p>
+        <div class="feat"><span>Press Start 2P + VT323</span><span>12 × 6 Bento</span><span>3px 黑缝</span></div>
+        <div class="open">打开预览 →<a class="docs" href="26-stained-glass/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="27-lab-instrument/index.html">
+      <div class="swatch sw-27">
+        <span class="num" style="color:#D5D8DA">27</span><span class="tag">特种 / 仪表</span>
+        <span class="palette"><i style="background:#3A3D3F"></i><i style="background:#1B2A2A"></i><i style="background:#7FEBA0"></i><i style="background:#F2A841"></i><i style="background:#E53E3E"></i></span>
+      </div>
+      <div class="info">
+        <h3>实验室仪表<small>Lab-Instrument</small></h3>
+        <p>老 HP 测试仪 / 示波器：拉丝铝外壳 + 内嵌 CRT 屏 + 螺钉 + 旋钮 + LED 指示。</p>
+        <div class="feat"><span>Orbitron + VT323</span><span>嵌入式 CRT</span><span>4 颗旋钮</span></div>
+        <div class="open">打开预览 →<a class="docs" href="27-lab-instrument/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="28-origami/index.html">
+      <div class="swatch sw-28">
+        <span class="num" style="color:#1F2433">28</span><span class="tag" style="color:#1F2433;background:rgba(255,255,255,.8)">明亮 / 折纸</span>
+        <span class="palette"><i style="background:#FF7A5C"></i><i style="background:#3A5DA8"></i><i style="background:#F2C94C"></i><i style="background:#2F8C6F"></i><i style="background:#9D6BC6"></i></span>
+      </div>
+      <div class="info">
+        <h3>折纸<small>Origami</small></h3>
+        <p>真三角折角（border-style triangle）+ 5 色彩纸 + 硬投影。每张卡片像折过角的彩纸。</p>
+        <div class="feat"><span>Plus Jakarta Sans</span><span>border 折角</span><span>0 blur 硬投影</span></div>
+        <div class="open">打开预览 →<a class="docs" href="28-origami/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="29-vaporwave/index.html">
+      <div class="swatch sw-29">
+        <span class="num">29</span><span class="tag" style="background:#FFEB3D;color:#3D1A6B">特种 / 蒸汽波</span>
+        <span class="palette"><i style="background:#3D1A6B"></i><i style="background:#FF3DAA"></i><i style="background:#1EE0FF"></i><i style="background:#FFEB3D"></i><i style="background:#FF7068"></i></span>
+      </div>
+      <div class="info">
+        <h3>蒸汽波<small>Vaporwave</small></h3>
+        <p>80s 落日 + 横条切割太阳 + 透视网格地板 + 霓虹 4 色渐变文字 H1。</p>
+        <div class="feat"><span>Courier New 900</span><span>perspective 网格</span><span>真景片</span></div>
+        <div class="open">打开预览 →<a class="docs" href="29-vaporwave/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="30-travel-journal/index.html">
+      <div class="swatch sw-30">
+        <span class="num">30</span><span class="tag">特种 / 手账</span>
+        <span class="palette"><i style="background:#8C5A3C"></i><i style="background:#F4EAD0"></i><i style="background:#A8362C"></i><i style="background:#4B6B8E"></i><i style="background:#B68A3E"></i></span>
+      </div>
+      <div class="info">
+        <h3>旅行手账<small>Travel-Journal</small></h3>
+        <p>Moleskine 牛皮封面 + 邮票齿孔 KPI + 倾斜邮戳 + PEK ✈ SHA 航线箭头 + 手写"顺/缓/颠"。</p>
+        <div class="feat"><span>Caveat + Quicksand</span><span>邮票齿孔 SVG</span><span>旋转邮戳</span></div>
+        <div class="open">打开预览 →<a class="docs" href="30-travel-journal/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="31-art-deco/index.html">
+      <div class="swatch sw-31">
+        <span class="num">31</span><span class="tag">暗色 / Deco</span>
+        <span class="palette"><i style="background:#1A1418"></i><i style="background:#C6A560"></i><i style="background:#7A2435"></i><i style="background:#EFE4CB"></i></span>
+      </div>
+      <div class="info">
+        <h3>装饰艺术<small>Art-Deco</small></h3>
+        <p>1920s 大都会：深酒红 + 双线金边对称 + ◆●◆ 几何花饰 + Cinzel 大写 + 法语标签。</p>
+        <div class="feat"><span>Cinzel + Cormorant</span><span>对称花饰</span><span>罗马数字</span></div>
+        <div class="open">打开预览 →<a class="docs" href="31-art-deco/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="32-rack-1u/index.html">
+      <div class="swatch sw-32">
+        <span class="num">32</span><span class="tag">暗色 / 机房</span>
+        <span class="palette"><i style="background:#0E0F11"></i><i style="background:#34D38A"></i><i style="background:#4FA8E8"></i><i style="background:#E8A841"></i><i style="background:#E54B5B"></i></span>
+      </div>
+      <div class="info">
+        <h3>服务器机柜<small>Rack-1U</small></h3>
+        <p>19" 标准机柜：U41/U36/U24 U 位编号 + 1U 状态条 + 2U KPI 模块 + 电源 LED + PDU/TEMP/FAN。</p>
+        <div class="feat"><span>Roboto Mono</span><span>U 位编号</span><span>4 颗电源 LED</span></div>
+        <div class="open">打开预览 →<a class="docs" href="32-rack-1u/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="33-capsule/index.html">
+      <div class="swatch sw-33">
+        <span class="num">33</span><span class="tag">暗色 / 太空</span>
+        <span class="palette"><i style="background:#070A14"></i><i style="background:#3CD0FF"></i><i style="background:#80E8FF"></i><i style="background:#5CE090"></i><i style="background:#FFA945"></i></span>
+      </div>
+      <div class="info">
+        <h3>太空舱<small>Capsule</small></h3>
+        <p>NASA / SpaceX HUD：极大胶囊圆角 + 280px 圆形 HUD 主表 + 冷青 + Space Mono。</p>
+        <div class="feat"><span>Space Mono</span><span>border-radius 99px</span><span>圆形雷达</span></div>
+        <div class="open">打开预览 →<a class="docs" href="33-capsule/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="34-goban/index.html">
+      <div class="swatch sw-34">
+        <span class="num" style="color:#1A1408">34</span><span class="tag" style="color:#1A1408;background:rgba(244,228,193,.85)">极简 / 棋谱</span>
+        <span class="palette"><i style="background:#E0BC85"></i><i style="background:#F4E4C1"></i><i style="background:#1A1408"></i><i style="background:#F8F2E2"></i><i style="background:#A8322E"></i></span>
+      </div>
+      <div class="info">
+        <h3>棋谱<small>Goban</small></h3>
+        <p>木质棋盘 56px 网格 + 黑白棋子 + 棋谱"第 19 手" + ○!× 状态符号 + 先手/协着/研着/观谱。</p>
+        <div class="feat"><span>思源宋 + Cormorant</span><span>棋盘网格</span><span>磨砂棋子</span></div>
+        <div class="open">打开预览 →<a class="docs" href="34-goban/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="35-woven/index.html">
+      <div class="swatch sw-35">
+        <span class="num" style="color:#2D2418">35</span><span class="tag" style="color:#2D2418;background:rgba(255,255,255,.7)">明亮 / 编织</span>
+        <span class="palette"><i style="background:#C25A3C"></i><i style="background:#7A8C4A"></i><i style="background:#A8546A"></i><i style="background:#6B95B8"></i><i style="background:#D9A53E"></i></span>
+      </div>
+      <div class="info">
+        <h3>编织<small>Woven</small></h3>
+        <p>北欧布艺：双层经纬细线 + SVG 4×4 织物挂毯 + 织线条纹进度条 + 圆形编织头像。</p>
+        <div class="feat"><span>Spectral + Outfit</span><span>双层经纬纹</span><span>4 色 pattern 挂毯</span></div>
+        <div class="open">打开预览 →<a class="docs" href="35-woven/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="36-holographic/index.html">
+      <div class="swatch sw-36">
+        <span class="num">36</span><span class="tag">暗色 / HUD</span>
+        <span class="palette"><i style="background:#000307"></i><i style="background:#5EE9FF"></i><i style="background:#C8F5FF"></i><i style="background:#FFB347"></i><i style="background:#FF4D6A"></i></span>
+      </div>
+      <div class="info">
+        <h3>全息 HUD<small>Holographic</small></h3>
+        <p>战机 HUD：全黑 + 单色青 + 多边形八角剪裁 + 4 角 L 形角钉 + 真雷达盘 SVG。</p>
+        <div class="feat"><span>Rajdhani + JBM</span><span>clip-path 八角</span><span>雷达 + 扫描指针</span></div>
+        <div class="open">打开预览 →<a class="docs" href="36-holographic/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="37-editorial/index.html">
+      <div class="swatch sw-37">
+        <span class="num" style="color:#1A1A18">37</span><span class="tag" style="color:#1A1A18;background:rgba(255,255,255,.85);border:1px solid #1A1A18">极简 / 杂志</span>
+        <span class="palette"><i style="background:#FAFAF7;border:1px solid #ddd"></i><i style="background:#1A1A18"></i><i style="background:#7E5532"></i><i style="background:#D8D4C8"></i></span>
+      </div>
+      <div class="info">
+        <h3>杂志<small>Editorial</small></h3>
+        <p>Kinfolk 大留白：88px Cormorant 居中 H1 + 抽象编辑摄影 SVG + Vol. XII 期号 + P.01-A 子页号。</p>
+        <div class="feat"><span>Cormorant + Inter</span><span>大留白</span><span>双线 kicker</span></div>
+        <div class="open">打开预览 →<a class="docs" href="37-editorial/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="38-periodic/index.html">
+      <div class="swatch sw-38">
+        <span class="num">38</span><span class="tag">暗色 / 元素</span>
+        <span class="palette"><i style="background:#6BD5FF"></i><i style="background:#79E089"></i><i style="background:#FFC75C"></i><i style="background:#A56BFF"></i><i style="background:#FF8FB8"></i><i style="background:#FF7A6B"></i></span>
+      </div>
+      <div class="info">
+        <h3>化学元素<small>Periodic</small></h3>
+        <p>元素周期表：每个 KPI 是一颗元素方块 Vol / Cr / Er / Bl + 6 色族系 + 化学符号命名 + τ 半衰期。</p>
+        <div class="feat"><span>IBM Plex Sans</span><span>元素方块</span><span>6 色族系图例</span></div>
+        <div class="open">打开预览 →<a class="docs" href="38-periodic/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="39-cartographic/index.html">
+      <div class="swatch sw-39">
+        <span class="num" style="color:#3D2818">39</span><span class="tag" style="color:#3D2818;background:rgba(255,255,255,.7)">极简 / 古地图</span>
+        <span class="palette"><i style="background:#F0E2BE"></i><i style="background:#3D2818"></i><i style="background:#A02B1F"></i><i style="background:#B68A3A"></i><i style="background:#B3CFD8"></i></span>
+      </div>
+      <div class="info">
+        <h3>古地图<small>Cartographic</small></h3>
+        <p>羊皮纸航海图：等高线 + 96px 罗盘 + 红色 ⚑ 旗 + 图钉卡片 + Mare / Capt. / Bosun 航海术语。</p>
+        <div class="feat"><span>Cinzel + Cormorant</span><span>等高线背景</span><span>真罗盘</span></div>
+        <div class="open">打开预览 →<a class="docs" href="39-cartographic/README.md">README</a></div>
+      </div>
+    </a>
+
+    <a class="card" href="40-floating-island/index.html">
+      <div class="swatch sw-40">
+        <span class="num" style="color:#1E2540">40</span><span class="tag" style="color:#1E2540;background:rgba(255,255,255,.75)">明亮 / 浮岛</span>
+        <span class="palette"><i style="background:#7CC1FF"></i><i style="background:#FF8FB8"></i><i style="background:#FFD08C"></i><i style="background:#86E6B5"></i></span>
+      </div>
+      <div class="info">
+        <h3>浮岛<small>Floating-Island</small></h3>
+        <p>纪念碑谷 / Sky 光遇：3 段天空渐变 + 模糊光斑 + 手绘浮岛 SVG（房子+树+鸟） + 椭圆底投影。</p>
+        <div class="feat"><span>Nunito</span><span>浮岛底投影</span><span>4 色岛屿</span></div>
+        <div class="open">打开预览 →<a class="docs" href="40-floating-island/README.md">README</a></div>
+      </div>
+    </a>
+
+  </div>
+</main>
+
+<footer>
+  <span>Northwind Cloud · 40 套 UI 方案 · 2026.06.19</span>
+  <span>每套包含 <code>index.html</code>（可直接浏览器打开） + <code>README.md</code>（设计说明）</span>
+</footer>
+</body>
+</html>

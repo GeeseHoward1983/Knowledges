@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>38 · 化学元素 — Northwind Cloud 控制台</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --bg:#0F1115;
+    --bg-2:#161A22;
+    --paper:#1B1F28;
+    --ink:#E5E9EF;
+    --ink-2:#8C93A0;
+    --ink-3:#4E5562;
+    --line:#262B36;
+    --line-2:#3A404C;
+    --hydrogen:#FF7A6B;       /* 非金属/红 */
+    --noble:#A56BFF;          /* 惰性气/紫 */
+    --metalloid:#FFC75C;      /* 类金属/琥珀 */
+    --alkali:#6BD5FF;         /* 碱金属/青 */
+    --transition:#79E089;     /* 过渡金属/绿 */
+    --halogen:#FF8FB8;        /* 卤素/粉 */
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;color:var(--ink);font-family:"IBM Plex Sans","Roboto Mono","Inter","PingFang SC",sans-serif;background:var(--bg)}
+  body{min-height:100vh;font-size:13px;line-height:1.5}
+
+  .app{display:grid;grid-template-columns:220px 1fr;min-height:100vh}
+
+  /* 边栏：周期表化族表 */
+  aside{padding:18px 14px;background:var(--bg-2);border-right:1px solid var(--line)}
+  .periodic-id{
+    width:96px;height:96px;margin:0 auto 14px;background:var(--paper);border:2px solid var(--ink);position:relative;padding:8px;
+    display:flex;flex-direction:column;justify-content:space-between;
+  }
+  .periodic-id .top-row{display:flex;justify-content:space-between;font-family:"Roboto Mono",monospace;font-size:9.5px;color:var(--ink-2)}
+  .periodic-id .top-row b{color:var(--hydrogen);font-weight:700;font-size:11px}
+  .periodic-id .symbol{font-family:"IBM Plex Sans",sans-serif;font-weight:700;font-size:38px;letter-spacing:-.02em;line-height:1;color:var(--ink);text-align:center}
+  .periodic-id .name{font-family:"IBM Plex Sans",sans-serif;font-size:9px;letter-spacing:.16em;color:var(--ink-2);text-align:center;text-transform:uppercase}
+  .periodic-id .mass{font-family:"Roboto Mono",monospace;font-size:9.5px;color:var(--ink-3);text-align:center}
+
+  .nav-section{font-family:"Roboto Mono",monospace;font-size:9px;letter-spacing:.22em;color:var(--ink-3);text-transform:uppercase;margin:14px 4px 5px}
+  .nav a{
+    display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:center;padding:7px 6px;text-decoration:none;color:var(--ink-2);font-family:"IBM Plex Sans",sans-serif;font-size:13.5px;
+    border-bottom:1px solid var(--line);
+  }
+  .nav a:hover{color:var(--ink)}
+  .nav a.active{color:var(--ink);background:var(--bg)}
+  .nav a .el{
+    width:28px;height:28px;border:1.5px solid;display:flex;align-items:center;justify-content:center;
+    font-family:"IBM Plex Sans",sans-serif;font-weight:700;font-size:11px;line-height:1;text-align:center;flex-shrink:0;
+    background:rgba(255,255,255,.02);
+  }
+  .nav a:nth-of-type(1) .el{color:var(--alkali);border-color:var(--alkali)}
+  .nav a:nth-of-type(2) .el{color:var(--transition);border-color:var(--transition)}
+  .nav a:nth-of-type(3) .el{color:var(--metalloid);border-color:var(--metalloid)}
+  .nav a:nth-of-type(4) .el{color:var(--noble);border-color:var(--noble)}
+  .nav a:nth-of-type(5) .el{color:var(--halogen);border-color:var(--halogen)}
+  .nav a:nth-of-type(6) .el{color:var(--hydrogen);border-color:var(--hydrogen)}
+  .nav a:nth-of-type(7) .el{color:var(--alkali);border-color:var(--alkali)}
+  .nav a:nth-of-type(8) .el{color:var(--transition);border-color:var(--transition)}
+  .nav a:nth-of-type(9) .el{color:var(--metalloid);border-color:var(--metalloid)}
+
+  /* 主区 */
+  main{padding:18px 22px 28px;min-width:0}
+
+  /* legend 图例 */
+  .legend{
+    display:flex;gap:18px;flex-wrap:wrap;padding:10px 16px;background:var(--bg-2);border:1px solid var(--line);margin-bottom:18px;
+    font-family:"Roboto Mono",monospace;font-size:10px;letter-spacing:.18em;color:var(--ink-2);text-transform:uppercase;align-items:center;
+  }
+  .legend .item{display:flex;align-items:center;gap:6px}
+  .legend .sq{width:11px;height:11px;border:1.5px solid}
+  .sq.alkali{border-color:var(--alkali)}
+  .sq.transition{border-color:var(--transition)}
+  .sq.metalloid{border-color:var(--metalloid)}
+  .sq.noble{border-color:var(--noble)}
+  .sq.halogen{border-color:var(--halogen)}
+  .sq.hydrogen{border-color:var(--hydrogen)}
+  .legend .spacer{flex:1}
+  .legend .ts{color:var(--ink);font-weight:600}
+
+  /* KPI 元素方块 */
+  .table-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+  .element{
+    background:var(--paper);border:2px solid;padding:14px 16px;display:flex;flex-direction:column;justify-content:space-between;min-height:140px;position:relative;
+  }
+  .element.alkali{border-color:var(--alkali)}
+  .element.transition{border-color:var(--transition)}
+  .element.metalloid{border-color:var(--metalloid)}
+  .element.noble{border-color:var(--noble)}
+  .element .head{display:flex;justify-content:space-between;align-items:flex-start}
+  .element .num{font-family:"Roboto Mono",monospace;font-size:11px;font-weight:700;color:var(--ink-2)}
+  .element .mass{font-family:"Roboto Mono",monospace;font-size:11px;color:var(--ink-3);text-align:right}
+  .element .symbol{font-family:"IBM Plex Sans",sans-serif;font-weight:700;font-size:44px;letter-spacing:-.02em;line-height:1;color:var(--ink);text-align:center;margin:10px 0 4px}
+  .element.alkali .symbol{color:var(--alkali)}
+  .element.transition .symbol{color:var(--transition)}
+  .element.metalloid .symbol{color:var(--metalloid)}
+  .element.noble .symbol{color:var(--noble)}
+  .element .name{font-family:"IBM Plex Sans",sans-serif;font-size:11.5px;letter-spacing:.14em;color:var(--ink-2);text-align:center;text-transform:uppercase;margin-bottom:6px}
+  .element .v{font-family:"Roboto Mono",monospace;font-size:18px;font-weight:700;color:var(--ink);text-align:center;font-variant-numeric:tabular-nums}
+  .element .v small{font-family:"IBM Plex Sans",sans-serif;font-size:11px;color:var(--ink-2);font-weight:400;margin-left:3px}
+  .element .delta{font-family:"Roboto Mono",monospace;font-size:10.5px;color:var(--ink-2);text-align:center;margin-top:4px}
+  .up{color:var(--transition)}
+  .down{color:var(--hydrogen)}
+
+  /* 主体 */
+  .grid{display:grid;grid-template-columns:1.55fr 1fr;gap:12px}
+  .panel{background:var(--paper);border:1px solid var(--line)}
+  .panel-head{
+    display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--bg-2);
+  }
+  .panel-title{font-family:"IBM Plex Sans",sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);display:flex;align-items:baseline;gap:8px}
+  .panel-title .ix{font-family:"Roboto Mono",monospace;font-size:10px;color:var(--hydrogen);font-weight:700}
+  .panel-title small{display:block;font-family:"Roboto Mono",monospace;font-weight:400;font-size:10px;color:var(--ink-3);letter-spacing:.08em;margin-top:1px;text-transform:none}
+
+  table{width:100%;border-collapse:collapse;font-family:"IBM Plex Sans",sans-serif;font-size:13px}
+  th{text-align:left;font-family:"Roboto Mono",monospace;font-weight:700;font-size:9.5px;letter-spacing:.18em;color:var(--ink-3);padding:8px 16px;border-bottom:1px solid var(--line);text-transform:uppercase;background:var(--bg-2)}
+  td{padding:11px 16px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+  tr:last-child td{border-bottom:0}
+  tr:hover td{background:var(--bg-2)}
+  td.mono{font-family:"Roboto Mono",monospace;font-size:11.5px;color:var(--ink)}
+  .iso{
+    display:inline-flex;align-items:center;justify-content:center;width:32px;height:24px;border:1.5px solid;
+    font-family:"IBM Plex Sans",sans-serif;font-weight:700;font-size:11px;letter-spacing:.04em;line-height:1;
+  }
+  .iso.ok{color:var(--transition);border-color:var(--transition)}
+  .iso.warn{color:var(--metalloid);border-color:var(--metalloid)}
+  .iso.bad{color:var(--hydrogen);border-color:var(--hydrogen);background:rgba(255,122,107,.1)}
+  .lat{display:inline-flex;align-items:center;gap:8px;font-family:"Roboto Mono",monospace;font-size:11px}
+  .lat .b{width:50px;height:4px;background:#0A0C10;border:1px solid var(--line);position:relative;overflow:hidden}
+  .lat .b i{display:block;height:100%}
+  .lat .b i.ok{background:var(--transition)}
+  .lat .b i.warn{background:var(--metalloid)}
+  .lat .b i.bad{background:var(--hydrogen)}
+
+  /* 名册 */
+  .person{display:grid;grid-template-columns:40px 1fr auto;gap:12px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line)}
+  .person:last-child{border-bottom:0}
+  .el-av{
+    width:40px;height:40px;border:1.5px solid;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:var(--bg);position:relative;
+  }
+  .el-av .num-top{position:absolute;top:1px;left:3px;font-family:"Roboto Mono",monospace;font-size:8px;color:var(--ink-2);font-weight:700}
+  .el-av .sym{font-family:"IBM Plex Sans",sans-serif;font-weight:700;font-size:16px;line-height:1}
+  .el-av.h1{color:var(--hydrogen);border-color:var(--hydrogen)}
+  .el-av.h2{color:var(--alkali);border-color:var(--alkali)}
+  .el-av.h3{color:var(--transition);border-color:var(--transition)}
+  .el-av.h4{color:var(--metalloid);border-color:var(--metalloid)}
+  .person b{font-family:"IBM Plex Sans",sans-serif;font-weight:600;font-size:13.5px;color:var(--ink)}
+  .person small{display:block;font-family:"Roboto Mono",monospace;font-size:10.5px;color:var(--ink-2);margin-top:1px}
+  .role-tag{font-family:"Roboto Mono",monospace;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;padding:2px 8px;border:1px solid var(--line-2);color:var(--ink-2)}
+  .role-tag.r{color:var(--hydrogen);border-color:var(--hydrogen)}
+
+  /* 账单 */
+  .bill{padding:14px 16px;font-family:"IBM Plex Sans",sans-serif;font-size:13.5px}
+  .bill .ln{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dotted var(--line)}
+  .bill .ln b{font-family:"Roboto Mono",monospace;font-weight:700;font-size:14px;color:var(--ink)}
+  .bill .total{
+    margin-top:8px;padding:12px 14px;background:var(--bg);border:2px solid var(--noble);
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .bill .total span{font-family:"Roboto Mono",monospace;font-size:11px;letter-spacing:.22em;color:var(--noble);text-transform:uppercase;font-weight:700}
+  .bill .total b{font-family:"Roboto Mono",monospace;font-weight:700;font-size:24px;color:var(--noble)}
+  .gauge{margin-top:14px}
+  .gauge .top{display:flex;justify-content:space-between;font-family:"Roboto Mono",monospace;font-size:9.5px;color:var(--ink-2);letter-spacing:.18em;text-transform:uppercase;margin-bottom:5px}
+  .gauge .bar{height:14px;background:var(--bg);border:1px solid var(--line);position:relative;overflow:hidden}
+  .gauge .bar i{display:block;height:100%;width:72%;background:repeating-linear-gradient(90deg,var(--alkali) 0 25%, var(--transition) 25% 50%, var(--metalloid) 50% 75%, var(--noble) 75% 100%)}
+
+  .btn{
+    display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border:1.5px solid var(--line-2);background:transparent;color:var(--ink);
+    font-family:"Roboto Mono",monospace;font-weight:700;font-size:10px;letter-spacing:.16em;cursor:pointer;text-transform:uppercase;
+  }
+  .btn:hover{border-color:var(--hydrogen);color:var(--hydrogen)}
+  .btn.b{background:var(--noble);border-color:var(--noble);color:#0F1115}
+
+  @media (max-width:1100px){
+    .app{grid-template-columns:1fr}
+    .table-row{grid-template-columns:1fr 1fr}
+    .grid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="periodic-id">
+      <div class="top-row"><b>01</b><span></span></div>
+      <div class="symbol">Nw</div>
+      <div class="name">Northwind</div>
+      <div class="mass">2.18.0</div>
+    </div>
+
+    <div class="nav-section">Overview · 1A</div>
+    <nav class="nav">
+      <a class="active"><span class="el">Db</span>仪表盘</a>
+      <a><span class="el">Tc</span>实时调用</a>
+      <a><span class="el">Rg</span>区域分布</a>
+    </nav>
+    <div class="nav-section">Resource · 2A</div>
+    <nav class="nav">
+      <a><span class="el">Ky</span>API 密钥</a>
+      <a><span class="el">Wh</span>Webhook</a>
+      <a><span class="el">Ex</span>数据导出</a>
+    </nav>
+    <div class="nav-section">Account · 3A</div>
+    <nav class="nav">
+      <a><span class="el">Mb</span>名册</a>
+      <a><span class="el">Bl</span>账单</a>
+      <a><span class="el">Cf</span>设置</a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="legend">
+      <div class="item"><span class="sq alkali"></span>Volume</div>
+      <div class="item"><span class="sq transition"></span>Crew</div>
+      <div class="item"><span class="sq metalloid"></span>Error</div>
+      <div class="item"><span class="sq noble"></span>Billing</div>
+      <div class="item"><span class="sq halogen"></span>Latency</div>
+      <div class="item"><span class="sq hydrogen"></span>Critical</div>
+      <span class="spacer"></span>
+      <span class="ts">2026 · 06 · 19 · 14:02 · UTC+8 · PROD / AP-SE-1</span>
+    </div>
+
+    <section class="table-row">
+      <div class="element alkali">
+        <div class="head"><span class="num">01</span><span class="mass">+ 12.4%</span></div>
+        <div class="symbol">Vol</div>
+        <div class="name">Volume MTD</div>
+        <div class="v">2,418,902<small>req</small></div>
+        <div class="delta">tgt 3.0M / T-11</div>
+      </div>
+      <div class="element transition">
+        <div class="head"><span class="num">02</span><span class="mass">+ 4 wk</span></div>
+        <div class="symbol">Cr</div>
+        <div class="name">Crew Live</div>
+        <div class="v">38<small>/50</small></div>
+        <div class="delta">idle 12</div>
+      </div>
+      <div class="element metalloid">
+        <div class="head"><span class="num">03</span><span class="mass" style="color:var(--metalloid)">+ 0.08</span></div>
+        <div class="symbol">Er</div>
+        <div class="name">Error 24h</div>
+        <div class="v" style="color:var(--metalloid)">0.42<small>%</small></div>
+        <div class="delta">thr 0.5%</div>
+      </div>
+      <div class="element noble">
+        <div class="head"><span class="num">04</span><span class="mass">auto</span></div>
+        <div class="symbol">Bl</div>
+        <div class="name">Bill MTD</div>
+        <div class="v">¥ 2,879<small>.50</small></div>
+        <div class="delta">T-11</div>
+      </div>
+    </section>
+
+    <div class="grid">
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title"><span class="ix">05</span>Lg<small>· Access Log · last 100</small></div>
+          <button class="btn">filter</button>
+        </div>
+        <table>
+          <thead><tr><th>T</th><th>Caller</th><th>Endpoint</th><th>Iso</th><th>τ</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">14:02:11</td><td>京东数科</td><td class="mono">POST /v2/orders/sync</td>
+              <td><span class="iso ok">200</span></td>
+              <td><span class="lat">92ms<span class="b"><i class="ok" style="width:18%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:09</td><td>dashboard</td><td class="mono">GET /v2/metrics/window</td>
+              <td><span class="iso ok">200</span></td>
+              <td><span class="lat">140ms<span class="b"><i class="ok" style="width:28%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:08</td><td>ACME</td><td class="mono">POST /v2/events/batch</td>
+              <td><span class="iso warn">429</span></td>
+              <td><span class="lat">318ms<span class="b"><i class="warn" style="width:65%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:07</td><td>Office</td><td class="mono">DELETE /v2/keys/ak_3f…</td>
+              <td><span class="iso ok">204</span></td>
+              <td><span class="lat">58ms<span class="b"><i class="ok" style="width:12%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:05</td><td>顺丰</td><td class="mono">GET /v2/orders?status=open</td>
+              <td><span class="iso bad">500</span></td>
+              <td><span class="lat">1.42s<span class="b"><i class="bad" style="width:88%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:03</td><td>京东数科</td><td class="mono">POST /v2/webhooks/test</td>
+              <td><span class="iso ok">200</span></td>
+              <td><span class="lat">110ms<span class="b"><i class="ok" style="width:22%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:01</td><td>平安</td><td class="mono">PUT /v2/orders/12489</td>
+              <td><span class="iso ok">200</span></td>
+              <td><span class="lat">181ms<span class="b"><i class="ok" style="width:34%"></i></span></span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title"><span class="ix">06</span>Mb<small>· Crew · 38/50</small></div>
+            <button class="btn">+ invite</button>
+          </div>
+          <div>
+            <div class="person"><div class="el-av h1"><span class="num-top">01</span><span class="sym">林</span></div><div><b>林安琪</b><small>liananqi · 2m</small></div><span class="role-tag r">OWNER</span></div>
+            <div class="person"><div class="el-av h2"><span class="num-top">02</span><span class="sym">陈</span></div><div><b>陈维</b><small>chenwei · 1h</small></div><span class="role-tag">ADMIN</span></div>
+            <div class="person"><div class="el-av h3"><span class="num-top">03</span><span class="sym">蒋</span></div><div><b>蒋克</b><small>jiangke · 1d</small></div><span class="role-tag">DEV</span></div>
+            <div class="person"><div class="el-av h4"><span class="num-top">04</span><span class="sym">袁</span></div><div><b>袁倩</b><small>vendor · pending</small></div><span class="role-tag">READ</span></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title"><span class="ix">07</span>Bl<small>· 06.01 – 06.30</small></div>
+            <button class="btn b">invoice</button>
+          </div>
+          <div class="bill">
+            <div class="ln"><span>Growth Plan</span><b>¥ 1,980.00</b></div>
+            <div class="ln"><span>Overage · 418,902</span><b>¥ 837.80</b></div>
+            <div class="ln"><span>Webhook Retry · 12,341</span><b>¥ 61.70</b></div>
+            <div class="total"><span>Σ Total</span><b>¥ 2,879.50</b></div>
+            <div class="gauge">
+              <div class="top"><span>Quota 72%</span><span>2.42M / 3M</span></div>
+              <div class="bar"><i></i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

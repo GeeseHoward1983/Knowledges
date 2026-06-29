@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>13 · 草图 — Northwind Cloud 控制台</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --paper:#FCFBF7;
+    --paper-2:#F4F1E8;
+    --ink:#1F1A14;
+    --ink-2:#5A5247;
+    --rule:#1F1A14;
+    --highlight:#FFE66B;   /* 荧光笔黄 */
+    --highlight-2:rgba(255,230,107,.55);
+    --pen-red:#E04A3C;
+    --pen-blue:#3060A8;
+    --pen-green:#3A8650;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;color:var(--ink);
+    font-family:"Caveat","Architects Daughter","Kalam","PingFang SC",cursive,system-ui;
+    background:var(--paper)
+  }
+  body{
+    min-height:100vh;font-size:18px;line-height:1.45;
+    background:
+      /* 方格本横线 */
+      repeating-linear-gradient(0deg, transparent 0 27px, rgba(31,26,20,.06) 27px 28px),
+      /* 方格本竖线 */
+      repeating-linear-gradient(90deg, transparent 0 27px, rgba(31,26,20,.04) 27px 28px),
+      var(--paper);
+    background-attachment:fixed;
+  }
+  .app{display:grid;grid-template-columns:230px 1fr;min-height:100vh}
+
+  /* 不完美的"草图边框" SVG 工具 */
+  /* 用 filter 给容器加抖动 */
+  .sketch{
+    border:2px solid var(--rule);
+    border-radius:6px 8px 5px 7px;
+    background:var(--paper);
+    position:relative;
+  }
+  .sketch::before,.sketch::after{
+    content:"";position:absolute;inset:0;border-radius:7px 5px 8px 6px;pointer-events:none;
+  }
+  .sketch::before{border:1px dashed rgba(31,26,20,.18);margin:3px;border-radius:5px 7px 6px 8px}
+  .sketch::after{display:none}
+
+  aside{
+    margin:18px;padding:20px 18px;
+  }
+  .brand{display:flex;align-items:center;gap:12px;margin-bottom:18px;padding-bottom:12px;border-bottom:2px solid var(--rule)}
+  .brand-doodle{
+    width:46px;height:46px;border:2px solid var(--rule);border-radius:14px 18px 16px 20px;
+    display:flex;align-items:center;justify-content:center;font-family:"Caveat",cursive;font-weight:700;font-size:26px;
+    background:var(--highlight);transform:rotate(-3deg);
+  }
+  .brand b{font-family:"Caveat",cursive;font-weight:700;font-size:24px;letter-spacing:.01em;line-height:1}
+  .brand small{display:block;font-family:"Kalam",cursive;font-weight:400;font-size:13px;color:var(--ink-2);margin-top:2px}
+
+  .nav-section{
+    font-family:"Kalam",cursive;font-size:14px;color:var(--ink-2);margin:14px 4px 4px;
+    text-decoration:underline wavy var(--ink-2);
+    text-underline-offset:4px;
+  }
+  .nav a{
+    display:flex;justify-content:space-between;align-items:baseline;padding:6px 8px;text-decoration:none;color:var(--ink);
+    font-family:"Caveat",cursive;font-weight:600;font-size:20px;line-height:1.2;
+  }
+  .nav a::before{content:"☐ ";color:var(--ink-2);margin-right:6px;font-size:16px}
+  .nav a:hover{background:var(--highlight-2)}
+  .nav a.active::before{content:"☑ ";color:var(--pen-red)}
+  .nav a.active{background:var(--highlight)}
+  .nav a .n{font-family:"Kalam",cursive;font-weight:400;font-size:14px;color:var(--ink-2)}
+
+  /* 主区 */
+  main{padding:18px 20px 30px;min-width:0}
+
+  .header{display:flex;align-items:flex-end;gap:24px;flex-wrap:wrap;margin-bottom:20px}
+  .header h1{
+    margin:0;font-family:"Caveat",cursive;font-weight:700;font-size:46px;letter-spacing:.01em;line-height:1.1;
+    transform:rotate(-.5deg);
+  }
+  .header h1 em{font-style:normal;background:linear-gradient(180deg,transparent 60%,var(--highlight) 60%);padding:0 6px}
+  .header .meta{font-family:"Kalam",cursive;font-size:15px;color:var(--ink-2);transform:rotate(.5deg)}
+  .header .meta b{color:var(--ink)}
+
+  /* 小贴士 / 手写注释 */
+  .sticky{
+    background:var(--highlight);padding:10px 14px;border-radius:3px;
+    font-family:"Kalam",cursive;font-size:15px;color:var(--ink);
+    transform:rotate(-1.2deg);box-shadow:2px 3px 0 rgba(31,26,20,.18);max-width:280px;
+  }
+  .sticky b{font-weight:700}
+
+  .arrow{
+    font-family:"Caveat",cursive;font-size:22px;color:var(--pen-red);transform:rotate(-12deg);display:inline-block;
+  }
+
+  /* KPI = 手画卡片 */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:22px}
+  .kpi{padding:16px 20px;display:flex;flex-direction:column;gap:6px}
+  .kpi.r1{transform:rotate(-.6deg)}
+  .kpi.r2{transform:rotate(.4deg)}
+  .kpi.r3{transform:rotate(-.3deg)}
+  .kpi.r4{transform:rotate(.7deg)}
+  .kpi .l{font-family:"Kalam",cursive;font-size:14px;color:var(--ink-2)}
+  .kpi .v{font-family:"Caveat",cursive;font-weight:700;font-size:42px;line-height:1;letter-spacing:-.01em}
+  .kpi .v small{font-size:16px;color:var(--ink-2);font-weight:400}
+  .kpi .v .hl{background:linear-gradient(180deg,transparent 60%,var(--highlight) 60%);padding:0 2px}
+  .kpi .d{font-family:"Kalam",cursive;font-size:13px;color:var(--ink-2);display:flex;justify-content:space-between}
+  .d .up{color:var(--pen-green)}
+  .d .down{color:var(--pen-red)}
+
+  /* 注释手指 */
+  .annot{position:absolute;font-family:"Caveat",cursive;color:var(--pen-red);font-size:18px;font-weight:600;line-height:1.1;pointer-events:none}
+  .annot::after{content:"";display:block}
+
+  /* 主区两栏 */
+  .grid{display:grid;grid-template-columns:1.55fr 1fr;gap:22px}
+
+  .card{padding:0;position:relative}
+  .card-head{
+    display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:2px solid var(--rule);
+  }
+  .card-title{font-family:"Caveat",cursive;font-weight:700;font-size:24px;letter-spacing:.01em;display:flex;align-items:baseline;gap:6px}
+  .card-title small{font-family:"Kalam",cursive;font-weight:400;font-size:14px;color:var(--ink-2)}
+
+  table{width:100%;border-collapse:collapse;font-family:"Kalam",cursive;font-size:16px}
+  th{
+    text-align:left;font-family:"Caveat",cursive;font-weight:700;font-size:18px;letter-spacing:.01em;color:var(--ink);
+    padding:10px 18px;border-bottom:2px solid var(--rule);
+  }
+  th::after{content:" ↓";color:var(--ink-2)}
+  td{padding:12px 18px;border-bottom:1.5px dashed rgba(31,26,20,.3)}
+  tr:last-child td{border-bottom:0}
+  td.mono{font-family:"JetBrains Mono",monospace;font-size:13.5px;color:var(--ink)}
+  .stat{
+    display:inline-block;font-family:"Caveat",cursive;font-weight:700;font-size:20px;padding:0 4px;
+  }
+  .stat.ok{color:var(--pen-green)}
+  .stat.ok::before{content:"✓ "}
+  .stat.warn{color:#9E6818}
+  .stat.warn::before{content:"~ "}
+  .stat.bad{color:var(--pen-red)}
+  .stat.bad::before{content:"✗ "}
+  .lat{display:inline-flex;align-items:center;gap:10px;font-family:"JetBrains Mono",monospace;font-size:13.5px}
+  /* 手画进度条 */
+  .lat .b{width:60px;height:8px;border:1.5px solid var(--rule);border-radius:99px;background:var(--paper);position:relative}
+  .lat .b::before{content:"";position:absolute;inset:1px;border-radius:99px;background:repeating-linear-gradient(135deg,var(--ink) 0 2px,transparent 2px 4px);display:block;height:calc(100% - 2px);width:calc(var(--w,18%) - 2px)}
+
+  /* 通讯录 */
+  .members{padding:6px 0}
+  .member{display:grid;grid-template-columns:50px 1fr auto;gap:14px;align-items:center;padding:12px 20px;border-bottom:1.5px dashed rgba(31,26,20,.3)}
+  .member:last-child{border-bottom:0}
+  .doodle-av{
+    width:50px;height:50px;border:2px solid var(--rule);border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-family:"Caveat",cursive;font-weight:700;font-size:20px;
+    background:var(--paper-2);
+  }
+  .doodle-av.a1{background:var(--highlight)}
+  .doodle-av.a2{background:#B5DCEA}
+  .doodle-av.a3{background:#C6E5B8}
+  .doodle-av.a4{background:#F5C7C2}
+  .member b{font-family:"Caveat",cursive;font-weight:700;font-size:20px}
+  .member small{display:block;font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--ink-2);margin-top:1px}
+  .role-write{
+    font-family:"Caveat",cursive;font-weight:700;font-size:18px;color:var(--pen-red);
+    text-decoration:underline wavy var(--pen-red);text-underline-offset:3px;
+  }
+
+  /* 账单 = 手写发票 */
+  .bill{padding:18px 22px}
+  .bill .ln{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1.5px dashed rgba(31,26,20,.3);font-family:"Kalam",cursive;font-size:16px}
+  .bill .ln b{font-family:"Caveat",cursive;font-weight:700;font-size:22px}
+  .bill .total{
+    margin-top:10px;padding:12px 16px;border:2px solid var(--rule);border-radius:6px 8px 5px 7px;
+    background:var(--highlight);display:flex;justify-content:space-between;align-items:baseline;
+    transform:rotate(-.6deg);
+  }
+  .bill .total b{font-family:"Caveat",cursive;font-weight:700;font-size:32px}
+  .gauge{margin-top:14px;font-family:"Kalam",cursive;font-size:14px;color:var(--ink-2)}
+  .gauge .top{display:flex;justify-content:space-between;margin-bottom:6px}
+  .gauge .bar{height:14px;border:2px solid var(--rule);border-radius:99px;background:var(--paper);position:relative;overflow:hidden}
+  .gauge .bar i{
+    display:block;height:100%;width:72%;
+    background:repeating-linear-gradient(45deg,var(--ink) 0 6px,transparent 6px 12px);
+  }
+
+  .btn{
+    display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:2px solid var(--rule);
+    background:var(--paper);color:var(--ink);font:inherit;font-family:"Caveat",cursive;font-weight:700;font-size:18px;cursor:pointer;
+    border-radius:5px 7px 4px 8px;
+  }
+  .btn.hl{background:var(--highlight)}
+  .btn.red{background:var(--pen-red);color:#fff;border-color:var(--pen-red)}
+
+  /* 顶部按钮 */
+  .topbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+  .search{
+    flex:1;min-width:260px;display:flex;align-items:center;gap:8px;padding:8px 14px;border:2px dashed var(--ink-2);border-radius:14px 18px 16px 20px;
+    background:var(--paper);font-family:"Kalam",cursive;font-size:15px;
+  }
+  .search input{flex:1;background:transparent;border:0;outline:0;font:inherit;color:var(--ink)}
+  .search::before{content:"🔍 ";margin-right:2px}
+
+  @media (max-width:1100px){
+    .app{grid-template-columns:1fr}
+    aside{margin:14px 14px 0}
+    main{padding:14px}
+    .kpis{grid-template-columns:1fr 1fr}
+    .grid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sketch">
+    <div class="brand">
+      <div class="brand-doodle">N</div>
+      <div><b>Northwind</b><small>cloud console — draft</small></div>
+    </div>
+    <div class="nav-section">总览</div>
+    <nav class="nav">
+      <a class="active"><span>仪表盘</span><span class="n">01</span></a>
+      <a><span>实时调用</span><span class="n">02</span></a>
+      <a><span>区域分布</span><span class="n">03</span></a>
+    </nav>
+    <div class="nav-section">资源</div>
+    <nav class="nav">
+      <a><span>API 密钥</span><span class="n">12</span></a>
+      <a><span>Webhook</span><span class="n">07</span></a>
+      <a><span>数据导出</span><span class="n">—</span></a>
+    </nav>
+    <div class="nav-section">账户</div>
+    <nav class="nav">
+      <a><span>成员</span><span class="n">38</span></a>
+      <a><span>计费</span><span class="n">—</span></a>
+      <a><span>偏好</span><span class="n">—</span></a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="header">
+      <h1>下午好，<em>林安琪</em> — 这个月看起来还不错！</h1>
+      <div class="meta">06.19 · 周五 · <b>14:02</b> · prod / ap-southeast-1</div>
+      <div class="sticky">
+        <b>提醒：</b>顺丰那个 500 错误你看到了吗？
+        最近三天集中在 14:00 前后。<br>
+        <span class="arrow">↗</span> 我标了一下。
+      </div>
+    </div>
+
+    <div class="topbar">
+      <div class="search"><input placeholder="搜个端点 / 成员 / Key 看看…"></div>
+      <button class="btn">通知 3</button>
+      <button class="btn hl">＋ 新建 Key</button>
+    </div>
+
+    <section class="kpis">
+      <div class="kpi sketch r1">
+        <span class="l">本月调用</span>
+        <span class="v"><span class="hl">2.42</span>M <small>req</small></span>
+        <span class="d"><span class="up">▲ 12.4%</span><span>tgt 3.0M</span></span>
+      </div>
+      <div class="kpi sketch r2">
+        <span class="l">活跃成员</span>
+        <span class="v">38 <small>/ 50</small></span>
+        <span class="d"><span class="up">▲ 4 本周</span><span>空闲 12</span></span>
+      </div>
+      <div class="kpi sketch r3">
+        <span class="l">错误率 24h</span>
+        <span class="v" style="color:var(--pen-red)">0.42<small>%</small></span>
+        <span class="d"><span class="down">▲ 0.08%</span><span>阈值 0.5%</span></span>
+      </div>
+      <div class="kpi sketch r4">
+        <span class="l">本月账单</span>
+        <span class="v">¥ 2,879 <small>.50</small></span>
+        <span class="d"><span>自动续费</span><span>T-11</span></span>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card sketch">
+        <div class="card-head">
+          <div class="card-title">最近调用日志 <small>· 实时 · 最近 100 条 · 生产</small></div>
+          <div style="display:flex;gap:8px">
+            <button class="btn">仅看错误</button>
+            <button class="btn">慢请求</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>时间</th><th>调用方</th><th>端点</th><th>状态</th><th>耗时</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">14:02:11</td><td>京东数科</td><td class="mono">POST /v2/orders/sync</td>
+              <td><span class="stat ok">200</span></td>
+              <td><span class="lat">92 ms<span class="b" style="--w:18%"></span></span></td></tr>
+            <tr><td class="mono">14:02:09</td><td>内部 dashboard</td><td class="mono">GET /v2/metrics/window</td>
+              <td><span class="stat ok">200</span></td>
+              <td><span class="lat">140 ms<span class="b" style="--w:28%"></span></span></td></tr>
+            <tr><td class="mono">14:02:08</td><td>ACME</td><td class="mono">POST /v2/events/batch</td>
+              <td><span class="stat warn">429</span></td>
+              <td><span class="lat">318 ms<span class="b" style="--w:65%"></span></span></td></tr>
+            <tr><td class="mono">14:02:07</td><td>Office</td><td class="mono">DELETE /v2/keys/ak_3f…</td>
+              <td><span class="stat ok">204</span></td>
+              <td><span class="lat">58 ms<span class="b" style="--w:12%"></span></span></td></tr>
+            <tr style="background:rgba(224,74,60,.06)">
+              <td class="mono">14:02:05</td><td>顺丰</td><td class="mono">GET /v2/orders?status=open</td>
+              <td><span class="stat bad">500</span></td>
+              <td style="position:relative">
+                <span class="lat">1.42 s<span class="b" style="--w:88%"></span></span>
+                <span class="annot" style="right:8px;top:-12px;transform:rotate(-6deg)">↑ 又是这个！</span>
+              </td></tr>
+            <tr><td class="mono">14:02:03</td><td>京东数科</td><td class="mono">POST /v2/webhooks/test</td>
+              <td><span class="stat ok">200</span></td>
+              <td><span class="lat">110 ms<span class="b" style="--w:22%"></span></span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:22px">
+        <div class="card sketch">
+          <div class="card-head">
+            <div class="card-title">成员 <small>· 38 在岗</small></div>
+            <button class="btn">邀请</button>
+          </div>
+          <div class="members">
+            <div class="member"><div class="doodle-av a1">林</div><div><b>林安琪</b><small>liananqi · 2 min</small></div><span class="role-write">所有者</span></div>
+            <div class="member"><div class="doodle-av a2">陈</div><div><b>陈维</b><small>chenwei · 1 hr</small></div><span class="role-write">管理员</span></div>
+            <div class="member"><div class="doodle-av a3">蒋</div><div><b>蒋克</b><small>jiangke · 1 d</small></div><span class="role-write">开发者</span></div>
+            <div class="member"><div class="doodle-av a4">袁</div><div><b>袁倩</b><small>vendor · 待复</small></div><span class="role-write">只读</span></div>
+          </div>
+        </div>
+
+        <div class="card sketch">
+          <div class="card-head">
+            <div class="card-title">本期账单 <small>· 06.01 – 06.30</small></div>
+            <button class="btn red">发票</button>
+          </div>
+          <div class="bill">
+            <div class="ln"><span>Growth 套餐</span><b>¥ 1,980.00</b></div>
+            <div class="ln"><span>超量调用 · 418,902</span><b>¥ 837.80</b></div>
+            <div class="ln"><span>Webhook 重试 · 12,341</span><b>¥ 61.70</b></div>
+            <div class="total"><span style="font-family:'Caveat',cursive;font-weight:700;font-size:22px">合计</span><b>¥ 2,879.50</b></div>
+            <div class="gauge">
+              <div class="top"><span>套餐用量 72%</span><span>2.42M / 3M</span></div>
+              <div class="bar"><i></i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+</body>
+</html>

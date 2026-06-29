@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>14 · 数据华尔街 — Northwind Cloud 控制台</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --bg:#F4F0E6;             /* 米麻报纸底 */
+    --bg-2:#E9E2CE;
+    --paper:#FBF7EC;
+    --ink:#15203E;            /* 深靛 */
+    --ink-2:#4A5470;
+    --ink-3:#8B91A6;
+    --rule:#15203E;
+    --rule-2:#C8C0A4;
+    --indigo:#1F3B7A;
+    --gold:#A88728;
+    --up:#1E7A4F;
+    --down:#B83838;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;color:var(--ink);font-family:"Inter","PingFang SC",system-ui,sans-serif;background:var(--bg)}
+  body{min-height:100vh;font-size:13.5px;line-height:1.5}
+
+  /* 顶部"报头" */
+  .masthead{
+    background:var(--paper);border-bottom:3px solid var(--rule);padding:12px 28px 8px;
+    display:grid;grid-template-columns:auto 1fr auto;gap:18px;align-items:center;
+  }
+  .masthead .left{font-family:"Inter",sans-serif;font-size:11px;color:var(--ink-2);letter-spacing:.16em;text-transform:uppercase;line-height:1.8}
+  .masthead .center{text-align:center}
+  .masthead .center h1{
+    margin:0;font-family:"Playfair Display","Source Han Serif SC",serif;font-weight:900;font-size:34px;letter-spacing:-.02em;line-height:1;
+  }
+  .masthead .center h1 em{font-style:italic;color:var(--gold)}
+  .masthead .center small{font-family:"Inter",sans-serif;font-size:11px;color:var(--ink-2);letter-spacing:.18em;text-transform:uppercase;display:block;margin-top:6px}
+  .masthead .right{font-family:"Inter",sans-serif;font-size:11px;color:var(--ink-2);letter-spacing:.16em;text-transform:uppercase;text-align:right;line-height:1.8}
+  .masthead .right b{display:block;color:var(--ink);font-family:"Playfair Display",serif;font-weight:600;font-size:18px;letter-spacing:0;text-transform:none}
+
+  /* 横向流动股票条（签名） */
+  .ticker{
+    background:var(--ink);color:var(--paper);overflow:hidden;border-bottom:1px solid var(--rule);
+  }
+  .ticker .track{
+    display:flex;gap:0;white-space:nowrap;animation:scroll 50s linear infinite;
+    font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.04em;
+  }
+  @keyframes scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+  .ticker .it{padding:9px 18px;display:inline-flex;gap:8px;align-items:baseline;border-right:1px solid rgba(251,247,236,.2)}
+  .ticker .it b{font-weight:700;color:#fff}
+  .ticker .up{color:#7DC79B}
+  .ticker .down{color:#FF9C9C}
+
+  /* 主体两栏 */
+  .app{display:grid;grid-template-columns:200px 1fr;min-height:calc(100vh - 110px)}
+  aside{
+    background:var(--paper);border-right:1px solid var(--rule);padding:18px 18px;
+  }
+  .section-h{
+    font-family:"Playfair Display",serif;font-weight:700;font-size:13px;letter-spacing:.06em;text-transform:uppercase;
+    border-top:2px solid var(--rule);border-bottom:1px solid var(--rule);padding:5px 0;margin:14px 0 8px;
+  }
+  .section-h:first-child{margin-top:0}
+  .nav a{
+    display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;text-decoration:none;color:var(--ink);
+    font-family:"Inter",sans-serif;font-size:13px;border-bottom:1px dotted var(--rule-2);
+  }
+  .nav a:hover{color:var(--gold)}
+  .nav a.active{color:var(--gold);font-weight:600}
+  .nav a .n{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-3)}
+  .nav a.active .n{color:var(--gold)}
+
+  main{padding:18px 28px 36px;min-width:0}
+
+  /* Hero：报纸大标题 */
+  .lede{
+    padding-bottom:18px;border-bottom:2px solid var(--rule);margin-bottom:20px;
+    display:grid;grid-template-columns:2.2fr 1fr;gap:30px;align-items:end;
+  }
+  .lede .kicker{font-family:"Inter",sans-serif;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:6px}
+  .lede h2{
+    margin:0;font-family:"Playfair Display","Source Han Serif SC",serif;font-weight:700;font-size:46px;letter-spacing:-.015em;line-height:1.05;
+  }
+  .lede h2 em{font-style:italic}
+  .lede p{margin:8px 0 0;font-family:"Source Serif Pro","Source Han Serif SC",Georgia,serif;font-size:14.5px;color:var(--ink-2);line-height:1.7;column-count:2;column-gap:18px;column-rule:1px dotted var(--rule-2)}
+  .lede p b{color:var(--ink);font-weight:600}
+  .lede .num-side{
+    border-left:1px solid var(--rule);padding-left:18px;
+  }
+  .lede .num-side .big{
+    font-family:"Playfair Display",serif;font-weight:700;font-size:68px;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums;
+  }
+  .lede .num-side .delta{color:var(--up);font-family:"JetBrains Mono",monospace;font-weight:700;font-size:14px;margin-top:6px}
+  .lede .num-side .meta{font-family:"Inter",sans-serif;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-2);margin-top:6px}
+
+  /* 指数行（4 个金融式数据块） */
+  .indices{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);padding:14px 0;margin-bottom:20px;
+  }
+  .ix{padding:0 18px;border-right:1px solid var(--rule-2)}
+  .ix:first-child{padding-left:0}
+  .ix:last-child{padding-right:0;border-right:0}
+  .ix .name{font-family:"Inter",sans-serif;font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-2);font-weight:700}
+  .ix .v{font-family:"Playfair Display",serif;font-weight:700;font-size:30px;letter-spacing:-.01em;font-variant-numeric:tabular-nums;line-height:1.1;margin-top:4px}
+  .ix .v small{font-family:"Inter",sans-serif;font-size:12px;color:var(--ink-2);font-weight:500;margin-left:4px;letter-spacing:0}
+  .ix .d{display:flex;justify-content:space-between;font-family:"JetBrains Mono",monospace;font-size:11.5px;margin-top:4px;font-weight:600}
+  .d .up{color:var(--up)}
+  .d .down{color:var(--down)}
+  .d .flat{color:var(--ink-2)}
+
+  /* 内容 = 报纸两栏 + 边栏 */
+  .body-grid{display:grid;grid-template-columns:1.55fr 1fr;gap:36px}
+
+  .col h3{
+    margin:0 0 10px;font-family:"Playfair Display","Source Han Serif SC",serif;font-weight:700;font-size:22px;letter-spacing:-.01em;
+    border-bottom:2px solid var(--rule);padding-bottom:6px;display:flex;justify-content:space-between;align-items:baseline;
+  }
+  .col h3 small{font-family:"Inter",sans-serif;font-weight:500;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2)}
+
+  table{width:100%;border-collapse:collapse;font-family:"Inter",sans-serif;font-size:13px}
+  th{text-align:left;font-family:"Inter",sans-serif;font-weight:700;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-2);padding:8px 8px;border-bottom:1px solid var(--rule);background:var(--paper)}
+  td{padding:10px 8px;border-bottom:1px solid var(--rule-2);font-variant-numeric:tabular-nums}
+  tr:last-child td{border-bottom:0}
+  td.mono{font-family:"JetBrains Mono",monospace;font-size:12px}
+  .stat{font-family:"JetBrains Mono",monospace;font-weight:700;font-size:12px}
+  .stat.ok{color:var(--up)}
+  .stat.warn{color:var(--gold)}
+  .stat.bad{color:var(--down)}
+  .lat{display:inline-flex;align-items:baseline;gap:8px;font-family:"JetBrains Mono",monospace;font-size:12px}
+  .lat .b{width:60px;height:3px;background:var(--rule-2);position:relative;display:inline-block;vertical-align:middle}
+  .lat .b i{display:block;height:100%;background:var(--ink)}
+  .lat .b.bad i{background:var(--down)}
+
+  /* 边栏：分两个 "栏目" */
+  .sidebox{padding-bottom:18px;margin-bottom:18px;border-bottom:2px solid var(--rule)}
+  .sidebox:last-child{border-bottom:0;margin-bottom:0;padding-bottom:0}
+  .sidebox h4{
+    margin:0 0 6px;font-family:"Playfair Display",serif;font-weight:700;font-size:18px;letter-spacing:-.01em;line-height:1.2;
+  }
+  .sidebox h4 small{font-family:"Inter",sans-serif;font-weight:500;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);display:block;margin-top:2px}
+
+  /* 通讯 */
+  .person{display:grid;grid-template-columns:36px 1fr auto;gap:12px;align-items:center;padding:10px 0;border-bottom:1px dotted var(--rule-2)}
+  .person:last-child{border-bottom:0}
+  .av-letter{
+    width:36px;height:36px;border:1.5px solid var(--rule);
+    display:flex;align-items:center;justify-content:center;font-family:"Playfair Display",serif;font-weight:700;font-size:15px;background:var(--paper);
+  }
+  .person b{font-family:"Source Serif Pro","Source Han Serif SC",serif;font-weight:600;font-size:14.5px}
+  .person small{display:block;font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-2);margin-top:1px}
+  .role{font-family:"Inter",sans-serif;font-size:10px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--ink-2);border:1px solid var(--rule-2);padding:2px 7px}
+  .role.gold{color:var(--gold);border-color:var(--gold)}
+
+  /* 账单 */
+  .bill .ln{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dotted var(--rule-2);font-family:"Source Serif Pro","Source Han Serif SC",serif;font-size:14px;font-variant-numeric:tabular-nums}
+  .bill .ln b{font-family:"Playfair Display",serif;font-weight:600;font-size:16px}
+  .bill .total{margin-top:6px;padding-top:10px;border-top:2px solid var(--rule);display:flex;justify-content:space-between;align-items:baseline}
+  .bill .total b{font-family:"Playfair Display",serif;font-weight:700;font-size:30px;color:var(--ink);letter-spacing:-.01em}
+  .bill .total b .acc{color:var(--gold)}
+  .bill .gauge{margin-top:14px}
+  .bill .gauge-top{display:flex;justify-content:space-between;font-family:"Inter",sans-serif;font-size:11px;color:var(--ink-2);letter-spacing:.14em;text-transform:uppercase;font-weight:600;margin-bottom:4px}
+  .bill .gauge-bar{height:4px;background:var(--rule-2);position:relative;overflow:hidden}
+  .bill .gauge-bar i{display:block;height:100%;width:72%;background:var(--ink)}
+
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border:1px solid var(--rule);background:transparent;color:var(--ink);font:inherit;font-family:"Inter",sans-serif;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;
+  }
+  .btn.gold{background:var(--gold);border-color:var(--gold);color:#fff}
+
+  footer{
+    margin-top:30px;padding-top:14px;border-top:1px solid var(--rule);font-family:"Inter",sans-serif;font-size:10.5px;color:var(--ink-2);
+    display:flex;justify-content:space-between;letter-spacing:.16em;text-transform:uppercase;
+  }
+
+  @media (max-width:1100px){
+    .app{grid-template-columns:1fr}
+    .masthead{grid-template-columns:1fr;text-align:center}
+    .masthead .left,.masthead .right{text-align:center}
+    .lede{grid-template-columns:1fr}
+    .lede p{column-count:1}
+    .indices{grid-template-columns:1fr 1fr}
+    .body-grid{grid-template-columns:1fr}
+    main{padding:14px 18px}
+  }
+</style>
+</head>
+<body>
+
+<div class="masthead">
+  <div class="left">VOL · 12 ED · 06 — 19<br>UTC+8 ASIA EDITION</div>
+  <div class="center">
+    <h1>Northwind <em>Daily</em></h1>
+    <small>CLOUD CONSOLE EDITION · EST. 2022</small>
+  </div>
+  <div class="right">星期五 · 多云<br><b>06.19 / 14:02</b></div>
+</div>
+
+<div class="ticker">
+  <div class="track">
+    <span class="it">NWND.CALLS <b>2,418,902</b> <span class="up">▲ 12.4%</span></span>
+    <span class="it">NWND.ERR <b>0.42%</b> <span class="down">▲ 0.08%</span></span>
+    <span class="it">NWND.P95 <b>184ms</b> <span class="down">▲ 12ms</span></span>
+    <span class="it">NWND.QPS <b>312</b> <span class="up">▲ 24</span></span>
+    <span class="it">NWND.MBR <b>38</b> <span class="up">▲ 4</span></span>
+    <span class="it">NWND.QUOTA <b>72%</b> <span class="flat">●</span></span>
+    <span class="it">NWND.BILL <b>¥ 2,879.50</b> <span class="flat">●</span></span>
+    <span class="it">JD.IN <b>982,401</b> <span class="up">▲ 8.2%</span></span>
+    <span class="it">SF.IN <b>112,890</b> <span class="down">▼ 4.1%</span></span>
+    <span class="it">ACME.IN <b>388,221</b> <span class="up">▲ 22.5%</span></span>
+    <!-- 重复一次保证无缝循环 -->
+    <span class="it">NWND.CALLS <b>2,418,902</b> <span class="up">▲ 12.4%</span></span>
+    <span class="it">NWND.ERR <b>0.42%</b> <span class="down">▲ 0.08%</span></span>
+    <span class="it">NWND.P95 <b>184ms</b> <span class="down">▲ 12ms</span></span>
+    <span class="it">NWND.QPS <b>312</b> <span class="up">▲ 24</span></span>
+    <span class="it">NWND.MBR <b>38</b> <span class="up">▲ 4</span></span>
+    <span class="it">NWND.QUOTA <b>72%</b> <span class="flat">●</span></span>
+    <span class="it">NWND.BILL <b>¥ 2,879.50</b> <span class="flat">●</span></span>
+    <span class="it">JD.IN <b>982,401</b> <span class="up">▲ 8.2%</span></span>
+    <span class="it">SF.IN <b>112,890</b> <span class="down">▼ 4.1%</span></span>
+    <span class="it">ACME.IN <b>388,221</b> <span class="up">▲ 22.5%</span></span>
+  </div>
+</div>
+
+<div class="app">
+  <aside>
+    <div class="section-h">Overview</div>
+    <nav class="nav">
+      <a class="active"><span>仪表盘</span><span class="n">01</span></a>
+      <a><span>实时调用</span><span class="n">02</span></a>
+      <a><span>区域分布</span><span class="n">03</span></a>
+    </nav>
+    <div class="section-h">Resources</div>
+    <nav class="nav">
+      <a><span>API 密钥</span><span class="n">12</span></a>
+      <a><span>Webhook</span><span class="n">07</span></a>
+      <a><span>数据导出</span><span class="n">—</span></a>
+    </nav>
+    <div class="section-h">Account</div>
+    <nav class="nav">
+      <a><span>成员</span><span class="n">38</span></a>
+      <a><span>计费</span><span class="n">—</span></a>
+      <a><span>设置</span><span class="n">—</span></a>
+    </nav>
+  </aside>
+
+  <main>
+    <section class="lede">
+      <div>
+        <div class="kicker">头版头条 · 本月调用</div>
+        <h2>调用量逼近 <em>三百万</em>大关，<br>错误率小幅抬头但仍受控</h2>
+        <p>
+          <b>Northwind Cloud</b> 旗下生产环境本月已累计接收 <b>2,418,902</b> 次 API 调用，距 <b>3,000,000</b> 次的套餐上限仅一步之遥；若延续当前速率，预计将于本月 27 日触顶。
+          24 小时滚动错误率上升至 <b>0.42%</b>，主要源自顺丰侧 <b>GET /v2/orders</b> 端点的连续 500 异常，建议追溯。
+          成员名册本周净增 <b>4 人</b>，活跃席位 38 / 50。
+        </p>
+      </div>
+      <div class="num-side">
+        <div class="kicker">本月调用 · MTD</div>
+        <div class="big">2.42M</div>
+        <div class="delta">▲ 12.4% MoM · 目标 3.0M</div>
+        <div class="meta">截至 14:02 · 实时</div>
+      </div>
+    </section>
+
+    <section class="indices">
+      <div class="ix">
+        <div class="name">本月调用</div>
+        <div class="v">2,418,902 <small>req</small></div>
+        <div class="d"><span class="up">▲ 12.4%</span><span>tgt 3.0M</span></div>
+      </div>
+      <div class="ix">
+        <div class="name">活跃成员</div>
+        <div class="v">38 <small>/ 50</small></div>
+        <div class="d"><span class="up">▲ 4</span><span>idle 12</span></div>
+      </div>
+      <div class="ix">
+        <div class="name">24h 错误率</div>
+        <div class="v" style="color:var(--down)">0.42 <small>%</small></div>
+        <div class="d"><span class="down">▲ 0.08%</span><span>thr 0.5%</span></div>
+      </div>
+      <div class="ix">
+        <div class="name">本月账单</div>
+        <div class="v">¥ 2,879 <small>.50</small></div>
+        <div class="d"><span class="flat">— auto</span><span>T-11</span></div>
+      </div>
+    </section>
+
+    <div class="body-grid">
+      <div class="col">
+        <h3>调用日志 <small>· 最近 100 条 · 生产</small></h3>
+        <table>
+          <thead><tr><th>时间</th><th>调用方</th><th>端点</th><th>状态</th><th>耗时</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">14:02:11</td><td>京东数科 · sdk-node@1.8</td><td class="mono">POST /v2/orders/sync</td>
+              <td><span class="stat ok">200</span></td>
+              <td><span class="lat">92 ms<span class="b"><i style="width:18%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:09</td><td>内部 dashboard</td><td class="mono">GET /v2/metrics/window</td>
+              <td><span class="stat ok">200</span></td>
+              <td><span class="lat">140 ms<span class="b"><i style="width:28%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:08</td><td>ACME · sdk-python@2.3</td><td class="mono">POST /v2/events/batch</td>
+              <td><span class="stat warn">429</span></td>
+              <td><span class="lat">318 ms<span class="b"><i style="width:65%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:07</td><td>Office · curl/8.4</td><td class="mono">DELETE /v2/keys/ak_3f…</td>
+              <td><span class="stat ok">204</span></td>
+              <td><span class="lat">58 ms<span class="b"><i style="width:12%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:05</td><td>顺丰 · sdk-go@1.1</td><td class="mono">GET /v2/orders?status=open</td>
+              <td><span class="stat bad">500</span></td>
+              <td><span class="lat">1.42 s<span class="b bad"><i style="width:88%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:03</td><td>京东数科</td><td class="mono">POST /v2/webhooks/test</td>
+              <td><span class="stat ok">200</span></td>
+              <td><span class="lat">110 ms<span class="b"><i style="width:22%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:01</td><td>平安 · sdk-java@3.0</td><td class="mono">PUT /v2/orders/12489</td>
+              <td><span class="stat ok">200</span></td>
+              <td><span class="lat">181 ms<span class="b"><i style="width:34%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:00</td><td>京东数科</td><td class="mono">POST /v2/events</td>
+              <td><span class="stat ok">200</span></td>
+              <td><span class="lat">88 ms<span class="b"><i style="width:18%"></i></span></span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="col">
+        <div class="sidebox">
+          <h4>名册<small>当期 38 在岗</small></h4>
+          <div class="person"><div class="av-letter">林</div><div><b>林安琪</b><small>liananqi · 2 min</small></div><span class="role gold">Owner</span></div>
+          <div class="person"><div class="av-letter">陈</div><div><b>陈维</b><small>chenwei · 1 hr</small></div><span class="role">Admin</span></div>
+          <div class="person"><div class="av-letter">蒋</div><div><b>蒋克</b><small>jiangke · 1 d</small></div><span class="role">Dev</span></div>
+          <div class="person"><div class="av-letter">袁</div><div><b>袁倩</b><small>vendor · pending</small></div><span class="role">Read</span></div>
+        </div>
+
+        <div class="sidebox bill">
+          <h4>本期账目<small>06.01 – 06.30 · 自动续费</small></h4>
+          <div class="ln"><span>Growth 套餐</span><b>¥ 1,980.00</b></div>
+          <div class="ln"><span>超量调用 · 418,902</span><b>¥ 837.80</b></div>
+          <div class="ln"><span>Webhook 重试 · 12,341</span><b>¥ 61.70</b></div>
+          <div class="total"><span style="font-family:'Inter',sans-serif;font-weight:700;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2)">Total</span><b>¥ 2,879<span class="acc">.50</span></b></div>
+          <div class="gauge">
+            <div class="gauge-top"><span>Quota</span><span>72%</span></div>
+            <div class="gauge-bar"><i></i></div>
+          </div>
+          <div style="margin-top:14px"><button class="btn gold">下载发票</button> <button class="btn">套餐升级</button></div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <span>Northwind Daily · Cloud Console Edition</span>
+      <span>Sheet 01 / 12 · 06.19 14:02 UTC+8</span>
+    </footer>
+  </main>
+</div>
+</body>
+</html>

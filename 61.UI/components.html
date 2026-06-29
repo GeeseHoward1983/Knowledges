@@ -1,0 +1,544 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>控件库 · 40 套主题预览 · Northwind</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link id="theme" rel="stylesheet" href="css/01-polar-glass.css">
+<style>
+  /* 仅给主题切换器自己用，避免被主题污染 */
+  #theme-switcher{
+    position:fixed;top:14px;right:14px;z-index:9999;
+    background:rgba(20,20,28,.85);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:10px;
+    padding:8px 10px;font:14px/1.4 -apple-system,Segoe UI,Inter,sans-serif;backdrop-filter:blur(10px);
+    box-shadow:0 8px 28px rgba(0,0,0,.4);
+  }
+  #theme-switcher select{
+    background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.18);border-radius:6px;
+    padding:5px 8px;font:13px -apple-system,Segoe UI,Inter,sans-serif;outline:0;cursor:pointer;
+  }
+  #theme-switcher option{background:#222;color:#fff}
+  #theme-switcher .lbl{font-size:11px;opacity:.7;letter-spacing:.12em;text-transform:uppercase;margin-right:6px;display:inline-block;vertical-align:middle}
+</style>
+</head>
+<body>
+<div id="theme-switcher">
+  <span class="lbl">Theme</span>
+  <select id="theme-select"></select>
+</div>
+
+<div class="nw-app">
+  <aside class="nw-sidebar">
+    <div class="nw-brand">
+      <div class="nw-brand-mark">N</div>
+      <div class="nw-brand-name">Northwind<small>Components</small></div>
+    </div>
+    <div class="nw-nav-section">总览</div>
+    <nav class="nw-nav">
+      <a class="active" href="#typography"><span class="nw-nav-ic">A</span>排版</a>
+      <a href="#buttons"><span class="nw-nav-ic">B</span>按钮</a>
+      <a href="#forms"><span class="nw-nav-ic">F</span>表单</a>
+      <a href="#feedback"><span class="nw-nav-ic">!</span>反馈</a>
+    </nav>
+    <div class="nw-nav-section">数据</div>
+    <nav class="nw-nav">
+      <a href="#table"><span class="nw-nav-ic">T</span>表格</a>
+      <a href="#tags"><span class="nw-nav-ic">#</span>标签</a>
+      <a href="#avatars"><span class="nw-nav-ic">@</span>头像</a>
+      <a href="#stats"><span class="nw-nav-ic">¥</span>统计卡</a>
+    </nav>
+    <div class="nw-nav-section">导航</div>
+    <nav class="nw-nav">
+      <a href="#tabs"><span class="nw-nav-ic">›</span>标签页</a>
+      <a href="#breadcrumbs"><span class="nw-nav-ic">/</span>面包屑</a>
+      <a href="#pagination"><span class="nw-nav-ic">«</span>分页</a>
+      <a href="#steps"><span class="nw-nav-ic">→</span>步骤</a>
+    </nav>
+    <div class="nw-nav-section">浮层</div>
+    <nav class="nw-nav">
+      <a href="#modal"><span class="nw-nav-ic">▢</span>对话框</a>
+      <a href="#tooltip"><span class="nw-nav-ic">?</span>提示</a>
+    </nav>
+  </aside>
+
+  <main class="nw-main">
+    <div class="nw-topbar">
+      <nav class="nw-breadcrumb">
+        <a href="#">控制台</a><span>/</span><a href="#">组件</a><span>/</span><b>全部</b>
+      </nav>
+      <div class="nw-topbar-spacer"></div>
+      <div class="nw-search">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg>
+        <input placeholder="搜索组件…">
+        <kbd>⌘K</kbd>
+      </div>
+      <button class="nw-btn">通知 3</button>
+      <button class="nw-btn nw-btn-primary">＋ 新建</button>
+      <div class="nw-avatar nw-avatar-md">LA</div>
+    </div>
+
+    <section id="typography" class="nw-section">
+      <h2 class="nw-section-title">排版 · Typography</h2>
+      <p class="nw-section-sub">显示字、衬线/无衬线、等宽、代码、引用。</p>
+
+      <div class="nw-card">
+        <h1>这是 H1 — Northwind Cloud 仪表盘</h1>
+        <h2>这是 H2 — 本月运行小记</h2>
+        <h3>这是 H3 — 调用日志</h3>
+        <h4>这是 H4 — 名册</h4>
+        <h5>这是 H5 — 偏好设置</h5>
+        <h6>这是 H6 — 字段名</h6>
+        <p>这是正文。<strong>加粗</strong>、<em>斜体</em>、<a href="#">链接</a>、<code>inline code</code>、按下 <kbd>⌘</kbd> + <kbd>K</kbd> 试试。</p>
+        <blockquote>"Everything should be made as simple as possible, but not simpler." — Einstein</blockquote>
+        <ul>
+          <li>无序列表项一</li>
+          <li>无序列表项二
+            <ul><li>嵌套项 a</li><li>嵌套项 b</li></ul>
+          </li>
+          <li>无序列表项三</li>
+        </ul>
+        <ol>
+          <li>有序列表项一</li>
+          <li>有序列表项二</li>
+        </ol>
+        <hr class="nw-divider">
+        <pre><code>// 代码块
+const orders = await api.list({ status: 'open' });
+console.log(orders.length); // 42</code></pre>
+      </div>
+    </section>
+
+    <section id="buttons" class="nw-section">
+      <h2 class="nw-section-title">按钮 · Buttons</h2>
+      <p class="nw-section-sub">主要 / 次要 / 幽灵 / 危险 / 加载 / 禁用 / 各尺寸 / 图标按钮 / 按钮组。</p>
+
+      <div class="nw-card">
+        <div class="nw-row">
+          <button class="nw-btn nw-btn-primary">主要按钮</button>
+          <button class="nw-btn">次要按钮</button>
+          <button class="nw-btn nw-btn-ghost">幽灵按钮</button>
+          <button class="nw-btn nw-btn-danger">危险操作</button>
+          <button class="nw-btn nw-btn-success">成功</button>
+        </div>
+
+        <div class="nw-row" style="margin-top:14px">
+          <button class="nw-btn nw-btn-primary nw-btn-sm">小按钮</button>
+          <button class="nw-btn nw-btn-primary">默认</button>
+          <button class="nw-btn nw-btn-primary nw-btn-lg">大按钮</button>
+        </div>
+
+        <div class="nw-row" style="margin-top:14px">
+          <button class="nw-btn nw-btn-primary" disabled>禁用</button>
+          <button class="nw-btn nw-btn-primary nw-btn-loading"><span class="nw-spinner"></span>加载中</button>
+          <button class="nw-btn nw-btn-icon" aria-label="search">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg>
+          </button>
+        </div>
+
+        <div class="nw-btn-group" style="margin-top:14px">
+          <button class="nw-btn">日</button>
+          <button class="nw-btn">周</button>
+          <button class="nw-btn nw-btn-primary">月</button>
+          <button class="nw-btn">季</button>
+          <button class="nw-btn">年</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="forms" class="nw-section">
+      <h2 class="nw-section-title">表单 · Forms</h2>
+      <p class="nw-section-sub">输入框 / 文本域 / 下拉 / 复选 / 单选 / 开关 / 滑块 / 文件 / 状态。</p>
+
+      <div class="nw-card">
+        <div class="nw-form-grid">
+          <div class="nw-form-group">
+            <label class="nw-label" for="f-name">姓名</label>
+            <input id="f-name" class="nw-input" value="林安琪">
+            <div class="nw-form-help">展示在所有面板的右上角。</div>
+          </div>
+          <div class="nw-form-group">
+            <label class="nw-label" for="f-mail">邮箱</label>
+            <input id="f-mail" type="email" class="nw-input" placeholder="you@northwind.io">
+          </div>
+          <div class="nw-form-group">
+            <label class="nw-label" for="f-pwd">密码</label>
+            <input id="f-pwd" type="password" class="nw-input nw-input-invalid" value="weakpwd">
+            <div class="nw-form-error">密码不能少于 12 位。</div>
+          </div>
+          <div class="nw-form-group">
+            <label class="nw-label" for="f-region">区域</label>
+            <select id="f-region" class="nw-select">
+              <option>ap-southeast-1（新加坡）</option>
+              <option>ap-northeast-1（东京）</option>
+              <option>us-east-1（弗吉尼亚）</option>
+              <option>eu-central-1（法兰克福）</option>
+            </select>
+          </div>
+          <div class="nw-form-group nw-form-full">
+            <label class="nw-label" for="f-note">备注</label>
+            <textarea id="f-note" class="nw-textarea" rows="3" placeholder="给团队的一句话…"></textarea>
+          </div>
+
+          <div class="nw-form-group">
+            <label class="nw-label">通知方式</label>
+            <label class="nw-check"><input type="checkbox" checked> 邮件</label>
+            <label class="nw-check"><input type="checkbox"> Slack</label>
+            <label class="nw-check"><input type="checkbox"> Webhook</label>
+          </div>
+          <div class="nw-form-group">
+            <label class="nw-label">套餐</label>
+            <label class="nw-radio"><input type="radio" name="plan"> Starter</label>
+            <label class="nw-radio"><input type="radio" name="plan" checked> Growth</label>
+            <label class="nw-radio"><input type="radio" name="plan"> Scale</label>
+          </div>
+          <div class="nw-form-group">
+            <label class="nw-label">自动续费</label>
+            <label class="nw-switch"><input type="checkbox" checked><span class="nw-switch-track"></span></label>
+          </div>
+          <div class="nw-form-group">
+            <label class="nw-label">速率 <span class="nw-form-help" style="margin-left:6px">312 / 1000 QPS</span></label>
+            <input type="range" class="nw-range" min="0" max="1000" value="312">
+          </div>
+          <div class="nw-form-group nw-form-full">
+            <label class="nw-label">附件</label>
+            <input type="file" class="nw-file">
+          </div>
+        </div>
+
+        <div class="nw-form-actions">
+          <button class="nw-btn">取消</button>
+          <button class="nw-btn nw-btn-primary">保存更改</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="feedback" class="nw-section">
+      <h2 class="nw-section-title">反馈 · Feedback</h2>
+      <p class="nw-section-sub">通知条 / 进度 / 加载 / 骨架屏 / 空状态。</p>
+
+      <div class="nw-card">
+        <div class="nw-alert nw-alert-info">
+          <b>提示</b> · 06.19 14:02 起将进行例行维护，预计 5 分钟。
+        </div>
+        <div class="nw-alert nw-alert-success">
+          <b>已生效</b> · API Key 已成功轮换。
+        </div>
+        <div class="nw-alert nw-alert-warning">
+          <b>警告</b> · 错误率 0.42% 已逼近 0.5% 阈值。
+        </div>
+        <div class="nw-alert nw-alert-danger">
+          <b>危险</b> · 顺丰侧 /v2/orders 出现连续 500 异常。
+        </div>
+
+        <div style="margin-top:16px">
+          <div class="nw-label">进度</div>
+          <div class="nw-progress"><i style="width:72%"></i></div>
+          <div class="nw-form-help">72% · 2,418,902 / 3,000,000 次</div>
+        </div>
+
+        <div style="margin-top:16px;display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+          <span class="nw-spinner"></span>
+          <span class="nw-spinner nw-spinner-lg"></span>
+          <span>正在加载…</span>
+        </div>
+
+        <div style="margin-top:16px">
+          <div class="nw-skeleton" style="width:30%"></div>
+          <div class="nw-skeleton" style="width:60%;margin-top:6px"></div>
+          <div class="nw-skeleton" style="width:45%;margin-top:6px"></div>
+        </div>
+
+        <div class="nw-empty" style="margin-top:16px">
+          <div class="nw-empty-icon">∅</div>
+          <h4>暂无数据</h4>
+          <p>这里还没有任何调用记录。先创建一个 API Key 试试看。</p>
+          <button class="nw-btn nw-btn-primary">＋ 新建 API Key</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="table" class="nw-section">
+      <h2 class="nw-section-title">表格 · Table</h2>
+      <p class="nw-section-sub">表头排序、行 hover、状态徽章、操作列。</p>
+
+      <div class="nw-card nw-card-flush">
+        <table class="nw-table">
+          <thead>
+            <tr>
+              <th><label class="nw-check"><input type="checkbox"></label></th>
+              <th>时间</th><th>调用方</th><th>端点</th><th>状态</th><th>耗时</th><th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><label class="nw-check"><input type="checkbox"></label></td>
+              <td><code>14:02:11</code></td><td>京东数科</td><td><code>POST /v2/orders/sync</code></td>
+              <td><span class="nw-badge nw-badge-success">● 200</span></td><td><code>92 ms</code></td>
+              <td><a href="#">详情</a> · <a href="#" class="nw-link-danger">删除</a></td>
+            </tr>
+            <tr><td><label class="nw-check"><input type="checkbox" checked></label></td>
+              <td><code>14:02:09</code></td><td>内部 dashboard</td><td><code>GET /v2/metrics/window</code></td>
+              <td><span class="nw-badge nw-badge-success">● 200</span></td><td><code>140 ms</code></td>
+              <td><a href="#">详情</a> · <a href="#" class="nw-link-danger">删除</a></td>
+            </tr>
+            <tr><td><label class="nw-check"><input type="checkbox"></label></td>
+              <td><code>14:02:08</code></td><td>ACME</td><td><code>POST /v2/events/batch</code></td>
+              <td><span class="nw-badge nw-badge-warning">● 429</span></td><td><code>318 ms</code></td>
+              <td><a href="#">详情</a> · <a href="#" class="nw-link-danger">删除</a></td>
+            </tr>
+            <tr><td><label class="nw-check"><input type="checkbox"></label></td>
+              <td><code>14:02:05</code></td><td>顺丰</td><td><code>GET /v2/orders?status=open</code></td>
+              <td><span class="nw-badge nw-badge-danger">● 500</span></td><td><code>1.42 s</code></td>
+              <td><a href="#">详情</a> · <a href="#" class="nw-link-danger">删除</a></td>
+            </tr>
+            <tr><td><label class="nw-check"><input type="checkbox"></label></td>
+              <td><code>14:02:03</code></td><td>京东数科</td><td><code>POST /v2/webhooks/test</code></td>
+              <td><span class="nw-badge nw-badge-success">● 200</span></td><td><code>110 ms</code></td>
+              <td><a href="#">详情</a> · <a href="#" class="nw-link-danger">删除</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="tags" class="nw-section">
+      <h2 class="nw-section-title">标签 / 徽章 / 切片 · Tags · Badges · Chips</h2>
+
+      <div class="nw-card">
+        <div class="nw-row">
+          <span class="nw-badge">默认</span>
+          <span class="nw-badge nw-badge-primary">主要</span>
+          <span class="nw-badge nw-badge-success">成功</span>
+          <span class="nw-badge nw-badge-warning">警告</span>
+          <span class="nw-badge nw-badge-danger">危险</span>
+          <span class="nw-badge nw-badge-info">信息</span>
+          <span class="nw-badge nw-badge-muted">弱</span>
+        </div>
+        <div class="nw-row" style="margin-top:12px">
+          <span class="nw-tag">订单</span>
+          <span class="nw-tag">物流</span>
+          <span class="nw-tag">财务</span>
+          <span class="nw-tag">v2</span>
+          <span class="nw-tag">已审核 <a href="#" class="nw-tag-close">×</a></span>
+        </div>
+        <div class="nw-row" style="margin-top:12px">
+          <span class="nw-chip"><span class="nw-chip-dot"></span>实时 · 5s</span>
+          <span class="nw-chip nw-chip-warning"><span class="nw-chip-dot"></span>P95 184ms</span>
+          <span class="nw-chip nw-chip-danger"><span class="nw-chip-dot"></span>限流 429</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="avatars" class="nw-section">
+      <h2 class="nw-section-title">头像 · Avatars</h2>
+
+      <div class="nw-card">
+        <div class="nw-row" style="align-items:center">
+          <div class="nw-avatar nw-avatar-sm">LA</div>
+          <div class="nw-avatar nw-avatar-md">CW</div>
+          <div class="nw-avatar nw-avatar-lg">JK</div>
+          <div class="nw-avatar nw-avatar-xl">YQ</div>
+        </div>
+        <div class="nw-avatar-stack" style="margin-top:14px">
+          <div class="nw-avatar nw-avatar-md">LA</div>
+          <div class="nw-avatar nw-avatar-md">CW</div>
+          <div class="nw-avatar nw-avatar-md">JK</div>
+          <div class="nw-avatar nw-avatar-md">YQ</div>
+          <div class="nw-avatar nw-avatar-md nw-avatar-more">+34</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="stats" class="nw-section">
+      <h2 class="nw-section-title">统计卡 · Stat Cards</h2>
+
+      <div class="nw-stat-grid">
+        <div class="nw-stat">
+          <div class="nw-stat-label">本月调用</div>
+          <div class="nw-stat-value">2,418,902 <small>req</small></div>
+          <div class="nw-stat-delta nw-up">▲ 12.4% MoM</div>
+        </div>
+        <div class="nw-stat">
+          <div class="nw-stat-label">活跃成员</div>
+          <div class="nw-stat-value">38 <small>/ 50 席</small></div>
+          <div class="nw-stat-delta nw-up">▲ 4 本周</div>
+        </div>
+        <div class="nw-stat">
+          <div class="nw-stat-label">错误率 24h</div>
+          <div class="nw-stat-value nw-stat-warn">0.42 <small>%</small></div>
+          <div class="nw-stat-delta nw-down">▲ 0.08%</div>
+        </div>
+        <div class="nw-stat">
+          <div class="nw-stat-label">本月账单</div>
+          <div class="nw-stat-value">¥ 2,879 <small>.50</small></div>
+          <div class="nw-stat-delta">自动续费 · T-11</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tabs" class="nw-section">
+      <h2 class="nw-section-title">标签页 / Pills</h2>
+
+      <div class="nw-card">
+        <nav class="nw-tabs">
+          <a class="active" href="#">全部</a>
+          <a href="#">错误</a>
+          <a href="#">慢请求</a>
+          <a href="#">我发起的</a>
+        </nav>
+
+        <div class="nw-pills" style="margin-top:18px">
+          <button class="active">日</button>
+          <button>周</button>
+          <button>月</button>
+          <button>季</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="breadcrumbs" class="nw-section">
+      <h2 class="nw-section-title">面包屑 · Breadcrumbs</h2>
+      <div class="nw-card">
+        <nav class="nw-breadcrumb">
+          <a href="#">控制台</a><span>/</span><a href="#">账户</a><span>/</span><a href="#">成员</a><span>/</span><b>林安琪</b>
+        </nav>
+      </div>
+    </section>
+
+    <section id="pagination" class="nw-section">
+      <h2 class="nw-section-title">分页 · Pagination</h2>
+      <div class="nw-card">
+        <nav class="nw-pagination">
+          <a href="#" class="nw-page-prev">‹ 上一页</a>
+          <a href="#">1</a>
+          <a href="#">2</a>
+          <a href="#" class="active">3</a>
+          <a href="#">4</a>
+          <a href="#">5</a>
+          <span>…</span>
+          <a href="#">42</a>
+          <a href="#" class="nw-page-next">下一页 ›</a>
+        </nav>
+      </div>
+    </section>
+
+    <section id="steps" class="nw-section">
+      <h2 class="nw-section-title">步骤条 · Steps</h2>
+
+      <div class="nw-card">
+        <ol class="nw-steps">
+          <li class="done"><span class="nw-step-num">1</span><div><b>创建组织</b><small>06.13 已完成</small></div></li>
+          <li class="done"><span class="nw-step-num">2</span><div><b>邀请成员</b><small>06.15 已完成</small></div></li>
+          <li class="current"><span class="nw-step-num">3</span><div><b>接入第一个 API</b><small>进行中…</small></div></li>
+          <li><span class="nw-step-num">4</span><div><b>配置 Webhook</b><small>待处理</small></div></li>
+          <li><span class="nw-step-num">5</span><div><b>上线生产</b><small>待处理</small></div></li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="modal" class="nw-section">
+      <h2 class="nw-section-title">对话框 · Modal</h2>
+
+      <div class="nw-card">
+        <div class="nw-modal">
+          <div class="nw-modal-header">
+            <h3>轮换 API Key？</h3>
+            <button class="nw-modal-close" aria-label="close">×</button>
+          </div>
+          <div class="nw-modal-body">
+            <p>此操作会立即作废当前的 <code>ak_3f2a…b91c</code>。所有正在使用旧 Key 的客户端会收到 <code>401 Unauthorized</code>，请确认你已经把新 Key 部署到所有调用方。</p>
+            <label class="nw-check"><input type="checkbox"> 我已了解，继续轮换</label>
+          </div>
+          <div class="nw-modal-footer">
+            <button class="nw-btn">取消</button>
+            <button class="nw-btn nw-btn-danger">立即轮换</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tooltip" class="nw-section">
+      <h2 class="nw-section-title">提示 / Toast</h2>
+
+      <div class="nw-card">
+        <span class="nw-tooltip-wrap">
+          鼠标悬停 <span class="nw-tooltip-target">触发提示</span> 看一下
+          <span class="nw-tooltip">这是工具提示的文字。</span>
+        </span>
+
+        <div class="nw-toast nw-toast-success" style="margin-top:18px">
+          <b>已保存</b> · 设置已更新。
+        </div>
+        <div class="nw-toast nw-toast-danger" style="margin-top:8px">
+          <b>失败</b> · 网络异常，请重试。
+        </div>
+      </div>
+    </section>
+
+    <footer class="nw-footer">
+      <span>Northwind Cloud · Components</span>
+      <span>40 套主题 · 切换 Theme 试试</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+  const themes = [
+    ['01-polar-glass','01 极地玻璃'],
+    ['02-tundra','02 苔原'],
+    ['03-blueprint','03 蓝图'],
+    ['04-midnight-neon','04 子夜霓虹'],
+    ['05-letterpress','05 信笺'],
+    ['06-tile-grid','06 立方瓷砖'],
+    ['07-terminal-crt','07 终端 CRT'],
+    ['08-claymorphism','08 黏土'],
+    ['09-swiss-grid','09 瑞士格'],
+    ['10-sakura-sumi','10 樱与墨'],
+    ['11-obsidian-data','11 黑曜数据'],
+    ['12-dune-pastel','12 沙丘'],
+    ['13-sketch-wireframe','13 草图'],
+    ['14-tickertape','14 数据华尔街'],
+    ['15-toss-style','15 韩系明亮'],
+    ['16-material-dark-pro','16 暗黑材料'],
+    ['17-retro-compute','17 复古运算'],
+    ['18-notion-like','18 文档式'],
+    ['19-lab-mono','19 暗色实验室'],
+    ['20-aurora-gradient','20 渐变流光'],
+    ['21-monet-garden','21 莫奈花园'],
+    ['22-liujin','22 鎏金'],
+    ['23-constructivist','23 苏维埃构成'],
+    ['24-mineral','24 矿物标本'],
+    ['25-tang-landscape','25 唐风山水'],
+    ['26-stained-glass','26 像素彩窗'],
+    ['27-lab-instrument','27 实验室仪表'],
+    ['28-origami','28 折纸'],
+    ['29-vaporwave','29 蒸汽波'],
+    ['30-travel-journal','30 旅行手账'],
+    ['31-art-deco','31 装饰艺术'],
+    ['32-rack-1u','32 服务器机柜'],
+    ['33-capsule','33 太空舱'],
+    ['34-goban','34 棋谱'],
+    ['35-woven','35 编织'],
+    ['36-holographic','36 全息 HUD'],
+    ['37-editorial','37 杂志'],
+    ['38-periodic','38 化学元素'],
+    ['39-cartographic','39 古地图'],
+    ['40-floating-island','40 浮岛'],
+  ];
+  const sel = document.getElementById('theme-select');
+  themes.forEach(([id,name])=>{
+    const opt = document.createElement('option');
+    opt.value = id; opt.textContent = name; sel.appendChild(opt);
+  });
+  // 从 URL 恢复
+  const url = new URL(location.href);
+  const init = url.searchParams.get('t') || '01-polar-glass';
+  sel.value = init;
+  document.getElementById('theme').href = 'css/' + init + '.css';
+  sel.addEventListener('change', e=>{
+    const t = e.target.value;
+    document.getElementById('theme').href = 'css/' + t + '.css';
+    const u = new URL(location.href); u.searchParams.set('t', t); history.replaceState(null,'',u);
+  });
+</script>
+</body>
+</html>

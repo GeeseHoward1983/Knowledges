@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>26 · 像素彩窗 — Northwind Cloud 控制台</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --lead:#0E0E12;          /* 铅条黑 */
+    --lead-2:#1A1A22;
+    --grout:#16161E;
+    --paper:#F4EFE3;
+    --ink:#0E0E12;
+    --ink-2:#5A5C72;
+    --cobalt:#2E5BCF;         /* 钴蓝 */
+    --ruby:#C8294B;            /* 红宝石 */
+    --emerald:#178A55;         /* 翠绿 */
+    --amber:#E8A222;           /* 琥珀 */
+    --orchid:#7E4B98;          /* 紫水晶 */
+    --rose:#E08AB3;           /* 玫瑰 */
+    --teal:#1C8A9A;            /* 湖青 */
+    --line:#0E0E12;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;color:var(--paper);font-family:"Press Start 2P","VT323","DotGothic16","Microsoft YaHei",monospace;background:var(--grout)}
+  body{
+    min-height:100vh;font-size:13px;line-height:1.55;
+    background:
+      linear-gradient(180deg,#0E0E12 0%, #1A1A22 100%);
+    background-attachment:fixed;
+  }
+  /* 铅条网格背景（细黑十字纹模拟铅条） */
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background:
+      linear-gradient(rgba(255,255,255,.02) 1px, transparent 1px) 0 0/20px 20px,
+      linear-gradient(90deg, rgba(255,255,255,.02) 1px, transparent 1px) 0 0/20px 20px;
+  }
+
+  .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh;position:relative;z-index:1}
+
+  /* 边栏 */
+  aside{padding:18px 16px;background:var(--lead);border-right:4px solid var(--ink);position:relative}
+  .brand{
+    padding:12px;border:3px solid var(--cobalt);background:#1A1A22;
+    box-shadow:inset 0 0 0 1px #0E0E12, 3px 3px 0 var(--cobalt);
+    margin-bottom:18px;display:flex;align-items:center;gap:10px;
+  }
+  .brand-px{
+    width:36px;height:36px;background:
+      conic-gradient(from 0deg at 50% 50%, var(--ruby) 0 25%, var(--amber) 25% 50%, var(--emerald) 50% 75%, var(--cobalt) 75% 100%);
+    border:2px solid var(--ink);
+  }
+  .brand b{font-family:"Press Start 2P","VT323",monospace;font-size:12px;letter-spacing:.04em;line-height:1.4;color:var(--paper)}
+  .brand small{font-family:"VT323",monospace;font-size:14px;color:var(--cobalt);letter-spacing:.12em;display:block;margin-top:4px}
+
+  .nav-section{font-family:"Press Start 2P",monospace;font-size:9px;letter-spacing:.16em;color:var(--amber);margin:14px 4px 6px;line-height:1.6}
+  .nav a{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:7px 9px;margin:3px 0;text-decoration:none;color:var(--paper);
+    font-family:"VT323",monospace;font-size:16px;letter-spacing:.04em;
+    border:2px solid transparent;background:#16161E;
+  }
+  .nav a:hover{border-color:var(--cobalt)}
+  .nav a.active{
+    border-color:var(--ruby);background:rgba(200,41,75,.16);color:var(--rose);
+    box-shadow:2px 2px 0 var(--ruby);
+  }
+  .nav a .px{width:10px;height:10px;background:var(--cobalt);border:1px solid #000}
+  .nav a.active .px{background:var(--ruby)}
+
+  /* 主区 */
+  main{padding:0;min-width:0;display:flex;flex-direction:column;min-height:100vh}
+
+  /* === 彩窗 hero：CSS 拼出马赛克彩绘玻璃 === */
+  .window{
+    display:grid;grid-template-columns:repeat(12,1fr);grid-template-rows:repeat(6,52px);
+    gap:3px;padding:18px;background:var(--ink);border-bottom:4px solid var(--ink);
+  }
+  .window i{display:block;border:2px solid var(--ink);position:relative}
+  .window i.t-ruby{background:var(--ruby)}
+  .window i.t-cobalt{background:var(--cobalt)}
+  .window i.t-emerald{background:var(--emerald)}
+  .window i.t-amber{background:var(--amber)}
+  .window i.t-orchid{background:var(--orchid)}
+  .window i.t-rose{background:var(--rose)}
+  .window i.t-teal{background:var(--teal)}
+  .window i.t-paper{background:var(--paper)}
+  .window i.t-lead{background:var(--lead-2)}
+  .window i .lbl{
+    position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;
+    font-family:"Press Start 2P",monospace;font-size:7.5px;letter-spacing:.16em;color:#0E0E12;line-height:1.5;text-align:center;
+  }
+  .window i.t-lead .lbl,.window i.t-cobalt .lbl,.window i.t-orchid .lbl,.window i.t-teal .lbl,.window i.t-emerald .lbl,.window i.t-ruby .lbl{color:#F4EFE3}
+  .window i .v{
+    font-family:"VT323",monospace;font-size:30px;letter-spacing:.02em;line-height:1;margin-top:4px;
+  }
+  .window i .v small{font-family:"Press Start 2P",monospace;font-size:8px;letter-spacing:.04em;margin-left:2px;vertical-align:6px}
+
+  /* 跨格 helper */
+  .c2{grid-column:span 2}
+  .c3{grid-column:span 3}
+  .c4{grid-column:span 4}
+  .c6{grid-column:span 6}
+  .r2{grid-row:span 2}
+  .r3{grid-row:span 3}
+
+  /* 顶部 toolbar */
+  .toolbar{
+    display:flex;align-items:center;gap:10px;padding:10px 18px;background:var(--lead);border-bottom:3px solid var(--ink);
+    font-family:"VT323",monospace;font-size:16px;color:var(--paper);
+  }
+  .toolbar .chip{
+    border:2px solid var(--cobalt);background:rgba(46,91,207,.12);color:var(--paper);padding:3px 9px;
+    font-family:"Press Start 2P",monospace;font-size:8px;letter-spacing:.14em;
+  }
+  .toolbar .chip.live{border-color:var(--emerald);color:var(--emerald)}
+  .toolbar .chip.live::before{content:"●";margin-right:4px}
+  .toolbar .spacer{flex:1}
+  .toolbar input{
+    background:transparent;border:0;outline:0;font:inherit;color:var(--paper);
+    border-bottom:1px solid rgba(244,239,227,.4);width:240px;padding:2px 6px;
+  }
+
+  /* 主体内容区 */
+  .body-wrap{padding:18px;display:grid;grid-template-columns:1.55fr 1fr;gap:18px;background:var(--grout);flex:1}
+
+  .panel{background:var(--lead);border:3px solid var(--ink);box-shadow:4px 4px 0 #000}
+  .panel-head{
+    display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:3px solid var(--ink);background:var(--ruby);color:var(--paper);
+    font-family:"Press Start 2P",monospace;font-size:10px;letter-spacing:.12em;
+  }
+  .panel-head.c{background:var(--cobalt)}
+  .panel-head.g{background:var(--emerald)}
+  .panel-head small{font-family:"VT323",monospace;font-size:13px;letter-spacing:.06em;opacity:.85;font-weight:400;margin-left:8px}
+  .panel-body{padding:0}
+
+  table{width:100%;border-collapse:collapse;font-family:"VT323",monospace;font-size:15px;color:var(--paper)}
+  th{
+    text-align:left;font-family:"Press Start 2P",monospace;font-weight:400;font-size:8.5px;letter-spacing:.18em;color:var(--amber);
+    padding:7px 14px;border-bottom:2px solid var(--ink);background:#1A1A22;
+  }
+  td{padding:7px 14px;border-bottom:1px solid #2A2A35;font-variant-numeric:tabular-nums}
+  tr:last-child td{border-bottom:0}
+  tr:hover td{background:#1F1F2A}
+  td.mono{font-family:"VT323",monospace;font-size:14px;color:var(--paper);opacity:.9}
+  .stat{
+    font-family:"Press Start 2P",monospace;font-size:9px;letter-spacing:.08em;padding:4px 8px;border:2px solid;
+    display:inline-block;line-height:1;
+  }
+  .stat.ok{color:var(--emerald);border-color:var(--emerald);background:rgba(23,138,85,.1)}
+  .stat.warn{color:var(--amber);border-color:var(--amber);background:rgba(232,162,34,.1)}
+  .stat.bad{color:var(--rose);border-color:var(--ruby);background:rgba(200,41,75,.18)}
+  .lat{display:inline-flex;align-items:center;gap:8px;font-family:"VT323",monospace;font-size:14px}
+  .lat .b{width:50px;height:8px;border:2px solid var(--ink);background:#0E0E12;display:inline-block;vertical-align:middle}
+  .lat .b i{display:block;height:100%}
+  .lat .b i.ok{background:var(--emerald)}
+  .lat .b i.warn{background:var(--amber)}
+  .lat .b i.bad{background:var(--ruby)}
+
+  /* 名册 */
+  .person{display:grid;grid-template-columns:42px 1fr auto;gap:12px;align-items:center;padding:11px 14px;border-bottom:1px solid #2A2A35}
+  .person:last-child{border-bottom:0}
+  .px-av{
+    width:42px;height:42px;border:2px solid var(--ink);
+    display:flex;align-items:center;justify-content:center;color:#0E0E12;
+    font-family:"Press Start 2P",monospace;font-size:13px;
+  }
+  .px-av.a1{background:var(--ruby);color:var(--paper)}
+  .px-av.a2{background:var(--cobalt);color:var(--paper)}
+  .px-av.a3{background:var(--emerald);color:var(--paper)}
+  .px-av.a4{background:var(--amber);color:#0E0E12}
+  .person b{font-family:"VT323",monospace;font-size:18px;color:var(--paper);font-weight:400}
+  .person small{display:block;font-family:"VT323",monospace;font-size:13px;color:var(--ink-2);margin-top:1px}
+  .role{font-family:"Press Start 2P",monospace;font-size:8.5px;letter-spacing:.06em;padding:4px 8px;border:2px solid var(--ink-2);color:var(--ink-2)}
+  .role.r{color:var(--rose);border-color:var(--ruby)}
+
+  /* 账单 */
+  .bill{padding:14px 16px;font-family:"VT323",monospace;font-size:15px;color:var(--paper)}
+  .bill .ln{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dotted #2A2A35}
+  .bill .ln b{font-family:"VT323",monospace;font-size:18px}
+  .bill .total{
+    margin-top:10px;padding:10px 12px;border:3px solid var(--amber);background:rgba(232,162,34,.1);
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .bill .total span{font-family:"Press Start 2P",monospace;font-size:9px;color:var(--amber);letter-spacing:.12em}
+  .bill .total b{font-family:"VT323",monospace;font-size:28px;color:var(--amber);letter-spacing:.02em}
+  .gauge{margin-top:14px}
+  .gauge .top{display:flex;justify-content:space-between;font-family:"Press Start 2P",monospace;font-size:8px;color:var(--ink-2);letter-spacing:.1em;margin-bottom:4px}
+  .gauge .bar{height:14px;border:2px solid var(--ink);background:#0E0E12;position:relative;display:flex}
+  .gauge .bar i{display:block;flex:0 0 calc(72%);background:repeating-linear-gradient(90deg,var(--ruby) 0 8px, var(--amber) 8px 16px, var(--emerald) 16px 24px, var(--cobalt) 24px 32px)}
+
+  .btn{
+    display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:2px solid var(--ink);background:var(--paper);color:var(--ink);
+    font-family:"Press Start 2P",monospace;font-size:8.5px;letter-spacing:.1em;cursor:pointer;box-shadow:2px 2px 0 var(--ink);
+  }
+  .btn.r{background:var(--ruby);color:var(--paper);border-color:var(--ink)}
+  .btn.y{background:var(--amber);color:var(--ink)}
+
+  @media (max-width:1100px){
+    .app{grid-template-columns:1fr}
+    aside{border-right:0;border-bottom:3px solid var(--ink)}
+    .window{grid-template-columns:repeat(6,1fr);grid-auto-rows:52px}
+    .c6{grid-column:span 6}.c4{grid-column:span 3}.c3{grid-column:span 3}.c2{grid-column:span 2}
+    .body-wrap{grid-template-columns:1fr;padding:14px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="brand">
+      <div class="brand-px"></div>
+      <div><b>NORTHWIND</b><small>CLOUD · SHEET 01</small></div>
+    </div>
+
+    <div class="nav-section">// TOTAL</div>
+    <nav class="nav">
+      <a class="active"><span><span class="px"></span>&nbsp;Dashboard</span><span>01</span></a>
+      <a><span><span class="px"></span>&nbsp;Live Calls</span><span>02</span></a>
+      <a><span><span class="px"></span>&nbsp;Regions</span><span>03</span></a>
+    </nav>
+    <div class="nav-section">// RESOURCE</div>
+    <nav class="nav">
+      <a><span><span class="px"></span>&nbsp;Keys</span><span>04</span></a>
+      <a><span><span class="px"></span>&nbsp;Webhook</span><span>05</span></a>
+      <a><span><span class="px"></span>&nbsp;Export</span><span>06</span></a>
+    </nav>
+    <div class="nav-section">// ACCOUNT</div>
+    <nav class="nav">
+      <a><span><span class="px"></span>&nbsp;Members</span><span>07</span></a>
+      <a><span><span class="px"></span>&nbsp;Billing</span><span>08</span></a>
+      <a><span><span class="px"></span>&nbsp;Config</span><span>09</span></a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="toolbar">
+      <span class="chip live">LIVE 5S</span>
+      <span class="chip">PROD · AP-SE-1</span>
+      <span class="spacer"></span>
+      <input placeholder="搜索 KEY / 端点 / 调用 ID">
+      <span class="chip">⌘K</span>
+    </div>
+
+    <!-- 彩绘玻璃 HERO -->
+    <section class="window">
+      <!-- 行 1 -->
+      <i class="t-cobalt c4 r2"><span class="lbl">本月调用<span class="v">2.42<small>M</small></span></span></i>
+      <i class="t-amber c2"><span class="lbl" style="font-size:9px">▲ 12.4%<br>MoM</span></i>
+      <i class="t-lead c2"><span class="lbl" style="color:var(--paper);font-size:9px">TGT<br>3.0M</span></i>
+      <i class="t-ruby c2"><span class="lbl">错误率<span class="v">0.42<small>%</small></span></span></i>
+      <i class="t-rose c2"><span class="lbl" style="font-size:9px">THR 0.5%<br>▲ 0.08%</span></i>
+
+      <!-- 行 2 -->
+      <i class="t-emerald c2"><span class="lbl">名册<span class="v">38</span></span></i>
+      <i class="t-teal c2"><span class="lbl" style="color:var(--paper);font-size:9px">▲ 4<br>本周</span></i>
+
+      <!-- 行 3 -->
+      <i class="t-orchid c3 r2"><span class="lbl">账目<span class="v" style="font-size:24px">¥2,879</span></span></i>
+      <i class="t-paper c3"><span class="lbl">06.19 14:02</span></i>
+      <i class="t-lead c3"><span class="lbl" style="color:var(--paper)">T-11 DAYS</span></i>
+      <i class="t-amber c3"><span class="lbl">SHEET 01</span></i>
+
+      <!-- 行 4 -->
+      <i class="t-emerald c2"><span class="lbl">QPS 312</span></i>
+      <i class="t-cobalt c2"><span class="lbl">P95 184ms</span></i>
+      <i class="t-rose c2"><span class="lbl">KEYS 12</span></i>
+      <i class="t-paper c2"><span class="lbl">UPTIME 17D</span></i>
+      <i class="t-ruby c1 c2"><span class="lbl" style="color:var(--paper)">LIVE ●</span></i>
+    </section>
+
+    <div class="body-wrap">
+      <div class="panel">
+        <div class="panel-head c">
+          <span>// ACCESS LOG · TAIL -F<small>last 100 · prod</small></span>
+          <span style="font-family:'VT323',monospace;font-size:13px">FILTER ALL ▾</span>
+        </div>
+        <div class="panel-body">
+          <table>
+            <thead><tr><th>T</th><th>CALLER</th><th>METHOD ENDPOINT</th><th>STAT</th><th>LAT</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">14:02:11</td><td>京东数科</td><td class="mono">POST /v2/orders/sync</td>
+                <td><span class="stat ok">200</span></td>
+                <td><span class="lat">92ms<span class="b"><i class="ok" style="width:18%"></i></span></span></td></tr>
+              <tr><td class="mono">14:02:09</td><td>内部 dashboard</td><td class="mono">GET /v2/metrics/window</td>
+                <td><span class="stat ok">200</span></td>
+                <td><span class="lat">140ms<span class="b"><i class="ok" style="width:28%"></i></span></span></td></tr>
+              <tr><td class="mono">14:02:08</td><td>ACME</td><td class="mono">POST /v2/events/batch</td>
+                <td><span class="stat warn">429</span></td>
+                <td><span class="lat">318ms<span class="b"><i class="warn" style="width:65%"></i></span></span></td></tr>
+              <tr><td class="mono">14:02:07</td><td>Office</td><td class="mono">DELETE /v2/keys/ak_3f…</td>
+                <td><span class="stat ok">204</span></td>
+                <td><span class="lat">58ms<span class="b"><i class="ok" style="width:12%"></i></span></span></td></tr>
+              <tr><td class="mono">14:02:05</td><td>顺丰</td><td class="mono">GET /v2/orders?status=open</td>
+                <td><span class="stat bad">500</span></td>
+                <td><span class="lat">1.42s<span class="b"><i class="bad" style="width:88%"></i></span></span></td></tr>
+              <tr><td class="mono">14:02:03</td><td>京东数科</td><td class="mono">POST /v2/webhooks/test</td>
+                <td><span class="stat ok">200</span></td>
+                <td><span class="lat">110ms<span class="b"><i class="ok" style="width:22%"></i></span></span></td></tr>
+              <tr><td class="mono">14:02:01</td><td>平安</td><td class="mono">PUT /v2/orders/12489</td>
+                <td><span class="stat ok">200</span></td>
+                <td><span class="lat">181ms<span class="b"><i class="ok" style="width:34%"></i></span></span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:18px">
+        <div class="panel">
+          <div class="panel-head g">
+            <span>// ROSTER<small>38 / 50</small></span>
+            <button class="btn">+ INVITE</button>
+          </div>
+          <div class="panel-body">
+            <div class="person"><div class="px-av a1">林</div><div><b>林安琪</b><small>liananqi · 2 min</small></div><span class="role r">OWNER</span></div>
+            <div class="person"><div class="px-av a2">陈</div><div><b>陈维</b><small>chenwei · 1 hr</small></div><span class="role">ADMIN</span></div>
+            <div class="person"><div class="px-av a3">蒋</div><div><b>蒋克</b><small>jiangke · 1 d</small></div><span class="role">DEV</span></div>
+            <div class="person"><div class="px-av a4">袁</div><div><b>袁倩</b><small>vendor · pending</small></div><span class="role">READ</span></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <span>// BILLING<small>06.01 – 06.30</small></span>
+            <button class="btn y">INVOICE</button>
+          </div>
+          <div class="bill">
+            <div class="ln"><span>GROWTH 套餐</span><b>¥ 1,980.00</b></div>
+            <div class="ln"><span>OVERAGE · 418,902</span><b>¥ 837.80</b></div>
+            <div class="ln"><span>WH RETRY · 12,341</span><b>¥ 61.70</b></div>
+            <div class="total"><span>TOTAL</span><b>¥ 2,879.50</b></div>
+            <div class="gauge">
+              <div class="top"><span>QUOTA 72%</span><span>2.42M / 3M</span></div>
+              <div class="bar"><i></i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

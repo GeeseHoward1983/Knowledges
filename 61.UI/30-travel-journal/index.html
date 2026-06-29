@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>30 · 旅行手账 — Northwind Cloud 控制台</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --leather:#8C5A3C;          /* 棕牛皮 */
+    --leather-d:#6B432A;
+    --leather-2:#A8714F;
+    --paper:#F4EAD0;            /* 旧手账纸 */
+    --paper-2:#E8DCBE;
+    --paper-3:#D9C99D;
+    --ink:#2A2014;
+    --ink-2:#5C4830;
+    --ink-3:#8E7A5A;
+    --stamp:#A8362C;            /* 邮戳红 */
+    --stamp-2:#6E2B25;
+    --route:#4B6B8E;            /* 路线蓝 */
+    --gold:#B68A3E;             /* 烫金 */
+    --line:#2A2014;
+    --thread:#C8A053;           /* 缝线金 */
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;color:var(--ink);font-family:"Caveat","Reenie Beanie","Quicksand","PingFang SC",cursive,sans-serif;background:var(--leather)}
+  body{
+    min-height:100vh;font-size:16px;line-height:1.5;
+    background:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='260' height='260'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/><feColorMatrix values='0 0 0 0 .35  0 0 0 0 .22  0 0 0 0 .12  0 0 0 .15 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
+      var(--leather);
+  }
+
+  .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh;position:relative;gap:18px;padding:18px}
+
+  /* === 牛皮封皮工具 === */
+  .leather-card{
+    background:var(--leather);
+    background-image:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2'/><feColorMatrix values='0 0 0 0 .4  0 0 0 0 .25  0 0 0 0 .14  0 0 0 .14 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    border:1px solid var(--leather-d);border-radius:6px;color:var(--paper);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.08),
+      inset 0 -2px 0 rgba(0,0,0,.25),
+      0 6px 18px rgba(0,0,0,.25);
+    position:relative;
+  }
+  /* 烫金缝线 */
+  .leather-card::before,.leather-card::after{
+    content:"";position:absolute;left:8px;right:8px;height:1px;
+    background:repeating-linear-gradient(90deg, var(--thread) 0 6px, transparent 6px 10px);opacity:.85;
+  }
+  .leather-card::before{top:6px}
+  .leather-card::after{bottom:6px}
+
+  /* === 手账纸卡片工具 === */
+  .paper-card{
+    background:var(--paper);border:1px solid var(--paper-3);border-radius:3px;
+    box-shadow:0 1px 0 rgba(0,0,0,.04), 0 6px 14px rgba(0,0,0,.18);
+    position:relative;
+  }
+
+  aside{padding:22px 18px}
+  .brand{padding:6px 8px 16px;border-bottom:1px dashed rgba(244,234,208,.4);margin-bottom:14px;display:flex;align-items:center;gap:12px}
+  .brand-emboss{
+    width:48px;height:48px;border:2px solid var(--gold);border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    color:var(--gold);font-family:"Caveat",cursive;font-weight:700;font-size:24px;
+    background:radial-gradient(circle at 30% 25%, rgba(182,138,62,.15), transparent 65%);
+  }
+  .brand b{font-family:"Caveat",cursive;font-weight:700;font-size:24px;letter-spacing:.04em;line-height:1;color:var(--paper)}
+  .brand small{display:block;font-family:"Quicksand",sans-serif;font-weight:600;font-size:10.5px;letter-spacing:.22em;color:var(--paper-2);margin-top:3px;text-transform:uppercase}
+
+  .nav-section{
+    font-family:"Caveat",cursive;font-weight:700;font-size:18px;color:var(--gold);margin:16px 6px 4px;letter-spacing:.04em;
+    text-decoration:underline wavy var(--gold);text-decoration-thickness:1px;text-underline-offset:4px;
+  }
+  .nav a{
+    display:flex;justify-content:space-between;align-items:baseline;padding:5px 6px;text-decoration:none;color:var(--paper);
+    font-family:"Caveat",cursive;font-weight:600;font-size:20px;letter-spacing:.02em;
+  }
+  .nav a:hover{color:var(--gold)}
+  .nav a.active{color:var(--gold)}
+  .nav a.active::before{content:"✈ ";color:var(--gold);margin-right:2px;font-size:14px;vertical-align:2px}
+  .nav a .n{font-family:"Quicksand",sans-serif;font-weight:600;font-size:11px;color:var(--paper-2);letter-spacing:.18em}
+
+  /* 主区：手账纸卡片 */
+  main{padding:0;min-width:0;display:flex;flex-direction:column;gap:18px}
+
+  /* 顶 toolbar 在牛皮上 */
+  .topbar{
+    padding:10px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  }
+  .topbar .lat{
+    color:var(--paper);font-family:"Caveat",cursive;font-size:18px;letter-spacing:.04em;
+  }
+  .topbar .lat b{color:var(--gold)}
+  .topbar .spacer{flex:1}
+  .stamp-mini{
+    display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border:1.5px dashed var(--paper-2);color:var(--paper);
+    font-family:"Quicksand",sans-serif;font-weight:600;font-size:11px;letter-spacing:.16em;text-transform:uppercase;border-radius:99px;
+  }
+  .stamp-mini::before{content:"●";color:var(--gold)}
+
+  /* Hero：旅行手账主卡片 */
+  .hero{padding:0;overflow:hidden;display:grid;grid-template-columns:1.4fr 1fr;gap:0}
+  .hero .left{padding:30px 32px;border-right:2px dashed var(--paper-3);position:relative}
+  .hero .eyebrow{font-family:"Quicksand",sans-serif;font-weight:700;font-size:11px;letter-spacing:.28em;color:var(--ink-2);text-transform:uppercase;margin-bottom:8px}
+  .hero h1{
+    margin:0;font-family:"Caveat","Source Han Serif SC",cursive,serif;font-weight:700;font-size:48px;letter-spacing:-.005em;line-height:1.1;color:var(--ink);
+  }
+  .hero h1 em{font-style:italic;color:var(--stamp)}
+  .hero .sub{
+    margin-top:14px;font-family:"Caveat",cursive;font-weight:600;font-size:21px;color:var(--ink-2);line-height:1.5;max-width:480px;
+  }
+  .hero .sub b{color:var(--ink);font-weight:700}
+
+  /* 邮戳 */
+  .stamp-big{
+    position:absolute;right:24px;top:24px;width:96px;height:96px;border:2.5px solid var(--stamp);border-radius:50%;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--stamp);
+    transform:rotate(-12deg);background:radial-gradient(circle at 30% 25%, rgba(168,54,44,.1), transparent 65%);
+    font-family:"Quicksand",sans-serif;font-weight:700;
+  }
+  .stamp-big::after{content:"";position:absolute;inset:4px;border:1px dashed rgba(168,54,44,.5);border-radius:50%}
+  .stamp-big .ts{font-family:"Caveat",cursive;font-weight:700;font-size:24px;line-height:1;letter-spacing:.04em}
+  .stamp-big .loc{font-size:9px;letter-spacing:.28em;margin-top:4px}
+  .stamp-big .date{font-family:"Caveat",cursive;font-weight:600;font-size:14px;margin-top:2px}
+
+  /* 右侧航班/行程信息 */
+  .hero .right{padding:30px 28px;background:var(--paper-2);color:var(--ink);position:relative}
+  .hero .right h3{margin:0 0 12px;font-family:"Quicksand",sans-serif;font-weight:700;font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--ink-2)}
+  .route{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;margin-bottom:18px}
+  .route .pt{text-align:center}
+  .route .pt b{display:block;font-family:"Caveat",cursive;font-weight:700;font-size:36px;line-height:1;color:var(--ink)}
+  .route .pt small{display:block;font-family:"Quicksand",sans-serif;font-weight:600;font-size:11px;letter-spacing:.16em;color:var(--ink-2);text-transform:uppercase;margin-top:4px}
+  .route .arrow{font-family:"Caveat",cursive;font-weight:700;font-size:28px;color:var(--route);text-align:center}
+  .route .arrow::before{content:"✈"}
+  .route .arrow::after{content:"";display:block;height:1.5px;background:repeating-linear-gradient(90deg,var(--route) 0 6px,transparent 6px 10px);margin-top:4px;width:100%}
+
+  .leg{display:flex;justify-content:space-between;padding:6px 0;font-family:"Caveat",cursive;font-weight:600;font-size:18px;color:var(--ink-2);border-bottom:1px dashed var(--paper-3)}
+  .leg:last-child{border-bottom:0}
+  .leg b{color:var(--ink);font-weight:700}
+
+  /* KPI 行：邮票收藏 */
+  .stamps{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .stamp-card{
+    padding:18px 18px 16px;background:var(--paper);border:1px solid var(--paper-3);position:relative;
+    box-shadow:0 4px 10px rgba(0,0,0,.12);
+  }
+  /* 邮票齿孔 */
+  .stamp-card::before,.stamp-card::after{
+    content:"";position:absolute;left:0;right:0;height:8px;
+    background:radial-gradient(circle at center,transparent 3px,var(--leather) 3.2px) 0 0/12px 8px;
+  }
+  .stamp-card::before{top:-4px}
+  .stamp-card::after{bottom:-4px;transform:scaleY(-1)}
+  .stamp-card .denom{
+    position:absolute;top:8px;right:10px;font-family:"Quicksand",sans-serif;font-weight:700;font-size:9.5px;letter-spacing:.2em;color:var(--ink-3);text-transform:uppercase;
+  }
+  .stamp-card .l{font-family:"Caveat",cursive;font-weight:700;font-size:18px;color:var(--ink-2);letter-spacing:.04em}
+  .stamp-card .v{
+    font-family:"Caveat","Source Han Serif SC",cursive,serif;font-weight:700;font-size:38px;letter-spacing:-.01em;line-height:1;margin-top:4px;color:var(--ink);font-variant-numeric:tabular-nums;
+  }
+  .stamp-card .v small{font-family:"Quicksand",sans-serif;font-weight:600;font-size:11px;color:var(--ink-2);margin-left:4px;letter-spacing:.04em}
+  .stamp-card .d{font-family:"Quicksand",sans-serif;font-weight:600;font-size:11px;color:var(--ink-2);margin-top:6px;display:flex;justify-content:space-between;letter-spacing:.04em}
+  .up{color:#5C7A3A}
+  .down{color:var(--stamp)}
+
+  /* 双栏 */
+  .grid{display:grid;grid-template-columns:1.55fr 1fr;gap:18px}
+
+  .panel-head{
+    display:flex;justify-content:space-between;align-items:center;padding:14px 22px;border-bottom:2px dashed var(--paper-3);background:var(--paper-2);
+  }
+  .panel-title{
+    font-family:"Caveat","Source Han Serif SC",cursive,serif;font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--ink);
+  }
+  .panel-title::before{content:"✦ ";color:var(--stamp);font-size:14px;vertical-align:2px;margin-right:2px}
+  .panel-title small{display:block;font-family:"Quicksand",sans-serif;font-weight:600;font-size:11px;color:var(--ink-2);margin-top:1px;letter-spacing:.16em;text-transform:uppercase}
+
+  /* 调用日志 = 行程时间线 */
+  .timeline{padding:14px 22px}
+  .leg-row{display:grid;grid-template-columns:80px 16px 1fr 60px 70px;gap:14px;align-items:center;padding:11px 0;border-bottom:1px dashed var(--paper-3);font-family:"Quicksand",sans-serif;font-size:13px}
+  .leg-row:last-child{border-bottom:0}
+  .leg-row .t{font-family:"Caveat",cursive;font-weight:700;font-size:17px;color:var(--ink)}
+  .leg-row .dot{display:flex;align-items:center;justify-content:center}
+  .leg-row .dot i{width:10px;height:10px;border-radius:50%;background:var(--paper);border:1.5px solid var(--ink-2);display:inline-block}
+  .leg-row .dot.ok i{background:#7A9B5F;border-color:#4A6B33}
+  .leg-row .dot.warn i{background:var(--gold);border-color:var(--leather-d)}
+  .leg-row .dot.bad i{background:var(--stamp);border-color:var(--stamp-2)}
+  .leg-row .body b{font-family:"Caveat",cursive;font-weight:700;font-size:17px;color:var(--ink);display:block;line-height:1.2}
+  .leg-row .body small{font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--ink-2);display:block;margin-top:2px;letter-spacing:.02em}
+  .leg-row .stat{font-family:"Quicksand",sans-serif;font-weight:700;font-size:11.5px;letter-spacing:.06em;padding:3px 8px;text-align:center;border:1.5px solid var(--ink-2);color:var(--ink);background:var(--paper-2)}
+  .leg-row .stat.warn{border-color:var(--gold);color:#7A5A18;background:rgba(182,138,62,.12)}
+  .leg-row .stat.bad{border-color:var(--stamp);color:var(--stamp);background:rgba(168,54,44,.08)}
+  .leg-row .lat{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--ink-2);text-align:right}
+
+  /* 名册 = 通讯录 */
+  .members{padding:6px 0}
+  .person{display:grid;grid-template-columns:46px 1fr auto;gap:14px;align-items:center;padding:13px 22px;border-bottom:1px dashed var(--paper-3)}
+  .person:last-child{border-bottom:0}
+  .photo{
+    width:46px;height:46px;border:1.5px solid var(--ink-2);background:var(--paper-2);
+    display:flex;align-items:center;justify-content:center;font-family:"Caveat",cursive;font-weight:700;font-size:24px;color:var(--ink);
+    transform:rotate(-3deg);box-shadow:2px 2px 0 var(--paper-3);
+  }
+  .photo.p2{transform:rotate(2deg)}
+  .photo.p3{transform:rotate(-1deg)}
+  .photo.p4{transform:rotate(3deg)}
+  .person b{font-family:"Caveat",cursive;font-weight:700;font-size:20px;color:var(--ink);letter-spacing:.02em}
+  .person small{display:block;font-family:"Quicksand",sans-serif;font-weight:600;font-size:11.5px;color:var(--ink-2);margin-top:1px;letter-spacing:.04em}
+  .role{font-family:"Quicksand",sans-serif;font-weight:700;font-size:11px;letter-spacing:.16em;text-transform:uppercase;padding:4px 10px;border:1.5px solid var(--ink-2);color:var(--ink);background:var(--paper-2)}
+  .role.r{color:var(--stamp);border-color:var(--stamp);background:rgba(168,54,44,.06)}
+
+  /* 账目 = 旅费 */
+  .bill{padding:18px 22px}
+  .bill .ln{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px dashed var(--paper-3);font-family:"Caveat",cursive;font-size:19px;color:var(--ink-2)}
+  .bill .ln b{font-family:"Caveat",cursive;font-weight:700;font-size:22px;color:var(--ink);font-variant-numeric:tabular-nums}
+  .bill .total{
+    margin-top:8px;padding-top:14px;border-top:2.5px double var(--ink);display:flex;justify-content:space-between;align-items:baseline;
+  }
+  .bill .total span{font-family:"Caveat",cursive;font-weight:700;font-size:22px;color:var(--ink)}
+  .bill .total b{font-family:"Caveat",cursive;font-weight:700;font-size:34px;color:var(--stamp);letter-spacing:-.01em}
+  .gauge{margin-top:16px}
+  .gauge .top{display:flex;justify-content:space-between;font-family:"Quicksand",sans-serif;font-weight:600;font-size:11px;color:var(--ink-2);letter-spacing:.16em;text-transform:uppercase;margin-bottom:6px}
+  .gauge .bar{height:10px;border:1.5px solid var(--ink-2);background:var(--paper);position:relative;overflow:hidden}
+  .gauge .bar i{display:block;height:100%;width:72%;background:repeating-linear-gradient(135deg,var(--stamp) 0 6px,var(--gold) 6px 12px)}
+
+  .btn{
+    display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1.5px solid var(--ink);background:var(--paper);
+    color:var(--ink);font-family:"Caveat",cursive;font-weight:700;font-size:18px;cursor:pointer;letter-spacing:.04em;
+    box-shadow:2px 2px 0 var(--ink);
+  }
+  .btn.stamp{background:var(--stamp);color:var(--paper);border-color:var(--stamp-2);box-shadow:2px 2px 0 var(--leather-d)}
+
+  @media (max-width:1100px){
+    .app{grid-template-columns:1fr;padding:14px}
+    .hero{grid-template-columns:1fr}
+    .hero .left{border-right:0;border-bottom:2px dashed var(--paper-3)}
+    .stamps{grid-template-columns:1fr 1fr}
+    .grid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="leather-card">
+    <div class="brand">
+      <div class="brand-emboss">N</div>
+      <div><b>Northwind</b><small>Travel Log · Vol 01</small></div>
+    </div>
+    <div class="nav-section">Itinerary</div>
+    <nav class="nav">
+      <a class="active"><span>仪表盘</span><span class="n">01</span></a>
+      <a><span>实时调用</span><span class="n">02</span></a>
+      <a><span>区域分布</span><span class="n">03</span></a>
+    </nav>
+    <div class="nav-section">Supplies</div>
+    <nav class="nav">
+      <a><span>API 密钥</span><span class="n">04</span></a>
+      <a><span>Webhook</span><span class="n">05</span></a>
+      <a><span>数据导出</span><span class="n">06</span></a>
+    </nav>
+    <div class="nav-section">Logbook</div>
+    <nav class="nav">
+      <a><span>名册</span><span class="n">07</span></a>
+      <a><span>账目</span><span class="n">08</span></a>
+      <a><span>偏好</span><span class="n">09</span></a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="topbar">
+      <span class="lat">日志 · <b>第 19 日</b> · ap-southeast-1 · 多云</span>
+      <span class="spacer"></span>
+      <span class="stamp-mini">LIVE · 5s</span>
+      <span class="stamp-mini">PROD</span>
+      <button class="btn">＋ 新行程</button>
+    </div>
+
+    <section class="hero paper-card">
+      <div class="left">
+        <div class="eyebrow">本月调用 · MTD · LIVE</div>
+        <h1>六月十九日，<em>晴。</em><br>这一程已走过 <em>240 万</em> 里。</h1>
+        <div class="sub">
+          较上月 <b>+12.4%</b>，按此速度，会在 <b>27 日</b> 抵达 3,000,000 里程上限。
+          24h 错误率 <b>0.42%</b>，仍在阈下，但顺丰那段路有几次颠簸，记得回头看看。
+        </div>
+        <div class="stamp-big">
+          <span class="ts">已抵</span>
+          <span class="loc">SHANGHAI</span>
+          <span class="date">06 · 19</span>
+        </div>
+      </div>
+      <div class="right">
+        <h3>This Week's Route</h3>
+        <div class="route">
+          <div class="pt"><b>PEK</b><small>06.13</small></div>
+          <div class="arrow"></div>
+          <div class="pt"><b>SHA</b><small>06.19</small></div>
+        </div>
+        <div class="leg"><span>06.13 · 北京 PEK</span><b>启程</b></div>
+        <div class="leg"><span>06.15 · 杭州 HGH</span><b>停驻 · API 升级</b></div>
+        <div class="leg"><span>06.17 · 深圳 SZX</span><b>停驻 · 客户对接</b></div>
+        <div class="leg"><span>06.19 · 上海 SHA</span><b>抵达 · 本期结算</b></div>
+        <div class="leg"><span>06.30 · 上海 SHA</span><b>本月闭账</b></div>
+      </div>
+    </section>
+
+    <section class="stamps">
+      <div class="stamp-card">
+        <span class="denom">№ 01 · ¥ 4.20</span>
+        <div class="l">本月里程</div>
+        <div class="v">2.42<small>M req</small></div>
+        <div class="d"><span class="up">▲ 12.4%</span><span>tgt 3.0M</span></div>
+      </div>
+      <div class="stamp-card">
+        <span class="denom">№ 02 · ¥ 0.80</span>
+        <div class="l">同行人</div>
+        <div class="v">38<small>/ 50 席</small></div>
+        <div class="d"><span class="up">▲ 4 本周</span><span>idle 12</span></div>
+      </div>
+      <div class="stamp-card">
+        <span class="denom">№ 03 · ¥ 2.00</span>
+        <div class="l">颠簸率 24h</div>
+        <div class="v" style="color:var(--stamp)">0.42<small>%</small></div>
+        <div class="d"><span class="down">▲ 0.08%</span><span>thr 0.5%</span></div>
+      </div>
+      <div class="stamp-card">
+        <span class="denom">№ 04 · ¥ 8.00</span>
+        <div class="l">本月旅费</div>
+        <div class="v">¥ 2,879<small>.50</small></div>
+        <div class="d"><span>auto</span><span>T-11</span></div>
+      </div>
+    </section>
+
+    <div class="grid">
+      <div class="paper-card">
+        <div class="panel-head">
+          <div class="panel-title">行程日记<small>· last 100 · 实时</small></div>
+          <button class="btn">仅看颠簸</button>
+        </div>
+        <div class="timeline">
+          <div class="leg-row"><span class="t">14:02</span><span class="dot ok"><i></i></span>
+            <div class="body"><b>京东数科 来访</b><small>POST /v2/orders/sync</small></div>
+            <span class="stat">顺</span><span class="lat">92 ms</span></div>
+          <div class="leg-row"><span class="t">14:02</span><span class="dot ok"><i></i></span>
+            <div class="body"><b>内部 dashboard 取阅</b><small>GET /v2/metrics/window</small></div>
+            <span class="stat">顺</span><span class="lat">140 ms</span></div>
+          <div class="leg-row"><span class="t">14:02</span><span class="dot warn"><i></i></span>
+            <div class="body"><b>ACME 批量推送</b><small>POST /v2/events/batch · 限流</small></div>
+            <span class="stat warn">缓</span><span class="lat">318 ms</span></div>
+          <div class="leg-row"><span class="t">14:02</span><span class="dot ok"><i></i></span>
+            <div class="body"><b>Office 注销旧 Key</b><small>DELETE /v2/keys/ak_3f…</small></div>
+            <span class="stat">顺</span><span class="lat">58 ms</span></div>
+          <div class="leg-row"><span class="t">14:02</span><span class="dot bad"><i></i></span>
+            <div class="body"><b>顺丰 查单失败</b><small>GET /v2/orders?status=open · 上游异常</small></div>
+            <span class="stat bad">颠</span><span class="lat">1.42 s</span></div>
+          <div class="leg-row"><span class="t">14:02</span><span class="dot ok"><i></i></span>
+            <div class="body"><b>京东数科 验签</b><small>POST /v2/webhooks/test</small></div>
+            <span class="stat">顺</span><span class="lat">110 ms</span></div>
+          <div class="leg-row"><span class="t">14:02</span><span class="dot ok"><i></i></span>
+            <div class="body"><b>平安 改单</b><small>PUT /v2/orders/12489</small></div>
+            <span class="stat">顺</span><span class="lat">181 ms</span></div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:18px">
+        <div class="paper-card">
+          <div class="panel-head">
+            <div class="panel-title">同行人名册<small>· 38 在册 · 12 空位</small></div>
+            <button class="btn">邀人</button>
+          </div>
+          <div class="members">
+            <div class="person"><div class="photo">林</div><div><b>林安琪</b><small>liananqi · 二分钟前</small></div><span class="role r">领队</span></div>
+            <div class="person"><div class="photo p2">陈</div><div><b>陈维</b><small>chenwei · 一小时前</small></div><span class="role">协理</span></div>
+            <div class="person"><div class="photo p3">蒋</div><div><b>蒋克</b><small>jiangke · 昨日</small></div><span class="role">伴行</span></div>
+            <div class="person"><div class="photo p4">袁</div><div><b>袁倩</b><small>vendor · 邀约中</small></div><span class="role">观光</span></div>
+          </div>
+        </div>
+
+        <div class="paper-card">
+          <div class="panel-head">
+            <div class="panel-title">旅费账目<small>· 06.01 – 06.30 · 自动续</small></div>
+            <button class="btn stamp">领票据</button>
+          </div>
+          <div class="bill">
+            <div class="ln"><span>Growth 月票</span><b>¥ 1,980.00</b></div>
+            <div class="ln"><span>超量里程 · 418,902</span><b>¥ 837.80</b></div>
+            <div class="ln"><span>Webhook 补票 · 12,341</span><b>¥ 61.70</b></div>
+            <div class="total"><span>合计</span><b>¥ 2,879.50</b></div>
+            <div class="gauge">
+              <div class="top"><span>里程包用量 72%</span><span>2.42M / 3M</span></div>
+              <div class="bar"><i></i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

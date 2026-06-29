@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>04 · 子夜霓虹 — Northwind Cloud 控制台</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --bg:#0B0820;            /* 深紫黑 */
+    --bg-2:#15102E;
+    --panel:#1A1438;
+    --panel-2:#231A4A;
+    --ink:#EDE9FF;
+    --ink-2:#9A8FD8;
+    --line:rgba(237,233,255,.08);
+    --line-2:rgba(237,233,255,.18);
+    --neon-1:#FF4FD8;        /* 霓虹紫红 */
+    --neon-2:#7B5BFF;        /* 霓虹紫 */
+    --neon-3:#36E2FF;        /* 霓虹青 */
+    --ok:#36FFC4;
+    --warn:#FFB95C;
+    --bad:#FF6B8A;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;color:var(--ink);font-family:"Sora","PingFang SC",system-ui,sans-serif;background:var(--bg)}
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(900px 600px at 0% 0%, rgba(255,79,216,.16), transparent 60%),
+      radial-gradient(800px 500px at 100% 0%, rgba(54,226,255,.14), transparent 55%),
+      radial-gradient(700px 400px at 50% 110%, rgba(123,91,255,.18), transparent 60%),
+      var(--bg);
+    background-attachment: fixed;
+    overflow-x:hidden;
+  }
+  .app{display:grid;grid-template-columns:236px 1fr;min-height:100vh}
+
+  /* 边栏 */
+  aside{
+    padding:22px 16px;border-right:1px solid var(--line);
+    background:linear-gradient(180deg,rgba(26,20,56,.7),rgba(11,8,32,.3));
+    backdrop-filter:blur(6px);
+  }
+  .brand{display:flex;align-items:center;gap:10px;margin-bottom:24px;padding:4px 6px}
+  .brand-mark{
+    width:36px;height:36px;border-radius:11px;position:relative;
+    background:conic-gradient(from 210deg at 50% 50%,var(--neon-1),var(--neon-2),var(--neon-3),var(--neon-1));
+    box-shadow:0 0 24px rgba(255,79,216,.45),0 0 36px rgba(54,226,255,.25);
+  }
+  .brand-mark::after{
+    content:"N";position:absolute;inset:2px;border-radius:9px;background:var(--bg);
+    display:flex;align-items:center;justify-content:center;font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:16px;color:var(--ink);
+  }
+  .brand-name{font-weight:600;font-size:15px;letter-spacing:.01em}
+  .brand-name small{display:block;font-size:10.5px;color:var(--ink-2);letter-spacing:.18em;text-transform:uppercase;margin-top:2px}
+
+  .nav-section{font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-2);margin:18px 8px 6px}
+  .nav a{
+    display:flex;align-items:center;gap:11px;padding:9px 12px;text-decoration:none;color:var(--ink);font-size:13.5px;border-radius:10px;
+  }
+  .nav a:hover{background:rgba(123,91,255,.08)}
+  .nav a.active{
+    background:linear-gradient(90deg,rgba(255,79,216,.16),rgba(123,91,255,.08));
+    box-shadow:inset 0 0 0 1px rgba(255,79,216,.35), 0 0 18px rgba(255,79,216,.12);
+  }
+  .nav a .ic{
+    width:22px;height:22px;border-radius:6px;background:rgba(237,233,255,.06);display:flex;align-items:center;justify-content:center;color:var(--ink-2);font-size:11px;font-family:"JetBrains Mono",monospace;
+  }
+  .nav a.active .ic{background:rgba(255,79,216,.2);color:var(--neon-1)}
+
+  /* 顶栏 */
+  main{padding:18px 26px 36px;min-width:0}
+  .topbar{display:flex;gap:12px;align-items:center;margin-bottom:22px;flex-wrap:wrap}
+  .search{
+    flex:1;min-width:240px;display:flex;align-items:center;gap:10px;
+    background:rgba(35,26,74,.55);border:1px solid var(--line-2);border-radius:12px;
+    padding:9px 14px;font-size:13.5px;color:var(--ink-2);
+  }
+  .search input{flex:1;background:transparent;border:0;outline:0;font:inherit;color:var(--ink)}
+  .chip{
+    display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:999px;
+    background:rgba(123,91,255,.12);border:1px solid var(--line-2);font-size:12px;color:var(--ink);
+  }
+  .chip.live::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok)}
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:10px;
+    background:rgba(237,233,255,.05);border:1px solid var(--line-2);color:var(--ink);
+    font:inherit;font-size:13px;cursor:pointer;
+  }
+  .btn.neon{
+    background:linear-gradient(90deg,var(--neon-1),var(--neon-2));border:0;color:#fff;font-weight:600;
+    box-shadow:0 0 20px rgba(255,79,216,.45);
+  }
+  .av{width:34px;height:34px;border-radius:50%;background:conic-gradient(from 90deg,var(--neon-3),var(--neon-1),var(--neon-2));padding:2px}
+  .av i{display:block;width:100%;height:100%;border-radius:50%;background:var(--bg);}
+
+  /* Hero */
+  .hero{
+    display:grid;grid-template-columns:1.5fr 1fr;gap:18px;margin-bottom:18px;
+  }
+  .hero-card{
+    padding:24px 26px;border-radius:18px;position:relative;overflow:hidden;
+    background:linear-gradient(180deg,rgba(26,20,56,.85),rgba(35,26,74,.65));
+    border:1px solid var(--line-2);
+    box-shadow:0 0 0 1px rgba(255,79,216,.12) inset, 0 18px 50px rgba(0,0,0,.35);
+  }
+  .hero-card::before{
+    content:"";position:absolute;inset:-1px;border-radius:18px;padding:1px;
+    background:linear-gradient(120deg,rgba(255,79,216,.6),rgba(54,226,255,.3) 60%,transparent);
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;
+  }
+  .eyebrow{font-size:11.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--neon-1);font-weight:600}
+  .hero-card h1{
+    margin:8px 0 6px;font-family:"Space Grotesk",sans-serif;font-size:54px;font-weight:600;letter-spacing:-.02em;line-height:1;
+    background:linear-gradient(90deg,#fff,var(--neon-1) 60%,var(--neon-3));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .hero-card .sub{color:var(--ink-2);font-size:13.5px;margin-top:8px}
+  .hero-spark{margin-top:18px;height:96px;border-radius:12px;position:relative;overflow:hidden;border:1px solid var(--line)}
+  .hero-spark svg{width:100%;height:100%;display:block}
+
+  .hero-right{display:grid;grid-template-rows:1fr 1fr;gap:18px}
+  .kpi{
+    padding:18px 20px;border-radius:16px;border:1px solid var(--line-2);
+    background:linear-gradient(180deg,rgba(35,26,74,.7),rgba(26,20,56,.4));
+    position:relative;overflow:hidden;
+  }
+  .kpi .label{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-2)}
+  .kpi .v{font-family:"Space Grotesk",sans-serif;font-size:32px;font-weight:600;line-height:1.05;margin-top:8px}
+  .kpi .v small{font-size:13px;color:var(--ink-2);margin-left:4px;font-weight:400}
+  .kpi .row{display:flex;justify-content:space-between;align-items:flex-end;margin-top:6px}
+  .delta{font-size:12.5px;display:inline-flex;align-items:center;gap:4px}
+  .delta.up{color:var(--ok)}
+  .delta.down{color:var(--bad)}
+  .mini-bars{display:flex;gap:3px;align-items:flex-end;height:32px}
+  .mini-bars span{width:5px;border-radius:2px;background:linear-gradient(180deg,var(--neon-3),var(--neon-2));box-shadow:0 0 10px rgba(54,226,255,.4)}
+  .mini-bars.warn span{background:linear-gradient(180deg,var(--warn),var(--neon-1));box-shadow:0 0 10px rgba(255,138,61,.3)}
+
+  /* 调用日志 */
+  .panel{
+    padding:18px 20px;border-radius:16px;border:1px solid var(--line-2);
+    background:linear-gradient(180deg,rgba(26,20,56,.7),rgba(26,20,56,.45));
+    margin-bottom:18px;
+  }
+  .panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px}
+  .panel-title{font-weight:600;font-size:15px}
+  .panel-title small{display:block;font-size:11.5px;color:var(--ink-2);margin-top:2px;letter-spacing:.04em}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{
+    text-align:left;font-weight:500;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-2);
+    padding:10px 12px;border-bottom:1px solid var(--line-2);
+  }
+  td{padding:12px;border-bottom:1px solid var(--line)}
+  tr:last-child td{border-bottom:0}
+  td.mono{font-family:"JetBrains Mono",monospace;font-size:12.5px;color:var(--ink)}
+  .status{
+    display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;font-family:"JetBrains Mono",monospace;font-size:11.5px;
+    border:1px solid;
+  }
+  .status.ok{color:var(--ok);border-color:rgba(54,255,196,.4);background:rgba(54,255,196,.08);box-shadow:0 0 12px rgba(54,255,196,.2)}
+  .status.warn{color:var(--warn);border-color:rgba(255,185,92,.4);background:rgba(255,185,92,.08);box-shadow:0 0 12px rgba(255,185,92,.2)}
+  .status.bad{color:var(--bad);border-color:rgba(255,107,138,.5);background:rgba(255,107,138,.1);box-shadow:0 0 12px rgba(255,107,138,.25)}
+  .lat{display:inline-flex;align-items:center;gap:8px;font-family:"JetBrains Mono",monospace;font-size:12px}
+  .lat .b{width:54px;height:6px;border-radius:4px;background:rgba(237,233,255,.08);overflow:hidden}
+  .lat .b i{display:block;height:100%;border-radius:4px}
+  .lat .b i.ok{background:linear-gradient(90deg,var(--neon-3),var(--ok));box-shadow:0 0 10px rgba(54,226,255,.4)}
+  .lat .b i.warn{background:linear-gradient(90deg,var(--warn),var(--neon-1));box-shadow:0 0 10px rgba(255,185,92,.4)}
+  .lat .b i.bad{background:linear-gradient(90deg,var(--bad),var(--neon-1));box-shadow:0 0 12px rgba(255,107,138,.4)}
+
+  /* 详情 */
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .member{display:grid;grid-template-columns:38px 1fr auto;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+  .member:last-child{border-bottom:0}
+  .m-av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;color:#fff;font-family:"Space Grotesk",sans-serif}
+  .m-av.a{background:conic-gradient(from 0deg,var(--neon-1),var(--neon-2),var(--neon-3),var(--neon-1));box-shadow:0 0 14px rgba(255,79,216,.4)}
+  .m-av.b{background:conic-gradient(from 0deg,var(--neon-3),var(--ok),var(--neon-2),var(--neon-3));box-shadow:0 0 14px rgba(54,226,255,.4)}
+  .m-av.c{background:conic-gradient(from 0deg,var(--warn),var(--neon-1),var(--neon-3),var(--warn));box-shadow:0 0 14px rgba(255,185,92,.4)}
+  .m-av.d{background:conic-gradient(from 0deg,var(--bad),var(--neon-2),var(--neon-1),var(--bad));box-shadow:0 0 14px rgba(255,107,138,.4)}
+  .meta small{display:block;color:var(--ink-2);font-size:12px;margin-top:2px}
+  .role{font-size:11px;font-family:"JetBrains Mono",monospace;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:6px;border:1px solid var(--line-2);color:var(--ink-2)}
+
+  .bill .ln{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+  .bill .ln:last-child{border-bottom:0}
+  .bill .ln b{font-family:"Space Grotesk",sans-serif;font-weight:500;font-size:16px}
+  .bill .total{margin-top:8px;padding-top:14px;border-top:1px solid var(--line-2);display:flex;justify-content:space-between;align-items:center}
+  .bill .total b{
+    font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:30px;
+    background:linear-gradient(90deg,var(--neon-1),var(--neon-3));-webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .gauge{margin-top:16px;height:8px;border-radius:6px;background:rgba(237,233,255,.06);overflow:hidden}
+  .gauge i{display:block;height:100%;width:72%;border-radius:6px;background:linear-gradient(90deg,var(--neon-1),var(--neon-3));box-shadow:0 0 16px rgba(255,79,216,.5)}
+  .gauge-legend{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-2);margin-top:6px;font-family:"JetBrains Mono",monospace}
+
+  @media (max-width: 1000px){
+    .app{grid-template-columns:1fr}
+    .hero{grid-template-columns:1fr}
+    .two-col{grid-template-columns:1fr}
+    main{padding:14px 16px 24px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div class="brand-name">Northwind<small>Cloud Console</small></div>
+    </div>
+    <div class="nav-section">总览</div>
+    <nav class="nav">
+      <a class="active"><span class="ic">◉</span><span>仪表盘</span></a>
+      <a><span class="ic">▤</span><span>实时调用</span></a>
+      <a><span class="ic">◔</span><span>区域分布</span></a>
+    </nav>
+    <div class="nav-section">资源</div>
+    <nav class="nav">
+      <a><span class="ic">⚿</span><span>API 密钥</span></a>
+      <a><span class="ic">⇄</span><span>Webhook</span></a>
+      <a><span class="ic">⤓</span><span>数据导出</span></a>
+    </nav>
+    <div class="nav-section">账户</div>
+    <nav class="nav">
+      <a><span class="ic">☻</span><span>成员与角色</span></a>
+      <a><span class="ic">¥</span><span>计费与发票</span></a>
+      <a><span class="ic">⚙</span><span>偏好设置</span></a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="topbar">
+      <div class="search">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg>
+        <input placeholder="搜索端点、Key 或调用 ID…">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11px">⌘ K</span>
+      </div>
+      <span class="chip live">生产环境 · ap-southeast-1</span>
+      <button class="btn">通知 3</button>
+      <button class="btn neon">＋ 新建 API Key</button>
+      <div class="av"><i></i></div>
+    </div>
+
+    <section class="hero">
+      <div class="hero-card">
+        <div class="eyebrow">本月调用量 · 实时</div>
+        <h1>2,418,902</h1>
+        <div class="sub">较上月同期 ▲ 12.4% · 目标 3,000,000 · 距月末 11 天</div>
+        <div class="hero-spark">
+          <svg viewBox="0 0 600 96" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="g4" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stop-color="#FF4FD8" stop-opacity=".5"/>
+                <stop offset="100%" stop-color="#FF4FD8" stop-opacity="0"/>
+              </linearGradient>
+              <linearGradient id="s4" x1="0" x2="1" y1="0" y2="0">
+                <stop offset="0%" stop-color="#36E2FF"/>
+                <stop offset="100%" stop-color="#FF4FD8"/>
+              </linearGradient>
+            </defs>
+            <path d="M0,72 C40,60 60,42 100,46 C140,50 160,28 200,26 C240,24 270,52 320,48 C370,44 400,16 440,20 C480,24 520,58 600,32 L600,96 L0,96 Z" fill="url(#g4)"/>
+            <path d="M0,72 C40,60 60,42 100,46 C140,50 160,28 200,26 C240,24 270,52 320,48 C370,44 400,16 440,20 C480,24 520,58 600,32"
+                  stroke="url(#s4)" stroke-width="2.2" fill="none" style="filter:drop-shadow(0 0 8px rgba(255,79,216,.5))"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="hero-right">
+        <div class="kpi">
+          <div class="label">活跃成员</div>
+          <div class="v">38<small>/ 50 席</small></div>
+          <div class="row">
+            <span class="delta up">▲ 4 · 本周</span>
+            <div class="mini-bars">
+              <span style="height:30%"></span><span style="height:50%"></span><span style="height:40%"></span>
+              <span style="height:65%"></span><span style="height:55%"></span><span style="height:80%"></span><span style="height:95%"></span>
+            </div>
+          </div>
+        </div>
+        <div class="kpi">
+          <div class="label">错误率 · 24h</div>
+          <div class="v" style="color:var(--warn)">0.42<small>%</small></div>
+          <div class="row">
+            <span class="delta down">▲ 0.08% · 阈值 0.5%</span>
+            <div class="mini-bars warn">
+              <span style="height:30%"></span><span style="height:42%"></span><span style="height:38%"></span>
+              <span style="height:55%"></span><span style="height:70%"></span><span style="height:60%"></span><span style="height:78%"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div class="panel-title">最近调用日志<small>实时流 · 最近 100 条 · 生产环境</small></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn">仅看错误</button>
+          <button class="btn">慢请求</button>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr><th>时间</th><th>调用方</th><th>端点</th><th>状态</th><th>耗时</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="mono">14:02:11.314</td><td>sdk-node@1.8 · 京东数科</td><td class="mono">POST /v2/orders/sync</td>
+            <td><span class="status ok">200</span></td>
+            <td><span class="lat"><span class="b"><i class="ok" style="width:18%"></i></span>92 ms</span></td></tr>
+          <tr><td class="mono">14:02:09.870</td><td>web-dashboard · 内部</td><td class="mono">GET /v2/metrics/window</td>
+            <td><span class="status ok">200</span></td>
+            <td><span class="lat"><span class="b"><i class="ok" style="width:28%"></i></span>140 ms</span></td></tr>
+          <tr><td class="mono">14:02:08.005</td><td>sdk-python@2.3 · ACME</td><td class="mono">POST /v2/events/batch</td>
+            <td><span class="status warn">429</span></td>
+            <td><span class="lat"><span class="b"><i class="warn" style="width:65%"></i></span>318 ms</span></td></tr>
+          <tr><td class="mono">14:02:07.121</td><td>curl/8.4 · Office</td><td class="mono">DELETE /v2/keys/ak_3f…</td>
+            <td><span class="status ok">204</span></td>
+            <td><span class="lat"><span class="b"><i class="ok" style="width:12%"></i></span>58 ms</span></td></tr>
+          <tr><td class="mono">14:02:05.443</td><td>sdk-go@1.1 · 顺丰</td><td class="mono">GET /v2/orders?status=open</td>
+            <td><span class="status bad">500</span></td>
+            <td><span class="lat"><span class="b"><i class="bad" style="width:88%"></i></span>1.42 s</span></td></tr>
+          <tr><td class="mono">14:02:03.018</td><td>sdk-node@1.8 · 京东数科</td><td class="mono">POST /v2/webhooks/test</td>
+            <td><span class="status ok">200</span></td>
+            <td><span class="lat"><span class="b"><i class="ok" style="width:22%"></i></span>110 ms</span></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="two-col">
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title">成员与角色<small>组织 · 38 在岗 · 12 席空闲</small></div>
+          <button class="btn">邀请</button>
+        </div>
+        <div class="member">
+          <div class="m-av a">LA</div>
+          <div class="meta">林安琪<small>liananqi@northwind.io · 2 分钟前活跃</small></div>
+          <span class="role">owner</span>
+        </div>
+        <div class="member">
+          <div class="m-av b">CW</div>
+          <div class="meta">陈维<small>chenwei@northwind.io · 1 小时前活跃</small></div>
+          <span class="role">admin</span>
+        </div>
+        <div class="member">
+          <div class="m-av c">JK</div>
+          <div class="meta">蒋克<small>jiangke@northwind.io · 昨日活跃</small></div>
+          <span class="role">developer</span>
+        </div>
+        <div class="member">
+          <div class="m-av d">YQ</div>
+          <div class="meta">袁倩<small>yuanqian@vendor.com · 受邀，待接受</small></div>
+          <span class="role">read-only</span>
+        </div>
+      </div>
+
+      <div class="panel bill">
+        <div class="panel-head">
+          <div class="panel-title">当前账单<small>06.01 – 06.30 · 自动续费</small></div>
+          <button class="btn neon">发票</button>
+        </div>
+        <div class="ln"><span>Growth 套餐</span><b>¥ 1,980.00</b></div>
+        <div class="ln"><span>超量调用 · 418,902 次</span><b>¥ 837.80</b></div>
+        <div class="ln"><span>Webhook 重试 · 12,341 次</span><b>¥ 61.70</b></div>
+        <div class="total"><span>本月小计</span><b>¥ 2,879.50</b></div>
+        <div class="gauge"><i></i></div>
+        <div class="gauge-legend"><span>套餐用量 · 72%</span><span>2,418,902 / 3,000,000</span></div>
+      </div>
+    </section>
+  </main>
+</div>
+</body>
+</html>

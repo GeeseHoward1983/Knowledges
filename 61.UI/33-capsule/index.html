@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>33 · 太空舱 — Northwind Cloud 控制台</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --bg:#070A14;
+    --bg-2:#0D1322;
+    --capsule:#10182B;
+    --capsule-2:#162035;
+    --ink:#E8EEF7;
+    --ink-2:#7F8DA8;
+    --ink-3:#4E5872;
+    --hud:#3CD0FF;       /* HUD 青 */
+    --hud-2:#80E8FF;
+    --hud-d:#1E7AA0;
+    --ok:#5CE090;
+    --warn:#FFA945;
+    --bad:#FF5C7A;
+    --line:rgba(60,208,255,.14);
+    --line-2:rgba(60,208,255,.32);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;color:var(--ink);font-family:"Space Mono","JetBrains Mono","Inter","PingFang SC",monospace;background:var(--bg)}
+  body{
+    min-height:100vh;font-size:13px;line-height:1.5;
+    background:
+      /* 星空噪点 */
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><g fill='%23ffffff'><circle cx='25' cy='30' r='.6' opacity='.5'/><circle cx='80' cy='60' r='.4' opacity='.4'/><circle cx='140' cy='25' r='.7' opacity='.6'/><circle cx='180' cy='90' r='.5' opacity='.45'/><circle cx='55' cy='130' r='.5' opacity='.4'/><circle cx='120' cy='160' r='.7' opacity='.55'/><circle cx='35' cy='180' r='.4' opacity='.4'/></g></svg>"),
+      radial-gradient(1000px 600px at 50% -100px, rgba(60,208,255,.06), transparent 60%),
+      linear-gradient(180deg, var(--bg) 0%, #050811 100%);
+    background-attachment:fixed;
+  }
+
+  /* 胶囊圆角风格 */
+  .pill-shape{border-radius:18px}
+
+  .app{display:grid;grid-template-columns:230px 1fr;min-height:100vh;padding:14px;gap:14px}
+
+  /* === 边栏：导航胶囊 === */
+  aside{
+    background:linear-gradient(180deg,var(--capsule),var(--capsule-2));
+    border:1px solid var(--line);border-radius:24px;padding:22px 14px;position:relative;
+    box-shadow:0 0 0 1px rgba(60,208,255,.06) inset, 0 12px 30px rgba(0,0,0,.4);
+  }
+  /* 顶部 HUD 描边 */
+  aside::before{
+    content:"";position:absolute;left:14px;right:14px;top:14px;height:1px;
+    background:linear-gradient(90deg,transparent,var(--hud) 50%,transparent);
+  }
+
+  .brand{padding:6px 8px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line);margin-bottom:14px}
+  .brand-orbit{
+    width:42px;height:42px;border-radius:50%;position:relative;border:1px solid var(--hud);
+    background:radial-gradient(circle at 30% 30%, rgba(60,208,255,.2), transparent 65%);
+  }
+  .brand-orbit::before{content:"";position:absolute;inset:5px;border-radius:50%;border:1px solid rgba(60,208,255,.4)}
+  .brand-orbit::after{
+    content:"";position:absolute;left:50%;top:-3px;width:5px;height:5px;border-radius:50%;background:var(--hud);
+    box-shadow:0 0 6px var(--hud);transform:translateX(-50%);
+  }
+  .brand b{font-family:"Space Mono",monospace;font-weight:700;font-size:14px;letter-spacing:.04em;line-height:1.2}
+  .brand small{display:block;font-size:10.5px;color:var(--ink-2);letter-spacing:.18em;text-transform:uppercase;margin-top:2px}
+
+  .nav-section{font-family:"Space Mono",monospace;font-size:9.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--hud);margin:14px 8px 6px;font-weight:700}
+  .nav-section::before{content:"› "}
+  .nav a{
+    display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:99px;text-decoration:none;color:var(--ink-2);font-family:"Inter",sans-serif;font-size:13.5px;font-weight:600;margin:2px 0;
+    border:1px solid transparent;
+  }
+  .nav a:hover{color:var(--ink);background:rgba(60,208,255,.05)}
+  .nav a.active{
+    color:var(--hud);background:rgba(60,208,255,.1);border:1px solid var(--line-2);
+    box-shadow:inset 0 0 8px rgba(60,208,255,.18);
+  }
+  .nav a .led{width:7px;height:7px;border-radius:50%;background:var(--ink-3)}
+  .nav a.active .led{background:var(--hud);box-shadow:0 0 6px var(--hud)}
+
+  /* 主区 */
+  main{display:flex;flex-direction:column;gap:14px;min-width:0}
+
+  /* 顶 capsule */
+  .topbar{
+    background:linear-gradient(180deg,var(--capsule),var(--capsule-2));border:1px solid var(--line);border-radius:99px;
+    padding:8px 22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    box-shadow:0 0 0 1px rgba(60,208,255,.05) inset;
+  }
+  .topbar .cap{
+    padding:5px 12px;border-radius:99px;background:rgba(60,208,255,.06);border:1px solid var(--line);
+    font-family:"Space Mono",monospace;font-size:10.5px;letter-spacing:.14em;color:var(--hud);text-transform:uppercase;display:inline-flex;align-items:center;gap:6px;
+  }
+  .topbar .cap.live::before{content:"●";color:var(--ok)}
+  .topbar .cap.amber{color:var(--warn);border-color:rgba(255,169,69,.3);background:rgba(255,169,69,.06)}
+  .topbar .spacer{flex:1}
+  .topbar input{
+    background:transparent;border:0;outline:0;font:inherit;color:var(--ink);font-family:"Inter",sans-serif;font-size:13px;
+    border-bottom:1px solid var(--line-2);padding:3px 8px;min-width:200px;
+  }
+
+  /* HUD 圆形大表 + KPI 区 */
+  .hud-row{display:grid;grid-template-columns:280px 1fr;gap:14px}
+  .hud-circle{
+    background:linear-gradient(180deg,var(--capsule),var(--capsule-2));border:1px solid var(--line);border-radius:22px;padding:20px;
+    position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:280px;
+  }
+  .hud-circle .ring{position:relative;width:200px;height:200px}
+  .hud-circle .ring svg{width:100%;height:100%;display:block}
+  .hud-circle .ring .v{
+    position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+  }
+  .hud-circle .ring .v b{font-family:"Space Mono",monospace;font-weight:700;font-size:30px;letter-spacing:-.01em;color:var(--hud-2);text-shadow:0 0 12px rgba(60,208,255,.5);font-variant-numeric:tabular-nums}
+  .hud-circle .ring .v small{font-family:"Space Mono",monospace;font-size:10.5px;color:var(--ink-2);letter-spacing:.18em;text-transform:uppercase;margin-top:4px}
+  .hud-circle .lbl{font-family:"Space Mono",monospace;font-size:10.5px;letter-spacing:.24em;color:var(--ink-2);text-transform:uppercase;margin-top:14px;display:flex;gap:18px}
+  .hud-circle .lbl b{color:var(--ink);font-weight:600;letter-spacing:0;text-transform:none;font-family:"Space Mono",monospace}
+
+  .kpis{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:14px}
+  .kpi{
+    background:linear-gradient(180deg,var(--capsule),var(--capsule-2));border:1px solid var(--line);border-radius:18px;padding:16px 18px;position:relative;
+  }
+  .kpi .l{font-family:"Space Mono",monospace;font-size:10.5px;letter-spacing:.18em;color:var(--ink-2);text-transform:uppercase;display:flex;justify-content:space-between;align-items:center}
+  .kpi .l .led{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 6px var(--ok)}
+  .kpi.warn .l .led{background:var(--warn);box-shadow:0 0 6px var(--warn)}
+  .kpi .v{font-family:"Space Mono",monospace;font-size:32px;font-weight:700;letter-spacing:-.01em;line-height:1;color:var(--ink);margin-top:8px;font-variant-numeric:tabular-nums}
+  .kpi .v small{font-size:12px;color:var(--ink-2);font-weight:400;margin-left:3px}
+  .kpi.warn .v{color:var(--warn)}
+  .kpi .d{font-family:"Space Mono",monospace;font-size:11px;color:var(--ink-2);display:flex;justify-content:space-between;margin-top:8px}
+  .up{color:var(--ok)}
+  .down{color:var(--bad)}
+
+  /* 主体两栏 */
+  .grid{display:grid;grid-template-columns:1.55fr 1fr;gap:14px}
+  .panel{background:linear-gradient(180deg,var(--capsule),var(--capsule-2));border:1px solid var(--line);border-radius:22px;overflow:hidden}
+  .panel-head{display:flex;justify-content:space-between;align-items:center;padding:14px 22px;border-bottom:1px solid var(--line)}
+  .panel-title{font-family:"Space Mono",monospace;font-weight:700;font-size:13px;letter-spacing:.18em;color:var(--hud);text-transform:uppercase}
+  .panel-title small{display:block;font-family:"Space Mono",monospace;font-weight:400;font-size:10.5px;color:var(--ink-2);margin-top:2px;letter-spacing:.06em;text-transform:none}
+
+  table{width:100%;border-collapse:collapse;font-family:"Inter",sans-serif;font-size:13px}
+  th{text-align:left;font-family:"Space Mono",monospace;font-weight:700;font-size:10px;letter-spacing:.2em;color:var(--ink-3);padding:9px 22px;border-bottom:1px solid var(--line);text-transform:uppercase}
+  td{padding:11px 22px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+  tr:last-child td{border-bottom:0}
+  tr:hover td{background:rgba(60,208,255,.04)}
+  td.mono{font-family:"Space Mono",monospace;font-size:12px;color:var(--ink)}
+  .pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:99px;font-family:"Space Mono",monospace;font-size:11px;font-weight:700;letter-spacing:.04em}
+  .pill.ok{background:rgba(92,224,144,.12);color:var(--ok);border:1px solid rgba(92,224,144,.35)}
+  .pill.warn{background:rgba(255,169,69,.12);color:var(--warn);border:1px solid rgba(255,169,69,.35)}
+  .pill.bad{background:rgba(255,92,122,.12);color:var(--bad);border:1px solid rgba(255,92,122,.35)}
+  .lat{display:inline-flex;align-items:center;gap:8px;font-family:"Space Mono",monospace;font-size:12px}
+  .lat .b{width:50px;height:5px;border-radius:99px;background:#0A0E18;border:1px solid var(--line);overflow:hidden}
+  .lat .b i{display:block;height:100%}
+  .lat .b i.ok{background:var(--ok)}
+  .lat .b i.warn{background:var(--warn)}
+  .lat .b i.bad{background:var(--bad)}
+
+  /* 名册 */
+  .person{display:grid;grid-template-columns:42px 1fr auto;gap:14px;align-items:center;padding:12px 22px;border-bottom:1px solid var(--line)}
+  .person:last-child{border-bottom:0}
+  .av-orbit{
+    width:42px;height:42px;border-radius:50%;border:1px solid var(--hud);background:rgba(60,208,255,.08);
+    display:flex;align-items:center;justify-content:center;font-family:"Space Mono",monospace;font-weight:700;font-size:14px;color:var(--hud);
+  }
+  .av-orbit.a2{border-color:var(--ok);color:var(--ok);background:rgba(92,224,144,.08)}
+  .av-orbit.a3{border-color:var(--warn);color:var(--warn);background:rgba(255,169,69,.08)}
+  .av-orbit.a4{border-color:#B86BFF;color:#B86BFF;background:rgba(184,107,255,.08)}
+  .person b{font-weight:700;font-size:13.5px;color:var(--ink)}
+  .person small{display:block;font-family:"Space Mono",monospace;font-size:11px;color:var(--ink-2);margin-top:1px}
+  .role{padding:4px 11px;border-radius:99px;font-family:"Space Mono",monospace;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;background:rgba(60,208,255,.06);color:var(--ink-2);border:1px solid var(--line)}
+  .role.r{background:rgba(60,208,255,.16);color:var(--hud);border-color:var(--hud-d)}
+
+  /* 账单 */
+  .bill{padding:18px 22px}
+  .bill .ln{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+  .bill .ln b{font-family:"Space Mono",monospace;font-weight:700;font-size:14.5px;color:var(--ink)}
+  .bill .total{
+    margin-top:10px;padding:14px 18px;border-radius:99px;background:linear-gradient(110deg,rgba(60,208,255,.2),rgba(60,208,255,.06));
+    display:flex;justify-content:space-between;align-items:center;border:1px solid var(--line-2);
+  }
+  .bill .total span{font-family:"Space Mono",monospace;font-size:11px;letter-spacing:.2em;color:var(--hud);text-transform:uppercase;font-weight:700}
+  .bill .total b{font-family:"Space Mono",monospace;font-weight:700;font-size:24px;color:var(--hud-2);text-shadow:0 0 10px rgba(60,208,255,.4)}
+  .gauge{margin-top:14px}
+  .gauge .top{display:flex;justify-content:space-between;font-family:"Space Mono",monospace;font-size:10.5px;color:var(--ink-2);letter-spacing:.16em;text-transform:uppercase;margin-bottom:4px}
+  .gauge .bar{height:6px;border-radius:99px;background:#0A0E18;overflow:hidden;border:1px solid var(--line)}
+  .gauge .bar i{display:block;height:100%;width:72%;border-radius:99px;background:linear-gradient(90deg,var(--hud),var(--ok));box-shadow:0 0 8px rgba(60,208,255,.4)}
+
+  .btn{
+    display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:99px;background:rgba(60,208,255,.08);
+    border:1px solid var(--line-2);color:var(--hud);font-family:"Space Mono",monospace;font-weight:700;font-size:11px;letter-spacing:.14em;cursor:pointer;
+  }
+  .btn:hover{background:rgba(60,208,255,.16)}
+
+  @media (max-width:1100px){
+    .app{grid-template-columns:1fr}
+    .hud-row{grid-template-columns:1fr}
+    .kpis{grid-template-columns:1fr 1fr;grid-template-rows:auto}
+    .grid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="brand">
+      <div class="brand-orbit"></div>
+      <div><b>NORTHWIND</b><small>CAPSULE · v2.18</small></div>
+    </div>
+    <div class="nav-section">flight deck</div>
+    <nav class="nav">
+      <a class="active"><span class="led"></span>Dashboard</a>
+      <a><span class="led"></span>Live Calls</a>
+      <a><span class="led"></span>Regions</a>
+    </nav>
+    <div class="nav-section">payload</div>
+    <nav class="nav">
+      <a><span class="led"></span>API Keys</a>
+      <a><span class="led"></span>Webhook</a>
+      <a><span class="led"></span>Export</a>
+    </nav>
+    <div class="nav-section">crew</div>
+    <nav class="nav">
+      <a><span class="led"></span>Members</a>
+      <a><span class="led"></span>Billing</a>
+      <a><span class="led"></span>Config</a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="topbar">
+      <span class="cap live">STREAM 5s</span>
+      <span class="cap">CAPSULE · PROD</span>
+      <span class="cap amber">P95 184ms</span>
+      <span class="cap">UPTIME 17D</span>
+      <span class="spacer"></span>
+      <input placeholder="搜索 endpoint / caller / key">
+      <span class="cap">⌘K</span>
+    </div>
+
+    <section class="hud-row">
+      <div class="hud-circle">
+        <div class="ring">
+          <svg viewBox="0 0 200 200">
+            <defs>
+              <linearGradient id="hud-g" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#3CD0FF"/>
+                <stop offset="100%" stop-color="#5CE090"/>
+              </linearGradient>
+            </defs>
+            <circle cx="100" cy="100" r="84" stroke="rgba(60,208,255,.16)" stroke-width="1" fill="none"/>
+            <circle cx="100" cy="100" r="84" stroke="url(#hud-g)" stroke-width="4" fill="none"
+                    stroke-dasharray="380 528" stroke-dashoffset="0" transform="rotate(-90 100 100)" stroke-linecap="round"/>
+            <circle cx="100" cy="100" r="68" stroke="rgba(60,208,255,.1)" stroke-width="1" stroke-dasharray="2 4" fill="none"/>
+            <circle cx="100" cy="100" r="48" stroke="rgba(60,208,255,.08)" stroke-width="1" fill="none"/>
+          </svg>
+          <div class="v"><small>QUOTA</small><b>72%</b><small>2.42M / 3.0M</small></div>
+        </div>
+        <div class="lbl"><span>MTD <b>2.42M</b></span><span>T-<b>11D</b></span></div>
+      </div>
+
+      <div class="kpis">
+        <div class="kpi">
+          <div class="l"><span>CALLS · MTD</span><span class="led"></span></div>
+          <div class="v">2,418,902<small> req</small></div>
+          <div class="d"><span class="up">▲ 12.4%</span><span>tgt 3.0M</span></div>
+        </div>
+        <div class="kpi">
+          <div class="l"><span>CREW · LIVE</span><span class="led"></span></div>
+          <div class="v">38<small>/50</small></div>
+          <div class="d"><span class="up">▲ 4 wk</span><span>idle 12</span></div>
+        </div>
+        <div class="kpi warn">
+          <div class="l"><span>ERROR · 24H</span><span class="led"></span></div>
+          <div class="v">0.42<small>%</small></div>
+          <div class="d"><span class="down">▲ 0.08%</span><span>thr 0.5%</span></div>
+        </div>
+        <div class="kpi">
+          <div class="l"><span>BILL · MTD</span><span class="led"></span></div>
+          <div class="v">¥ 2,879<small>.50</small></div>
+          <div class="d"><span>auto</span><span>T-11</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title">TELEMETRY · ACCESS LOG<small>last 100 · prod</small></div>
+          <button class="btn">仅看异常</button>
+        </div>
+        <table>
+          <thead><tr><th>T</th><th>CALLER</th><th>METHOD ENDPOINT</th><th>STAT</th><th>LAT</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">14:02:11</td><td>京东数科</td><td class="mono">POST /v2/orders/sync</td>
+              <td><span class="pill ok">200</span></td>
+              <td><span class="lat">92 ms<span class="b"><i class="ok" style="width:18%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:09</td><td>dashboard</td><td class="mono">GET /v2/metrics/window</td>
+              <td><span class="pill ok">200</span></td>
+              <td><span class="lat">140 ms<span class="b"><i class="ok" style="width:28%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:08</td><td>ACME</td><td class="mono">POST /v2/events/batch</td>
+              <td><span class="pill warn">429</span></td>
+              <td><span class="lat">318 ms<span class="b"><i class="warn" style="width:65%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:07</td><td>Office</td><td class="mono">DELETE /v2/keys/ak_3f…</td>
+              <td><span class="pill ok">204</span></td>
+              <td><span class="lat">58 ms<span class="b"><i class="ok" style="width:12%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:05</td><td>顺丰</td><td class="mono">GET /v2/orders?status=open</td>
+              <td><span class="pill bad">500</span></td>
+              <td><span class="lat">1.42 s<span class="b"><i class="bad" style="width:88%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:03</td><td>京东数科</td><td class="mono">POST /v2/webhooks/test</td>
+              <td><span class="pill ok">200</span></td>
+              <td><span class="lat">110 ms<span class="b"><i class="ok" style="width:22%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:01</td><td>平安</td><td class="mono">PUT /v2/orders/12489</td>
+              <td><span class="pill ok">200</span></td>
+              <td><span class="lat">181 ms<span class="b"><i class="ok" style="width:34%"></i></span></span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">CREW · ROSTER<small>38 / 50</small></div>
+            <button class="btn">+ INVITE</button>
+          </div>
+          <div>
+            <div class="person"><div class="av-orbit">林</div><div><b>林安琪</b><small>liananqi · 2 min</small></div><span class="role r">OWNER</span></div>
+            <div class="person"><div class="av-orbit a2">陈</div><div><b>陈维</b><small>chenwei · 1 hr</small></div><span class="role">ADMIN</span></div>
+            <div class="person"><div class="av-orbit a3">蒋</div><div><b>蒋克</b><small>jiangke · 1 d</small></div><span class="role">DEV</span></div>
+            <div class="person"><div class="av-orbit a4">袁</div><div><b>袁倩</b><small>vendor · pending</small></div><span class="role">READ</span></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">BILLING · MTD<small>06.01 – 06.30</small></div>
+            <button class="btn">INVOICE</button>
+          </div>
+          <div class="bill">
+            <div class="ln"><span>PLAN · GROWTH</span><b>¥ 1,980.00</b></div>
+            <div class="ln"><span>OVERAGE · 418,902</span><b>¥ 837.80</b></div>
+            <div class="ln"><span>WH RETRY · 12,341</span><b>¥ 61.70</b></div>
+            <div class="total"><span>TOTAL</span><b>¥ 2,879.50</b></div>
+            <div class="gauge">
+              <div class="top"><span>QUOTA 72%</span><span>2.42M / 3M</span></div>
+              <div class="bar"><i></i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+</body>
+</html>

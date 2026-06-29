@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>06 · 立方瓷砖 — Northwind Cloud 控制台</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --bg:#F2EEE8;
+    --ink:#1A1A1A;
+    --ink-2:#5A5A55;
+    --t-mint:#B6E0C2;
+    --t-mint-2:#7CC899;
+    --t-coral:#FFB59E;
+    --t-coral-2:#FF7A5C;
+    --t-sky:#B4D6F2;
+    --t-sky-2:#5C9BD8;
+    --t-butter:#FFE08A;
+    --t-butter-2:#F2B23A;
+    --t-violet:#D6BFE8;
+    --t-violet-2:#9D6BC6;
+    --t-rose:#F5C7D5;
+    --t-rose-2:#E0668A;
+    --t-charcoal:#2A2A2A;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;color:var(--ink);font-family:"DM Sans","PingFang SC",system-ui,sans-serif;background:var(--bg)}
+  body{min-height:100vh}
+  .app{display:grid;grid-template-columns:220px 1fr;min-height:100vh;gap:18px;padding:18px}
+
+  /* 边栏：自己也是一块瓷砖 */
+  aside{
+    background:#FFFFFF;border-radius:26px;padding:24px 18px;
+    box-shadow:0 1px 0 rgba(0,0,0,.04), 0 8px 30px rgba(26,26,26,.06);
+  }
+  .brand{display:flex;align-items:center;gap:10px;margin-bottom:24px}
+  .brand-mark{
+    width:38px;height:38px;border-radius:12px;
+    background:
+      conic-gradient(from 45deg,
+        var(--t-coral-2) 0 25%, var(--t-butter-2) 25% 50%,
+        var(--t-sky-2) 50% 75%, var(--t-mint-2) 75% 100%);
+  }
+  .brand-name{font-weight:700;font-size:17px;letter-spacing:-.01em}
+  .brand-name small{display:block;font-weight:500;font-size:11px;color:var(--ink-2);letter-spacing:.06em;margin-top:2px}
+
+  .nav-section{font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2);margin:18px 6px 6px}
+  .nav a{
+    display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:14px;
+    text-decoration:none;color:var(--ink);font-size:14px;font-weight:500;
+  }
+  .nav a:hover{background:#F2EEE8}
+  .nav a.active{background:#1A1A1A;color:#fff}
+  .nav a .em{width:24px;height:24px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;background:#F2EEE8}
+  .nav a.active .em{background:rgba(255,255,255,.15)}
+
+  /* 主区 */
+  main{min-width:0}
+  .topbar{
+    display:flex;align-items:center;gap:14px;margin-bottom:18px;flex-wrap:wrap;
+    background:#FFFFFF;border-radius:22px;padding:12px 18px;
+    box-shadow:0 1px 0 rgba(0,0,0,.04), 0 8px 24px rgba(26,26,26,.05);
+  }
+  .greet{font-weight:600;font-size:18px;letter-spacing:-.01em}
+  .greet small{display:block;font-size:12.5px;color:var(--ink-2);font-weight:500;margin-top:2px}
+  .topbar .spacer{flex:1}
+  .search{
+    display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:14px;background:#F2EEE8;color:var(--ink-2);font-size:13px;
+    min-width:240px;
+  }
+  .search input{flex:1;background:transparent;border:0;outline:0;font:inherit;color:var(--ink)}
+  .btn{
+    display:inline-flex;align-items:center;gap:6px;padding:10px 16px;border-radius:14px;border:0;cursor:pointer;
+    background:#F2EEE8;color:var(--ink);font:inherit;font-weight:600;font-size:13px;
+  }
+  .btn.dark{background:#1A1A1A;color:#fff}
+  .av{width:40px;height:40px;border-radius:50%;background:conic-gradient(from 90deg,var(--t-coral-2),var(--t-butter-2),var(--t-mint-2),var(--t-sky-2),var(--t-coral-2))}
+
+  /* Bento 网格 */
+  .bento{display:grid;grid-template-columns:repeat(6,1fr);grid-auto-rows:140px;gap:16px}
+  .tile{border-radius:26px;padding:22px;position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between}
+  .tile h3{margin:0;font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:rgba(0,0,0,.6)}
+  .tile .big{font-size:38px;font-weight:700;letter-spacing:-.02em;line-height:1}
+  .tile .big small{font-size:14px;font-weight:500;color:rgba(0,0,0,.55);margin-left:4px}
+  .tile.dark{background:var(--t-charcoal);color:#fff}
+  .tile.dark h3{color:rgba(255,255,255,.65)}
+  .tile.dark .big small{color:rgba(255,255,255,.6)}
+
+  .t-coral{background:var(--t-coral)}
+  .t-mint{background:var(--t-mint)}
+  .t-sky{background:var(--t-sky)}
+  .t-butter{background:var(--t-butter)}
+  .t-violet{background:var(--t-violet)}
+  .t-rose{background:var(--t-rose)}
+  .t-white{background:#fff}
+
+  .tile .arrow{
+    position:absolute;top:18px;right:18px;width:32px;height:32px;border-radius:50%;
+    background:rgba(255,255,255,.55);display:flex;align-items:center;justify-content:center;color:#1A1A1A;
+  }
+  .tile.dark .arrow{background:rgba(255,255,255,.12);color:#fff}
+
+  /* 各种瓷砖的尺寸 */
+  .t-greet{grid-column:span 6;grid-row:span 1;background:#1A1A1A;color:#fff;padding:26px 30px}
+  .t-greet h2{margin:0;font-size:34px;font-weight:600;letter-spacing:-.02em;line-height:1.1;max-width:760px}
+  .t-greet h2 em{font-style:normal;color:var(--t-mint)}
+  .t-greet h2 em.rose{color:var(--t-rose-2)}
+  .t-greet h2 em.butter{color:var(--t-butter)}
+  .t-greet .row{display:flex;gap:18px;font-size:13px;color:rgba(255,255,255,.7);margin-top:4px}
+  .t-greet .row b{color:#fff;font-weight:600}
+
+  .t-calls{grid-column:span 3;grid-row:span 2}
+  .t-members{grid-column:span 2;grid-row:span 1}
+  .t-errors{grid-column:span 1;grid-row:span 1}
+  .t-bill{grid-column:span 2;grid-row:span 1}
+  .t-quota{grid-column:span 2;grid-row:span 1}
+  .t-log{grid-column:span 4;grid-row:span 3;display:block;padding:0;background:#fff;color:var(--ink)}
+  .t-roster{grid-column:span 2;grid-row:span 3;display:block;padding:0;background:#fff;color:var(--ink)}
+  .t-bill-detail{grid-column:span 6;grid-row:span 2;display:block;padding:0;background:#fff}
+
+  /* 调用瓷砖 */
+  .t-calls .big{font-size:64px;line-height:.95;font-weight:700;letter-spacing:-.03em}
+  .t-calls .up{
+    display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:99px;
+    background:rgba(255,255,255,.4);color:#1A1A1A;font-size:12.5px;font-weight:600;
+  }
+  .t-calls .spark{height:70px;margin-top:8px}
+  .t-calls .spark svg{width:100%;height:100%}
+
+  /* 成员瓷砖 */
+  .t-members .av-stack{display:flex;margin-top:6px}
+  .t-members .av-stack .a{
+    width:36px;height:36px;border-radius:50%;border:3px solid var(--t-mint);background:#1A1A1A;color:#fff;
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;margin-left:-12px;
+  }
+  .t-members .av-stack .a:first-child{margin-left:0}
+  .t-members .av-stack .a.bg1{background:var(--t-coral-2)}
+  .t-members .av-stack .a.bg2{background:var(--t-sky-2)}
+  .t-members .av-stack .a.bg3{background:var(--t-butter-2);color:#1A1A1A}
+  .t-members .av-stack .a.bg4{background:var(--t-violet-2)}
+  .t-members .av-stack .more{
+    width:36px;height:36px;border-radius:50%;border:3px solid var(--t-mint);background:rgba(255,255,255,.5);color:#1A1A1A;
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;margin-left:-12px;
+  }
+
+  /* 错误率瓷砖 */
+  .t-errors .gauge{width:80px;height:80px;border-radius:50%;background:conic-gradient(#1A1A1A 0 0.42deg, rgba(0,0,0,.15) 0.42deg 360deg);position:relative;margin-top:8px}
+  .t-errors .gauge::after{content:"";position:absolute;inset:8px;border-radius:50%;background:var(--t-butter)}
+  .t-errors .v{position:absolute;left:0;right:0;top:50%;text-align:center;transform:translateY(-50%);font-weight:700;font-size:18px}
+
+  /* 配额条 */
+  .t-quota .bar{height:12px;background:rgba(0,0,0,.18);border-radius:99px;overflow:hidden;margin-top:8px}
+  .t-quota .bar i{display:block;height:100%;width:72%;background:#1A1A1A;border-radius:99px}
+  .t-quota .legend{display:flex;justify-content:space-between;font-size:11.5px;color:rgba(0,0,0,.6);margin-top:6px;font-weight:500}
+
+  /* 账单瓷砖 */
+  .t-bill .big{font-size:30px}
+
+  /* 调用日志瓷砖（内部表格） */
+  .panel-head{display:flex;justify-content:space-between;align-items:center;padding:20px 24px;border-bottom:1px solid #F0EBE3}
+  .panel-title{font-weight:700;font-size:15px;letter-spacing:-.01em}
+  .panel-title small{display:block;font-size:12px;color:var(--ink-2);font-weight:500;margin-top:2px}
+  .pill{padding:5px 10px;border-radius:99px;font-size:12px;font-weight:600;background:#F2EEE8;color:var(--ink)}
+  .pill.live{background:#1A1A1A;color:#fff}
+  .pill.live::before{content:"●";color:var(--t-mint-2);margin-right:4px}
+
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;font-weight:600;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2);padding:10px 24px;border-bottom:1px solid #F0EBE3}
+  td{padding:14px 24px;border-bottom:1px solid #F7F3EC}
+  tr:last-child td{border-bottom:0}
+  td.mono{font-family:"JetBrains Mono",monospace;font-size:12.5px}
+  .chip{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:99px;font-size:11.5px;font-weight:600}
+  .chip.ok{background:var(--t-mint);color:#1A4A2E}
+  .chip.warn{background:var(--t-butter);color:#6B4A0E}
+  .chip.bad{background:var(--t-rose);color:#8E1F3D}
+  .lat{display:inline-flex;align-items:center;gap:8px;font-family:"JetBrains Mono",monospace;font-size:12px}
+  .lat .b{width:54px;height:8px;border-radius:99px;background:#F2EEE8;overflow:hidden}
+  .lat .b i{display:block;height:100%;border-radius:99px}
+  .lat .b i.ok{background:var(--t-mint-2)}
+  .lat .b i.warn{background:var(--t-butter-2)}
+  .lat .b i.bad{background:var(--t-rose-2)}
+
+  /* 通讯录瓷砖 */
+  .roster{padding:8px 0}
+  .roster .row{display:grid;grid-template-columns:42px 1fr auto;gap:12px;align-items:center;padding:13px 24px;border-bottom:1px solid #F7F3EC}
+  .roster .row:last-child{border-bottom:0}
+  .roster .av-r{width:42px;height:42px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+  .av-r.a1{background:var(--t-coral);color:#7A2A14}
+  .av-r.a2{background:var(--t-sky);color:#1F4A78}
+  .av-r.a3{background:var(--t-mint);color:#1A4A2E}
+  .av-r.a4{background:var(--t-violet);color:#4A206E}
+  .roster b{font-weight:600;font-size:14px}
+  .roster small{display:block;font-size:11.5px;color:var(--ink-2);font-weight:500;margin-top:1px}
+  .role{padding:4px 9px;border-radius:99px;font-size:11px;font-weight:600;background:#F2EEE8;color:var(--ink)}
+
+  /* 账单详情 */
+  .bill-detail{padding:24px}
+  .bill-detail .grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+  .bill-detail h4{margin:0 0 12px;font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2)}
+  .bill-detail .ln{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #F0EBE3;font-size:13.5px}
+  .bill-detail .ln:last-child{border-bottom:0}
+  .bill-detail .ln b{font-weight:700;font-size:16px}
+  .bill-detail .total{margin-top:8px;padding-top:14px;border-top:2px solid #1A1A1A;display:flex;justify-content:space-between;align-items:center}
+  .bill-detail .total b{font-size:28px;font-weight:700}
+
+  @media (max-width:1000px){
+    .app{grid-template-columns:1fr}
+    .bento{grid-template-columns:repeat(2,1fr)}
+    .t-greet,.t-bill-detail{grid-column:span 2}
+    .t-calls,.t-log,.t-roster{grid-column:span 2;grid-row:auto}
+    .t-members,.t-errors,.t-bill,.t-quota{grid-column:span 1}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div class="brand-name">Northwind<small>Cloud</small></div>
+    </div>
+    <div class="nav-section">总览</div>
+    <nav class="nav">
+      <a class="active"><span class="em">▦</span>仪表盘</a>
+      <a><span class="em">⚡</span>实时调用</a>
+      <a><span class="em">◔</span>区域分布</a>
+    </nav>
+    <div class="nav-section">资源</div>
+    <nav class="nav">
+      <a><span class="em">⚿</span>API 密钥</a>
+      <a><span class="em">↻</span>Webhook</a>
+      <a><span class="em">↓</span>数据导出</a>
+    </nav>
+    <div class="nav-section">账户</div>
+    <nav class="nav">
+      <a><span class="em">☺</span>成员</a>
+      <a><span class="em">¥</span>账单</a>
+      <a><span class="em">⚙</span>设置</a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="topbar">
+      <div class="greet">下午好，林安琪。<small>06.19 · 周五 · 生产环境 / ap-southeast-1</small></div>
+      <div class="spacer"></div>
+      <div class="search">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg>
+        <input placeholder="搜索 API、成员、调用…">
+      </div>
+      <button class="btn">通知 3</button>
+      <button class="btn dark">＋ 新建 API Key</button>
+      <div class="av"></div>
+    </div>
+
+    <div class="bento">
+      <div class="tile t-greet t-greet">
+        <h2>这个月看起来不错——调用量 <em>稳步走高</em>，错误率仍在阈值内，账单 <em class="butter">¥2,879.50</em>，距月末还有 11 天。</h2>
+        <div class="row"><span>本月调用 <b>2,418,902</b></span><span>成员 <b>38 / 50</b></span><span>错误率 <b>0.42%</b></span></div>
+      </div>
+
+      <div class="tile t-coral t-calls">
+        <h3>本月调用</h3>
+        <div class="arrow">→</div>
+        <div>
+          <div class="big">2.42<small>M req</small></div>
+          <div class="up">▲ 12.4% MoM</div>
+        </div>
+        <div class="spark">
+          <svg viewBox="0 0 300 70" preserveAspectRatio="none">
+            <path d="M0,50 C20,46 30,38 50,40 C70,42 80,28 100,26 C120,24 130,46 160,44 C190,42 200,18 220,20 C240,22 260,50 300,30 L300,70 L0,70 Z" fill="rgba(26,26,26,.18)"/>
+            <path d="M0,50 C20,46 30,38 50,40 C70,42 80,28 100,26 C120,24 130,46 160,44 C190,42 200,18 220,20 C240,22 260,50 300,30"
+                  stroke="#1A1A1A" stroke-width="2.4" fill="none"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="tile t-mint t-members">
+        <h3>活跃成员</h3>
+        <div class="arrow">→</div>
+        <div>
+          <div class="big">38<small>/ 50 席</small></div>
+          <div class="av-stack">
+            <div class="a bg1">LA</div>
+            <div class="a bg2">CW</div>
+            <div class="a bg3">JK</div>
+            <div class="a bg4">YQ</div>
+            <div class="more">+34</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tile t-butter t-errors">
+        <h3>错误率</h3>
+        <div class="big" style="font-size:30px">0.42<small>%</small></div>
+        <div style="font-size:11.5px;font-weight:600;color:#6B4A0E">阈值 0.5%</div>
+      </div>
+
+      <div class="tile t-violet t-bill">
+        <h3>本月账单</h3>
+        <div class="arrow">→</div>
+        <div>
+          <div class="big">¥ 2,879<small>.50</small></div>
+          <div style="font-size:11.5px;font-weight:600;color:#4A206E">自动续费 · 11 天后结算</div>
+        </div>
+      </div>
+
+      <div class="tile t-sky t-quota">
+        <h3>套餐用量</h3>
+        <div>
+          <div class="big" style="font-size:28px">72<small>%</small></div>
+          <div class="bar"><i></i></div>
+          <div class="legend"><span>2.42M / 3M</span><span>剩 11 天</span></div>
+        </div>
+      </div>
+
+      <div class="tile t-log">
+        <div class="panel-head">
+          <div class="panel-title">最近调用日志<small>实时 · 最近 100 条 · 生产</small></div>
+          <span class="pill live">LIVE</span>
+        </div>
+        <table>
+          <thead><tr><th>时间</th><th>调用方</th><th>端点</th><th>状态</th><th>耗时</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">14:02:11</td><td>京东数科</td><td class="mono">POST /v2/orders/sync</td>
+              <td><span class="chip ok">200</span></td>
+              <td><span class="lat">92 ms<span class="b"><i class="ok" style="width:18%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:09</td><td>内部 dashboard</td><td class="mono">GET /v2/metrics/window</td>
+              <td><span class="chip ok">200</span></td>
+              <td><span class="lat">140 ms<span class="b"><i class="ok" style="width:28%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:08</td><td>ACME</td><td class="mono">POST /v2/events/batch</td>
+              <td><span class="chip warn">429</span></td>
+              <td><span class="lat">318 ms<span class="b"><i class="warn" style="width:65%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:07</td><td>Office</td><td class="mono">DELETE /v2/keys/ak_3f…</td>
+              <td><span class="chip ok">204</span></td>
+              <td><span class="lat">58 ms<span class="b"><i class="ok" style="width:12%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:05</td><td>顺丰</td><td class="mono">GET /v2/orders?status=open</td>
+              <td><span class="chip bad">500</span></td>
+              <td><span class="lat">1.42 s<span class="b"><i class="bad" style="width:88%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:03</td><td>京东数科</td><td class="mono">POST /v2/webhooks/test</td>
+              <td><span class="chip ok">200</span></td>
+              <td><span class="lat">110 ms<span class="b"><i class="ok" style="width:22%"></i></span></span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="tile t-roster">
+        <div class="panel-head">
+          <div class="panel-title">成员与角色<small>38 在岗 · 12 席空闲</small></div>
+          <span class="pill">邀请</span>
+        </div>
+        <div class="roster">
+          <div class="row"><div class="av-r a1">LA</div><div><b>林安琪</b><small>2 分钟前活跃</small></div><span class="role">所有者</span></div>
+          <div class="row"><div class="av-r a2">CW</div><div><b>陈维</b><small>1 小时前活跃</small></div><span class="role">管理员</span></div>
+          <div class="row"><div class="av-r a3">JK</div><div><b>蒋克</b><small>昨日活跃</small></div><span class="role">开发者</span></div>
+          <div class="row"><div class="av-r a4">YQ</div><div><b>袁倩</b><small>受邀待接受</small></div><span class="role">只读</span></div>
+          <div class="row"><div class="av-r a1" style="background:var(--t-rose);color:#8E1F3D">HM</div><div><b>胡明</b><small>3 天前活跃</small></div><span class="role">开发者</span></div>
+        </div>
+      </div>
+
+      <div class="tile t-bill-detail">
+        <div class="panel-head">
+          <div class="panel-title">本期账单<small>06.01 – 06.30 · 自动续费</small></div>
+          <span class="pill" style="background:#1A1A1A;color:#fff">下载发票</span>
+        </div>
+        <div class="bill-detail">
+          <div class="grid">
+            <div>
+              <h4>费用明细</h4>
+              <div class="ln"><span>Growth 套餐 月费</span><b>¥ 1,980.00</b></div>
+              <div class="ln"><span>超量调用 · 418,902 次</span><b>¥ 837.80</b></div>
+              <div class="ln"><span>Webhook 重试 · 12,341 次</span><b>¥ 61.70</b></div>
+              <div class="total"><span style="font-weight:600">本月小计</span><b>¥ 2,879.50</b></div>
+            </div>
+            <div>
+              <h4>套餐用量</h4>
+              <div style="display:flex;align-items:center;gap:18px;margin-bottom:14px">
+                <div style="position:relative;width:110px;height:110px;flex-shrink:0">
+                  <svg width="110" height="110" viewBox="0 0 110 110">
+                    <circle cx="55" cy="55" r="46" stroke="#F0EBE3" stroke-width="14" fill="none"/>
+                    <circle cx="55" cy="55" r="46" stroke="#1A1A1A" stroke-width="14" fill="none"
+                            stroke-dasharray="208 290" stroke-dashoffset="0" transform="rotate(-90 55 55)" stroke-linecap="round"/>
+                  </svg>
+                  <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:22px">72%</div>
+                </div>
+                <div style="font-size:13.5px;color:var(--ink-2);line-height:1.7">
+                  本月已用 <b style="color:var(--ink)">2,418,902</b> / 3,000,000 次<br>
+                  以当前速率，预计将于 <b style="color:var(--ink)">27 日</b> 触顶<br>
+                  超量将按 <b style="color:var(--ink)">¥ 0.002 / 次</b> 计费
+                </div>
+              </div>
+              <button class="btn dark" style="width:100%;justify-content:center">升级到 Scale 套餐 →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

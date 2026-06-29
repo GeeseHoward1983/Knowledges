@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>08 · 黏土 — Northwind Cloud 控制台</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --bg:#F4ECF7;            /* 淡薰衣草 */
+    --bg-2:#EADDF0;
+    --paper:#FFFFFF;
+    --ink:#3D2752;
+    --ink-2:#7B5A99;
+    --ink-3:#A98ECC;
+    --primary:#A78BFA;
+    --primary-d:#7B5BE5;
+    --peach:#FFB58F;
+    --peach-d:#FF8466;
+    --mint:#A8E6CF;
+    --mint-d:#5DCB9A;
+    --sun:#FFD66B;
+    --sun-d:#F5B43A;
+    --rose:#FFA0B8;
+    --rose-d:#E66789;
+    --sky:#A4D2F4;
+    --sky-d:#5FA8DC;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;color:var(--ink);font-family:"Nunito","PingFang SC",system-ui,sans-serif;font-weight:600;background:var(--bg)}
+  body{min-height:100vh}
+  .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh;gap:0}
+
+  /* 黏土阴影体系 */
+  .clay{
+    background:var(--paper);
+    border-radius:28px;
+    box-shadow:
+      8px 8px 24px rgba(123,90,153,.18),
+      -6px -6px 16px rgba(255,255,255,.9),
+      inset 1px 1px 0 rgba(255,255,255,.7),
+      inset -2px -2px 6px rgba(123,90,153,.06);
+  }
+  .clay-soft{
+    border-radius:22px;
+    box-shadow:
+      4px 4px 14px rgba(123,90,153,.14),
+      -3px -3px 10px rgba(255,255,255,.85),
+      inset 1px 1px 0 rgba(255,255,255,.7);
+  }
+  .clay-press{
+    border-radius:18px;background:var(--bg);
+    box-shadow:
+      inset 4px 4px 10px rgba(123,90,153,.18),
+      inset -3px -3px 8px rgba(255,255,255,.9);
+  }
+
+  /* 边栏 */
+  aside{
+    margin:20px;padding:24px 18px;
+  }
+  aside.clay{padding:24px 18px}
+  .brand{display:flex;align-items:center;gap:12px;margin-bottom:24px;padding:4px 8px}
+  .brand-mark{
+    width:46px;height:46px;border-radius:16px;
+    background:linear-gradient(135deg,var(--primary),var(--rose));
+    box-shadow:
+      6px 6px 14px rgba(167,139,250,.4),
+      -3px -3px 8px rgba(255,255,255,.7),
+      inset 2px 2px 4px rgba(255,255,255,.5);
+    display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:20px;
+  }
+  .brand-name{font-weight:800;font-size:18px;letter-spacing:-.01em}
+  .brand-name small{display:block;font-weight:600;font-size:11px;color:var(--ink-2);margin-top:2px}
+
+  .nav-section{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);margin:18px 10px 8px}
+  .nav a{
+    display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:16px;text-decoration:none;
+    color:var(--ink);font-size:14px;font-weight:600;margin:4px 0;
+  }
+  .nav a .em{
+    width:32px;height:32px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;
+    box-shadow:
+      3px 3px 6px rgba(123,90,153,.18),
+      inset 1px 1px 2px rgba(255,255,255,.5);
+  }
+  .em.e1{background:linear-gradient(135deg,var(--primary),var(--primary-d))}
+  .em.e2{background:linear-gradient(135deg,var(--peach),var(--peach-d))}
+  .em.e3{background:linear-gradient(135deg,var(--mint),var(--mint-d))}
+  .em.e4{background:linear-gradient(135deg,var(--sun),var(--sun-d))}
+  .em.e5{background:linear-gradient(135deg,var(--rose),var(--rose-d))}
+  .em.e6{background:linear-gradient(135deg,var(--sky),var(--sky-d))}
+  .nav a:hover{background:rgba(167,139,250,.12)}
+  .nav a.active{
+    background:linear-gradient(135deg,var(--primary),var(--primary-d));color:#fff;
+    box-shadow:
+      6px 6px 14px rgba(123,90,153,.3),
+      inset 2px 2px 4px rgba(255,255,255,.25);
+  }
+  .nav a.active .em{background:rgba(255,255,255,.25);box-shadow:inset 2px 2px 4px rgba(0,0,0,.06)}
+
+  /* 主区 */
+  main{padding:20px 20px 32px 0;min-width:0}
+  .topbar{display:flex;align-items:center;gap:14px;margin-bottom:22px;flex-wrap:wrap}
+  .greet{flex:1;min-width:240px}
+  .greet h1{margin:0;font-size:28px;font-weight:800;letter-spacing:-.01em;line-height:1.2}
+  .greet h1 em{font-style:normal;background:linear-gradient(90deg,var(--primary-d),var(--rose-d));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .greet p{margin:6px 0 0;font-size:13px;color:var(--ink-2);font-weight:600}
+
+  .search{
+    padding:12px 18px;font-size:14px;color:var(--ink-2);min-width:260px;display:flex;align-items:center;gap:10px;
+  }
+  .search input{flex:1;background:transparent;border:0;outline:0;font:inherit;color:var(--ink);font-weight:600}
+
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border-radius:16px;border:0;cursor:pointer;
+    font:inherit;font-weight:700;font-size:13.5px;color:#fff;
+    background:linear-gradient(135deg,var(--primary),var(--primary-d));
+    box-shadow:
+      6px 6px 14px rgba(123,90,153,.3),
+      -3px -3px 8px rgba(255,255,255,.6),
+      inset 1px 1px 0 rgba(255,255,255,.3);
+  }
+  .btn.soft{background:var(--paper);color:var(--ink);box-shadow:4px 4px 10px rgba(123,90,153,.15),-3px -3px 8px rgba(255,255,255,.8),inset 1px 1px 0 rgba(255,255,255,.7)}
+  .av{
+    width:46px;height:46px;border-radius:50%;
+    background:linear-gradient(135deg,var(--peach),var(--rose-d));
+    box-shadow:
+      6px 6px 14px rgba(255,132,102,.3),
+      inset 2px 2px 4px rgba(255,255,255,.5);
+    display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;
+  }
+
+  /* KPI */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:22px}
+  .kpi{padding:20px 22px;display:flex;flex-direction:column;gap:8px}
+  .kpi .top{display:flex;align-items:center;gap:10px}
+  .kpi .em{
+    width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;
+    box-shadow:3px 3px 7px rgba(123,90,153,.2),inset 1px 1px 2px rgba(255,255,255,.4);
+  }
+  .kpi .label{font-size:13px;color:var(--ink-2);font-weight:700}
+  .kpi .value{font-size:32px;font-weight:800;letter-spacing:-.02em;line-height:1}
+  .kpi .value small{font-size:13px;color:var(--ink-2);font-weight:700;margin-left:4px}
+  .kpi .foot{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700}
+  .pill{padding:4px 10px;border-radius:99px;font-size:11.5px;font-weight:700}
+  .pill.up{background:rgba(93,203,154,.2);color:#2D7A50}
+  .pill.down{background:rgba(230,103,137,.2);color:#A8324F}
+  .pill.flat{background:rgba(167,139,250,.18);color:var(--primary-d)}
+
+  /* 主体 */
+  .grid{display:grid;grid-template-columns:1.55fr 1fr;gap:18px}
+
+  .panel{padding:22px 24px}
+  .panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px}
+  .panel-title{font-weight:800;font-size:17px;letter-spacing:-.01em}
+  .panel-title small{display:block;font-size:12.5px;color:var(--ink-2);font-weight:600;margin-top:2px}
+
+  .tabs{display:flex;gap:4px;padding:5px;border-radius:14px;background:var(--bg-2);box-shadow:inset 3px 3px 7px rgba(123,90,153,.14),inset -2px -2px 6px rgba(255,255,255,.85)}
+  .tab{padding:6px 12px;font-size:12.5px;font-weight:700;border-radius:10px;cursor:pointer;color:var(--ink-2)}
+  .tab.active{
+    background:#fff;color:var(--ink);
+    box-shadow:3px 3px 7px rgba(123,90,153,.14),-2px -2px 6px rgba(255,255,255,.8);
+  }
+
+  table{width:100%;border-collapse:separate;border-spacing:0 6px;font-size:13.5px}
+  th{text-align:left;font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);padding:8px 14px}
+  td{padding:14px;background:var(--bg);font-weight:600}
+  td:first-child{border-radius:14px 0 0 14px}
+  td:last-child{border-radius:0 14px 14px 0}
+  tr td{box-shadow:inset 3px 3px 7px rgba(123,90,153,.08),inset -2px -2px 5px rgba(255,255,255,.7)}
+  td.mono{font-family:"JetBrains Mono",monospace;font-weight:500;font-size:12.5px}
+  .chip{
+    display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:99px;font-size:11.5px;font-weight:700;color:#fff;
+    box-shadow:3px 3px 7px rgba(123,90,153,.18),inset 1px 1px 2px rgba(255,255,255,.4);
+  }
+  .chip.ok{background:linear-gradient(135deg,var(--mint),var(--mint-d))}
+  .chip.warn{background:linear-gradient(135deg,var(--sun),var(--sun-d))}
+  .chip.bad{background:linear-gradient(135deg,var(--rose),var(--rose-d))}
+  .lat{display:inline-flex;align-items:center;gap:10px;font-family:"JetBrains Mono",monospace;font-size:12.5px}
+  .lat .b{width:60px;height:10px;border-radius:99px;background:var(--bg-2);box-shadow:inset 2px 2px 4px rgba(123,90,153,.18),inset -1px -1px 3px rgba(255,255,255,.6);overflow:hidden}
+  .lat .b i{display:block;height:100%;border-radius:99px;box-shadow:inset 1px 1px 1px rgba(255,255,255,.4)}
+  .lat .b i.ok{background:linear-gradient(90deg,var(--mint),var(--mint-d))}
+  .lat .b i.warn{background:linear-gradient(90deg,var(--sun),var(--sun-d))}
+  .lat .b i.bad{background:linear-gradient(90deg,var(--rose),var(--rose-d))}
+
+  /* 成员 */
+  .members{display:flex;flex-direction:column;gap:10px}
+  .member{display:grid;grid-template-columns:48px 1fr auto;align-items:center;gap:14px;padding:12px 16px;border-radius:18px;background:var(--bg);box-shadow:inset 3px 3px 7px rgba(123,90,153,.08),inset -2px -2px 5px rgba(255,255,255,.7)}
+  .m-av{
+    width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:15px;
+    box-shadow:4px 4px 10px rgba(123,90,153,.2),inset 2px 2px 4px rgba(255,255,255,.4);
+  }
+  .m-av.a1{background:linear-gradient(135deg,var(--primary),var(--primary-d))}
+  .m-av.a2{background:linear-gradient(135deg,var(--peach),var(--peach-d))}
+  .m-av.a3{background:linear-gradient(135deg,var(--mint),var(--mint-d))}
+  .m-av.a4{background:linear-gradient(135deg,var(--sun),var(--sun-d))}
+  .meta b{font-weight:800;font-size:14.5px}
+  .meta small{display:block;font-size:12px;color:var(--ink-2);font-weight:600;margin-top:1px}
+  .role{
+    padding:6px 12px;border-radius:99px;font-size:11.5px;font-weight:700;
+    background:#fff;color:var(--ink);
+    box-shadow:3px 3px 6px rgba(123,90,153,.14),-2px -2px 5px rgba(255,255,255,.9);
+  }
+
+  /* 账单 */
+  .bill .ln{display:flex;justify-content:space-between;align-items:center;padding:11px 0;font-size:14px}
+  .bill .ln + .ln{border-top:2px dashed rgba(167,139,250,.25)}
+  .bill .ln b{font-weight:800;font-size:16px}
+  .bill .total{
+    margin-top:14px;padding:16px 20px;border-radius:18px;
+    background:linear-gradient(135deg,var(--primary),var(--primary-d));color:#fff;
+    box-shadow:6px 6px 14px rgba(123,90,153,.3),inset 2px 2px 4px rgba(255,255,255,.25);
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .bill .total b{font-size:24px;font-weight:800}
+  .gauge{margin-top:16px}
+  .gauge .top{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-2);font-weight:700;margin-bottom:6px}
+  .gauge .bar{height:14px;border-radius:99px;background:var(--bg-2);box-shadow:inset 3px 3px 6px rgba(123,90,153,.18),inset -2px -2px 5px rgba(255,255,255,.7);overflow:hidden}
+  .gauge .bar i{display:block;height:100%;width:72%;border-radius:99px;background:linear-gradient(90deg,var(--peach),var(--rose-d));box-shadow:inset 1px 1px 2px rgba(255,255,255,.4)}
+
+  @media (max-width:1000px){
+    .app{grid-template-columns:1fr}
+    aside{margin:16px 16px 0}
+    main{padding:16px}
+    .kpis{grid-template-columns:1fr 1fr}
+    .grid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="clay">
+    <div class="brand">
+      <div class="brand-mark">N</div>
+      <div class="brand-name">Northwind<small>Cloud</small></div>
+    </div>
+    <div class="nav-section">总览</div>
+    <nav class="nav">
+      <a class="active"><span class="em e1">▦</span>仪表盘</a>
+      <a><span class="em e2">⚡</span>实时调用</a>
+      <a><span class="em e3">◔</span>区域分布</a>
+    </nav>
+    <div class="nav-section">资源</div>
+    <nav class="nav">
+      <a><span class="em e4">⚿</span>API 密钥</a>
+      <a><span class="em e5">↻</span>Webhook</a>
+      <a><span class="em e6">↓</span>数据导出</a>
+    </nav>
+    <div class="nav-section">账户</div>
+    <nav class="nav">
+      <a><span class="em e3">☺</span>成员</a>
+      <a><span class="em e2">¥</span>账单</a>
+      <a><span class="em e1">⚙</span>设置</a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="topbar">
+      <div class="greet">
+        <h1>下午好，林安琪 <em>👋</em></h1>
+        <p>06.19 · 周五 · 生产环境 · ap-southeast-1</p>
+      </div>
+      <div class="search clay-soft">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg>
+        <input placeholder="搜索 API、成员、调用…">
+      </div>
+      <button class="btn soft">通知 3</button>
+      <button class="btn">＋ 新建 Key</button>
+      <div class="av">LA</div>
+    </div>
+
+    <section class="kpis">
+      <div class="kpi clay">
+        <div class="top">
+          <div class="em e1">⚡</div>
+          <div class="label">本月调用</div>
+        </div>
+        <div class="value">2.42<small>M req</small></div>
+        <div class="foot"><span class="pill up">▲ 12.4%</span> 对比上月</div>
+      </div>
+      <div class="kpi clay">
+        <div class="top">
+          <div class="em e3">☺</div>
+          <div class="label">活跃成员</div>
+        </div>
+        <div class="value">38<small>/ 50 席</small></div>
+        <div class="foot"><span class="pill up">▲ 4</span> 本周</div>
+      </div>
+      <div class="kpi clay">
+        <div class="top">
+          <div class="em e4">!</div>
+          <div class="label">错误率 · 24h</div>
+        </div>
+        <div class="value" style="color:#A8501A">0.42<small>%</small></div>
+        <div class="foot"><span class="pill down">▲ 0.08%</span> 阈值 0.5%</div>
+      </div>
+      <div class="kpi clay">
+        <div class="top">
+          <div class="em e2">¥</div>
+          <div class="label">本月账单</div>
+        </div>
+        <div class="value">¥ 2,879<small>.50</small></div>
+        <div class="foot"><span class="pill flat">自动续费</span> T-11</div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="panel clay">
+        <div class="panel-head">
+          <div class="panel-title">最近调用日志<small>实时 · 最近 100 条 · 生产</small></div>
+          <div class="tabs">
+            <span class="tab active">全部</span>
+            <span class="tab">错误</span>
+            <span class="tab">慢请求</span>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>时间</th><th>调用方</th><th>端点</th><th>状态</th><th>耗时</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">14:02:11</td><td>京东数科</td><td class="mono">POST /v2/orders/sync</td>
+              <td><span class="chip ok">200</span></td>
+              <td><span class="lat">92 ms<span class="b"><i class="ok" style="width:18%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:09</td><td>内部 dashboard</td><td class="mono">GET /v2/metrics/window</td>
+              <td><span class="chip ok">200</span></td>
+              <td><span class="lat">140 ms<span class="b"><i class="ok" style="width:28%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:08</td><td>ACME</td><td class="mono">POST /v2/events/batch</td>
+              <td><span class="chip warn">429</span></td>
+              <td><span class="lat">318 ms<span class="b"><i class="warn" style="width:65%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:07</td><td>Office</td><td class="mono">DELETE /v2/keys/ak_3f…</td>
+              <td><span class="chip ok">204</span></td>
+              <td><span class="lat">58 ms<span class="b"><i class="ok" style="width:12%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:05</td><td>顺丰</td><td class="mono">GET /v2/orders?status=open</td>
+              <td><span class="chip bad">500</span></td>
+              <td><span class="lat">1.42 s<span class="b"><i class="bad" style="width:88%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:03</td><td>京东数科</td><td class="mono">POST /v2/webhooks/test</td>
+              <td><span class="chip ok">200</span></td>
+              <td><span class="lat">110 ms<span class="b"><i class="ok" style="width:22%"></i></span></span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:18px">
+        <div class="panel clay">
+          <div class="panel-head">
+            <div class="panel-title">成员<small>38 在岗</small></div>
+            <button class="btn soft">邀请</button>
+          </div>
+          <div class="members">
+            <div class="member"><div class="m-av a1">LA</div><div class="meta"><b>林安琪</b><small>2 分钟前活跃</small></div><span class="role">所有者</span></div>
+            <div class="member"><div class="m-av a2">CW</div><div class="meta"><b>陈维</b><small>1 小时前活跃</small></div><span class="role">管理员</span></div>
+            <div class="member"><div class="m-av a3">JK</div><div class="meta"><b>蒋克</b><small>昨日活跃</small></div><span class="role">开发者</span></div>
+            <div class="member"><div class="m-av a4">YQ</div><div class="meta"><b>袁倩</b><small>受邀待复</small></div><span class="role">只读</span></div>
+          </div>
+        </div>
+
+        <div class="panel clay bill">
+          <div class="panel-head">
+            <div class="panel-title">本月账单<small>06.01 – 06.30</small></div>
+            <button class="btn soft">发票</button>
+          </div>
+          <div class="ln"><span>Growth 套餐</span><b>¥ 1,980.00</b></div>
+          <div class="ln"><span>超量调用 · 418,902 次</span><b>¥ 837.80</b></div>
+          <div class="ln"><span>Webhook 重试 · 12,341 次</span><b>¥ 61.70</b></div>
+          <div class="total"><span style="font-weight:700;font-size:14px">本月小计</span><b>¥ 2,879.50</b></div>
+          <div class="gauge">
+            <div class="top"><span>套餐用量 72%</span><span>2.42M / 3M</span></div>
+            <div class="bar"><i></i></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+</body>
+</html>

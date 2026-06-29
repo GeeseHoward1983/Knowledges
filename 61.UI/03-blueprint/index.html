@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>03 · 蓝图 — Northwind Cloud 控制台</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --bg:#0F3251;          /* 蓝图深蓝 */
+    --bg-2:#103A5C;
+    --paper:#0E3854;
+    --ink:#E6EFF7;
+    --ink-2:#94B6D3;
+    --line:rgba(230,239,247,.22);
+    --line-strong:rgba(230,239,247,.5);
+    --cyan:#7BD5E0;
+    --amber:#F3C56B;
+    --rose:#F08AA1;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;color:var(--ink);font-family:"Space Grotesk","PingFang SC",system-ui,sans-serif;background:var(--bg)}
+  /* 工程蓝图等距网格 */
+  body{
+    min-height:100vh;
+    background:
+      linear-gradient(rgba(230,239,247,.06) 1px, transparent 1px) 0 0/24px 24px,
+      linear-gradient(90deg, rgba(230,239,247,.06) 1px, transparent 1px) 0 0/24px 24px,
+      linear-gradient(rgba(230,239,247,.14) 1px, transparent 1px) 0 0/120px 120px,
+      linear-gradient(90deg, rgba(230,239,247,.14) 1px, transparent 1px) 0 0/120px 120px,
+      var(--bg);
+    background-attachment: fixed;
+  }
+  .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+
+  /* 边栏：图纸标题栏感 */
+  aside{
+    border-right:1px solid var(--line-strong);
+    padding:20px 18px;
+    background:linear-gradient(180deg,rgba(15,50,81,.85),rgba(15,50,81,.55));
+  }
+  .stamp{
+    border:1px solid var(--line-strong);
+    padding:10px 12px;display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:center;margin-bottom:18px;
+  }
+  .stamp-mark{
+    width:34px;height:34px;border:1.5px solid var(--cyan);
+    display:flex;align-items:center;justify-content:center;color:var(--cyan);
+    font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:600;letter-spacing:.05em;
+    position:relative;
+  }
+  .stamp-mark::before,.stamp-mark::after{
+    content:"";position:absolute;background:var(--cyan);
+  }
+  .stamp-mark::before{left:-3px;top:-3px;width:6px;height:6px;border-radius:50%}
+  .stamp-mark::after{right:-3px;bottom:-3px;width:6px;height:6px;border-radius:50%}
+  .stamp .name{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:14px;letter-spacing:.04em}
+  .stamp .name small{display:block;font-family:"JetBrains Mono",monospace;font-weight:400;font-size:10px;letter-spacing:.14em;color:var(--ink-2);margin-top:2px;text-transform:uppercase}
+
+  .nav-section{
+    font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--ink-2);margin:18px 4px 6px;display:flex;align-items:center;gap:8px;
+  }
+  .nav-section::after{content:"";flex:1;height:1px;border-top:1px dashed var(--line)}
+  .nav a{
+    display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;
+    padding:8px 10px;text-decoration:none;color:var(--ink);font-size:13.5px;
+    border:1px dashed transparent;
+  }
+  .nav a:hover{border-color:var(--line)}
+  .nav a.active{
+    border:1px dashed var(--cyan);background:rgba(123,213,224,.07);
+  }
+  .nav a .ix{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-2)}
+  .nav a .gauge{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--cyan)}
+
+  /* 主区 */
+  main{padding:0 30px 40px;position:relative}
+
+  /* 标题栏 ＋ 信息块 ＋ 卡纸 */
+  .titlebar{
+    margin:0 -30px 22px;padding:18px 30px;
+    border-bottom:1px solid var(--line-strong);
+    display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+    background:linear-gradient(180deg,rgba(15,50,81,.6),rgba(15,50,81,0));
+  }
+  .titlebar h1{
+    margin:0;font-family:"Space Grotesk",sans-serif;font-weight:500;font-size:24px;letter-spacing:.01em;
+  }
+  .titlebar h1 b{color:var(--cyan);font-weight:600}
+  .meta-block{
+    margin-left:auto;display:flex;gap:14px;font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-2);letter-spacing:.06em;text-transform:uppercase;
+  }
+  .meta-block i{font-style:normal;color:var(--ink);display:block;margin-top:3px;font-size:12.5px}
+
+  /* 标注引线指标卡 */
+  .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:28px;margin:30px 0 36px;position:relative}
+  .kpi{
+    border:1px solid var(--line-strong);padding:18px 18px 22px;position:relative;
+    background:linear-gradient(180deg,rgba(15,50,81,.45),rgba(15,50,81,.15));
+  }
+  .kpi::before,.kpi::after{
+    content:"";position:absolute;background:var(--cyan);width:5px;height:5px;border-radius:50%;
+  }
+  .kpi::before{left:-3px;top:-3px}
+  .kpi::after{right:-3px;bottom:-3px}
+  .kpi .label{
+    font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-2);
+    display:flex;align-items:center;gap:8px;
+  }
+  .kpi .label .lead{flex:1;height:1px;border-top:1px dashed var(--line)}
+  .kpi .value{
+    font-family:"Space Grotesk",sans-serif;font-weight:500;font-size:38px;letter-spacing:-.01em;margin-top:10px;line-height:1;
+  }
+  .kpi .value .unit{font-size:13px;color:var(--ink-2);margin-left:6px}
+  .kpi .foot{display:flex;justify-content:space-between;align-items:flex-end;margin-top:14px;font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-2)}
+  .delta-up{color:var(--cyan)}
+  .delta-down{color:var(--rose)}
+
+  /* 签名：尺寸引线 */
+  .dim{position:absolute;color:var(--cyan);font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;pointer-events:none}
+  .dim.top{top:-22px;left:0;right:0;display:flex;align-items:center;gap:6px}
+  .dim.top::before,.dim.top::after{content:"";flex:1;border-top:1px dashed var(--cyan);opacity:.5}
+  .dim.top span{padding:0 6px}
+
+  /* 调用日志 */
+  .panel{border:1px solid var(--line-strong);background:rgba(15,50,81,.45);margin-bottom:24px;position:relative}
+  .panel-head{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px dashed var(--line)}
+  .panel-title{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:14px;letter-spacing:.03em}
+  .panel-title small{display:block;font-family:"JetBrains Mono",monospace;font-weight:400;color:var(--ink-2);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;margin-top:2px}
+  .panel-actions{display:flex;gap:8px}
+  .tag{
+    font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.1em;
+    border:1px solid var(--line-strong);padding:3px 8px;text-transform:uppercase;color:var(--ink-2);
+  }
+  .tag.live::before{content:"●";color:var(--cyan);margin-right:5px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{
+    font-family:"JetBrains Mono",monospace;font-weight:500;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--ink-2);padding:10px 14px;text-align:left;border-bottom:1px dashed var(--line);
+  }
+  td{padding:11px 14px;border-bottom:1px dashed var(--line);color:var(--ink)}
+  tr:last-child td{border-bottom:0}
+  td.mono{font-family:"JetBrains Mono",monospace;font-size:12px}
+  .st{display:inline-flex;align-items:center;gap:6px;font-family:"JetBrains Mono",monospace;font-size:12px}
+  .st i{width:8px;height:8px;border-radius:50%;display:inline-block}
+  .st.ok i{background:var(--cyan)}
+  .st.warn i{background:var(--amber)}
+  .st.bad i{background:var(--rose)}
+  .lat{font-family:"JetBrains Mono",monospace;display:inline-grid;grid-template-columns:60px 1fr;gap:8px;align-items:center}
+  .lat .b{height:6px;border:1px solid var(--line);position:relative}
+  .lat .b i{display:block;height:100%}
+  .lat .b i.ok{background:var(--cyan)}
+  .lat .b i.warn{background:var(--amber)}
+  .lat .b i.bad{background:var(--rose)}
+
+  /* 双栏 */
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+
+  /* 成员 */
+  .members .row{display:grid;grid-template-columns:38px 1fr auto;gap:12px;align-items:center;padding:11px 16px;border-bottom:1px dashed var(--line)}
+  .members .row:last-child{border-bottom:0}
+  .av{
+    width:38px;height:38px;border:1px solid var(--line-strong);display:flex;align-items:center;justify-content:center;
+    font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:600;
+    background:rgba(123,213,224,.08);color:var(--cyan);
+  }
+  .members .row b{font-weight:500}
+  .members .row small{display:block;font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-2);margin-top:2px}
+  .role{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--line);padding:3px 8px;color:var(--ink-2)}
+
+  /* 账单 */
+  .bill{padding:16px}
+  .bill .ln{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px dashed var(--line);font-size:13px}
+  .bill .ln b{font-family:"Space Grotesk",sans-serif;font-weight:500;font-size:15px}
+  .bill .ln.total{border-top:1px solid var(--line-strong);border-bottom:0;margin-top:8px;padding-top:14px}
+  .bill .ln.total b{font-size:24px;color:var(--cyan)}
+  .gauge-row{margin-top:14px}
+  .gauge-row .legend{display:flex;justify-content:space-between;font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-2);margin-bottom:6px}
+  .gauge-row .bar{position:relative;height:14px;border:1px solid var(--line-strong)}
+  .gauge-row .bar i{display:block;height:100%;width:72%;background:repeating-linear-gradient(135deg,var(--cyan) 0 4px,transparent 4px 8px)}
+  .gauge-row .bar::after{
+    content:"";position:absolute;top:-2px;bottom:-2px;left:72%;width:1px;background:var(--cyan);
+  }
+
+  /* 按钮 */
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;padding:7px 14px;
+    border:1px solid var(--line-strong);background:transparent;color:var(--ink);
+    font:inherit;font-family:"Space Grotesk",sans-serif;font-size:12.5px;letter-spacing:.05em;cursor:pointer;
+  }
+  .btn.primary{border-color:var(--cyan);color:var(--cyan)}
+  .btn.primary::before{content:"+";margin-right:2px}
+
+  @media (max-width:1000px){
+    .app{grid-template-columns:1fr}
+    .kpi-row{grid-template-columns:1fr 1fr;gap:18px}
+    .two-col{grid-template-columns:1fr}
+    main{padding:0 16px 24px}
+    .titlebar{margin:0 -16px 18px;padding:14px 16px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="stamp">
+      <div class="stamp-mark">N</div>
+      <div class="name">Northwind<small>Project · Sheet 01/12</small></div>
+    </div>
+    <div class="nav-section">总览</div>
+    <nav class="nav">
+      <a class="active"><span class="ix">A1</span><span>仪表盘</span><span class="gauge">●</span></a>
+      <a><span class="ix">A2</span><span>实时调用</span><span class="gauge">02</span></a>
+      <a><span class="ix">A3</span><span>区域分布</span><span class="gauge">03</span></a>
+    </nav>
+    <div class="nav-section">资源</div>
+    <nav class="nav">
+      <a><span class="ix">B1</span><span>API 密钥</span><span class="gauge">12</span></a>
+      <a><span class="ix">B2</span><span>Webhook</span><span class="gauge">07</span></a>
+      <a><span class="ix">B3</span><span>数据导出</span><span class="gauge">—</span></a>
+    </nav>
+    <div class="nav-section">账户</div>
+    <nav class="nav">
+      <a><span class="ix">C1</span><span>成员与角色</span><span class="gauge">38</span></a>
+      <a><span class="ix">C2</span><span>计费与发票</span><span class="gauge">—</span></a>
+      <a><span class="ix">C3</span><span>偏好设置</span><span class="gauge">—</span></a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="titlebar">
+      <h1>仪表盘 · <b>生产环境</b></h1>
+      <div class="meta-block">
+        <div>SHEET<i>01 / 12</i></div>
+        <div>REGION<i>ap-southeast-1</i></div>
+        <div>UPDATED<i>14:02:11 UTC+8</i></div>
+        <div>SCALE<i>1 : 100K req</i></div>
+      </div>
+    </div>
+
+    <div class="kpi-row">
+      <div class="dim top"><span>· 关键指标 / 24h ·</span></div>
+      <div class="kpi">
+        <div class="label">月调用量<span class="lead"></span></div>
+        <div class="value">2,418,902<span class="unit">req</span></div>
+        <div class="foot"><span class="delta-up">▲ 12.4% MoM</span><span>目标 3,000,000</span></div>
+      </div>
+      <div class="kpi">
+        <div class="label">活跃成员<span class="lead"></span></div>
+        <div class="value">38<span class="unit">/ 50 席</span></div>
+        <div class="foot"><span class="delta-up">▲ 4 本周</span><span>空闲 12</span></div>
+      </div>
+      <div class="kpi">
+        <div class="label">错误率 24h<span class="lead"></span></div>
+        <div class="value">0.42<span class="unit">%</span></div>
+        <div class="foot"><span class="delta-down">▲ 0.08%</span><span>阈值 0.5%</span></div>
+      </div>
+      <div class="kpi">
+        <div class="label">本月账单<span class="lead"></span></div>
+        <div class="value">¥ 2,879<span class="unit">.50</span></div>
+        <div class="foot"><span>自动续费</span><span>结算 T-11</span></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">调用日志 / Sheet A2<small>实时流 · 最近 100 条 · 仅生产</small></div>
+        <div class="panel-actions">
+          <span class="tag live">LIVE</span>
+          <button class="btn">仅看错误</button>
+          <button class="btn primary">导出</button>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr><th style="width:13%">T</th><th>调用方</th><th>端点</th><th style="width:10%">状态</th><th style="width:22%">耗时</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="mono">14:02:11.314</td><td>sdk-node@1.8 · 京东数科</td><td class="mono">POST /v2/orders/sync</td>
+            <td><span class="st ok"><i></i>200</span></td>
+            <td><span class="lat"><span>92 ms</span><span class="b"><i class="ok" style="width:18%"></i></span></span></td></tr>
+          <tr><td class="mono">14:02:09.870</td><td>web-dashboard · 内部</td><td class="mono">GET /v2/metrics/window</td>
+            <td><span class="st ok"><i></i>200</span></td>
+            <td><span class="lat"><span>140 ms</span><span class="b"><i class="ok" style="width:28%"></i></span></span></td></tr>
+          <tr><td class="mono">14:02:08.005</td><td>sdk-python@2.3 · ACME</td><td class="mono">POST /v2/events/batch</td>
+            <td><span class="st warn"><i></i>429</span></td>
+            <td><span class="lat"><span>318 ms</span><span class="b"><i class="warn" style="width:65%"></i></span></span></td></tr>
+          <tr><td class="mono">14:02:07.121</td><td>curl/8.4 · Office</td><td class="mono">DELETE /v2/keys/ak_3f…</td>
+            <td><span class="st ok"><i></i>204</span></td>
+            <td><span class="lat"><span>58 ms</span><span class="b"><i class="ok" style="width:12%"></i></span></span></td></tr>
+          <tr><td class="mono">14:02:05.443</td><td>sdk-go@1.1 · 顺丰</td><td class="mono">GET /v2/orders?status=open</td>
+            <td><span class="st bad"><i></i>500</span></td>
+            <td><span class="lat"><span>1.42 s</span><span class="b"><i class="bad" style="width:88%"></i></span></span></td></tr>
+          <tr><td class="mono">14:02:03.018</td><td>sdk-node@1.8 · 京东数科</td><td class="mono">POST /v2/webhooks/test</td>
+            <td><span class="st ok"><i></i>200</span></td>
+            <td><span class="lat"><span>110 ms</span><span class="b"><i class="ok" style="width:22%"></i></span></span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="two-col">
+      <div class="panel members">
+        <div class="panel-head">
+          <div class="panel-title">成员清册 / C1<small>组织 · 38 在岗 · 12 席空闲</small></div>
+          <button class="btn">邀请</button>
+        </div>
+        <div class="row"><div class="av">LA</div><div><b>林安琪</b><small>liananqi@northwind.io · 2 min</small></div><span class="role">OWNER</span></div>
+        <div class="row"><div class="av">CW</div><div><b>陈维</b><small>chenwei@northwind.io · 1 h</small></div><span class="role">ADMIN</span></div>
+        <div class="row"><div class="av">JK</div><div><b>蒋克</b><small>jiangke@northwind.io · 1 d</small></div><span class="role">DEV</span></div>
+        <div class="row"><div class="av">YQ</div><div><b>袁倩</b><small>yuanqian@vendor.com · 待接受</small></div><span class="role">READ</span></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title">本期账单 / C2<small>06.01 – 06.30 · 自动续费</small></div>
+          <button class="btn primary">发票</button>
+        </div>
+        <div class="bill">
+          <div class="ln"><span>Growth 套餐</span><b>¥ 1,980.00</b></div>
+          <div class="ln"><span>超量调用 · 418,902 次</span><b>¥ 837.80</b></div>
+          <div class="ln"><span>Webhook 重试 · 12,341 次</span><b>¥ 61.70</b></div>
+          <div class="ln total"><span style="font-weight:500">本月小计</span><b>¥ 2,879.50</b></div>
+          <div class="gauge-row">
+            <div class="legend"><span>套餐用量 72%</span><span>2,418,902 / 3,000,000</span></div>
+            <div class="bar"><i></i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

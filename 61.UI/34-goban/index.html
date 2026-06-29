@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>34 · 棋谱 — Northwind Cloud 控制台</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --wood:#E0BC85;
+    --wood-2:#D2A971;
+    --wood-3:#B88955;
+    --paper:#F4E4C1;
+    --ink:#1A1408;
+    --ink-2:#5C4A2C;
+    --ink-3:#8C7656;
+    --line:rgba(26,20,8,.65);
+    --line-2:rgba(26,20,8,.25);
+    --black-stone:#1A1408;
+    --white-stone:#F8F2E2;
+    --red-mark:#A8322E;
+    --blue-mark:#2E5A8E;
+    --green-mark:#3E7A4A;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;color:var(--ink);font-family:"Cormorant Garamond","Source Han Serif SC","STSong",serif;background:var(--wood)}
+  body{
+    min-height:100vh;font-size:14.5px;line-height:1.55;
+    background:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.6' numOctaves='3'/><feColorMatrix values='0 0 0 0 .3  0 0 0 0 .2  0 0 0 0 .08  0 0 0 .12 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
+      linear-gradient(135deg, var(--wood) 0%, var(--wood-2) 100%);
+  }
+  .app{display:grid;grid-template-columns:230px 1fr;min-height:100vh}
+
+  /* 边栏 = 棋谱目录 */
+  aside{padding:24px 18px;background:var(--paper);border-right:2px solid var(--ink);position:relative}
+  aside::after{content:"";position:absolute;top:24px;bottom:24px;right:-1px;width:1px;background:repeating-linear-gradient(180deg,var(--ink) 0 6px, transparent 6px 12px)}
+
+  .brand{padding:0 4px 14px;border-bottom:1px solid var(--ink);margin-bottom:14px;display:flex;align-items:center;gap:12px}
+  .stone-mark{
+    width:44px;height:44px;border-radius:50%;background:radial-gradient(circle at 35% 30%, #2E2818, var(--black-stone) 70%);
+    box-shadow:0 2px 4px rgba(0,0,0,.3), inset 0 -2px 4px rgba(0,0,0,.5), inset 0 1px 2px rgba(255,255,255,.1);
+    display:flex;align-items:center;justify-content:center;color:var(--white-stone);font-family:"Source Han Serif SC",serif;font-weight:500;font-size:22px;
+    position:relative;
+  }
+  .stone-mark::after{content:"";position:absolute;top:6px;left:8px;width:14px;height:8px;border-radius:50%;background:radial-gradient(ellipse,rgba(255,255,255,.18),transparent 70%)}
+  .brand b{font-family:"Source Han Serif SC",serif;font-weight:500;font-size:19px;letter-spacing:.04em;line-height:1.1}
+  .brand small{display:block;font-family:"Cormorant Garamond",serif;font-style:italic;font-weight:500;font-size:13px;color:var(--ink-2);letter-spacing:.06em;margin-top:3px}
+
+  .nav-section{
+    font-family:"Source Han Serif SC",serif;font-weight:500;font-size:13px;color:var(--ink-2);
+    margin:14px 4px 4px;letter-spacing:.4em;border-bottom:1px solid var(--line-2);padding-bottom:4px;
+  }
+  .nav a{
+    display:grid;grid-template-columns:18px 1fr auto;align-items:baseline;gap:8px;
+    padding:7px 4px;text-decoration:none;color:var(--ink);font-size:15px;letter-spacing:.04em;
+    border-bottom:1px dotted var(--line-2);
+  }
+  .nav a:hover{color:var(--red-mark)}
+  .nav a.active{color:var(--red-mark);font-weight:600}
+  .nav a .num{
+    font-family:"Cormorant Garamond",serif;font-style:italic;font-size:13px;color:var(--ink-3);text-align:right;
+  }
+  .nav a .stone{
+    width:14px;height:14px;border-radius:50%;background:var(--white-stone);border:1.5px solid var(--ink);
+  }
+  .nav a:nth-child(odd) .stone{background:var(--black-stone)}
+  .nav a.active .stone{box-shadow:0 0 0 2px var(--red-mark)}
+
+  /* 主区 */
+  main{padding:28px 32px 36px;min-width:0;background:var(--paper);border-left:1px solid var(--line-2)}
+
+  /* 顶 */
+  .crumbs{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:14px;color:var(--ink-2);margin-bottom:6px;letter-spacing:.04em}
+  .crumbs b{color:var(--ink);font-style:normal;font-weight:600}
+  .header{display:flex;align-items:end;justify-content:space-between;gap:24px;padding-bottom:18px;border-bottom:2px solid var(--ink);margin-bottom:24px;flex-wrap:wrap}
+  .header h1{margin:0;font-family:"Source Han Serif SC",serif;font-weight:500;font-size:34px;letter-spacing:.04em;line-height:1.2}
+  .header h1 em{color:var(--red-mark)}
+  .header .meta{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:14px;color:var(--ink-2);text-align:right;line-height:1.7}
+  .header .meta b{display:block;font-family:"Source Han Serif SC",serif;font-style:normal;font-weight:500;color:var(--ink);font-size:18px;letter-spacing:.04em}
+
+  /* === 棋盘网格背景 KPI 区 === */
+  .board{
+    background:
+      linear-gradient(var(--line) 1.5px, transparent 1.5px) 0 0/56px 56px,
+      linear-gradient(90deg, var(--line) 1.5px, transparent 1.5px) 0 0/56px 56px,
+      var(--paper);
+    background-position:14px 14px;
+    border:2px solid var(--ink);padding:28px;margin-bottom:24px;position:relative;
+  }
+  /* 边界角"星位" */
+  .board::before,.board::after{content:"";position:absolute;width:8px;height:8px;border-radius:50%;background:var(--ink)}
+  .board::before{top:13px;left:13px}
+  .board::after{bottom:13px;right:13px}
+
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;position:relative;z-index:1}
+  .kpi{padding:14px 16px;background:rgba(244,228,193,.92);border:1.5px solid var(--ink);position:relative}
+  .kpi .corner{position:absolute;top:-9px;left:-9px;width:18px;height:18px;border-radius:50%;background:var(--black-stone);
+    box-shadow:0 2px 3px rgba(0,0,0,.3), inset 0 -1px 2px rgba(0,0,0,.4), inset 0 1px 1px rgba(255,255,255,.1);
+    display:flex;align-items:center;justify-content:center;color:var(--white-stone);font-family:"Cormorant Garamond",serif;font-style:italic;font-weight:700;font-size:11px;
+  }
+  .kpi.k2 .corner{background:var(--white-stone);color:var(--ink);box-shadow:0 2px 3px rgba(0,0,0,.25), inset 0 -1px 2px rgba(0,0,0,.1)}
+  .kpi.k3 .corner{background:var(--red-mark);box-shadow:0 2px 3px rgba(0,0,0,.3), inset 0 -1px 2px rgba(0,0,0,.3)}
+  .kpi.k4 .corner{background:var(--black-stone);color:var(--white-stone)}
+  .kpi .l{font-family:"Source Han Serif SC",serif;font-weight:500;font-size:12px;color:var(--ink-2);letter-spacing:.18em;margin-bottom:4px}
+  .kpi .v{font-family:"Source Han Serif SC",serif;font-weight:500;font-size:30px;letter-spacing:-.01em;line-height:1.1;font-variant-numeric:tabular-nums}
+  .kpi .v small{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:12px;color:var(--ink-2);margin-left:4px;font-weight:500}
+  .kpi .v .red{color:var(--red-mark)}
+  .kpi .d{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:12.5px;color:var(--ink-2);margin-top:6px;display:flex;justify-content:space-between}
+  .up{color:var(--green-mark)}
+  .down{color:var(--red-mark)}
+
+  /* 主体 */
+  .grid{display:grid;grid-template-columns:1.55fr 1fr;gap:24px}
+
+  .sec-h{
+    display:flex;justify-content:space-between;align-items:baseline;border-top:2px solid var(--ink);padding-top:14px;margin-bottom:12px;
+  }
+  .sec-h h3{margin:0;font-family:"Source Han Serif SC",serif;font-weight:500;font-size:20px;letter-spacing:.08em;display:flex;align-items:baseline;gap:8px}
+  .sec-h h3::before{content:"●";color:var(--ink);font-size:10px;vertical-align:2px}
+  .sec-h h3 small{font-family:"Cormorant Garamond",serif;font-style:italic;font-weight:500;font-size:13px;color:var(--ink-2);letter-spacing:.04em;margin-left:6px}
+  .sec-tools{font-family:"Source Han Serif SC",serif;font-size:14px;color:var(--ink-2)}
+  .sec-tools span{margin-left:14px;cursor:pointer}
+  .sec-tools .active{color:var(--red-mark);font-weight:600}
+
+  /* 棋谱表格 */
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th{text-align:left;font-family:"Cormorant Garamond",serif;font-style:italic;font-weight:500;font-size:12.5px;color:var(--ink-2);padding:8px 0;border-bottom:1.5px solid var(--ink);letter-spacing:.06em}
+  td{padding:11px 0;border-bottom:1px dotted var(--line);font-variant-numeric:tabular-nums}
+  tr:last-child td{border-bottom:0}
+  td.mono{font-family:"JetBrains Mono",monospace;font-size:12.5px;color:var(--ink)}
+  td.move{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:14.5px;font-weight:500}
+  td.stone{width:30px}
+  .move-stone{
+    width:20px;height:20px;border-radius:50%;background:var(--black-stone);
+    display:inline-flex;align-items:center;justify-content:center;color:var(--white-stone);
+    font-family:"Cormorant Garamond",serif;font-style:italic;font-weight:700;font-size:10px;
+    box-shadow:0 1px 2px rgba(0,0,0,.4), inset 0 -1px 1px rgba(0,0,0,.3);
+  }
+  .move-stone.w{background:var(--white-stone);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.25), inset 0 -1px 1px rgba(0,0,0,.1)}
+  .move-stone.r{background:var(--red-mark);box-shadow:0 1px 2px rgba(0,0,0,.3)}
+  .stat-mark{
+    display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;border:1.5px solid var(--ink);
+    font-family:"Cormorant Garamond",serif;font-style:italic;font-weight:700;font-size:11px;
+  }
+  .stat-mark.ok{background:transparent;color:var(--ink)}
+  .stat-mark.warn{background:transparent;color:var(--red-mark);border-color:var(--red-mark)}
+  .stat-mark.bad{background:var(--red-mark);color:var(--white-stone);border-color:var(--red-mark)}
+  .lat{display:inline-flex;align-items:baseline;gap:8px;font-family:"JetBrains Mono",monospace;font-size:12px}
+  .lat .b{width:54px;height:1.5px;background:var(--line-2);position:relative}
+  .lat .b i{display:block;height:1.5px}
+  .lat .b i.ok{background:var(--ink)}
+  .lat .b i.warn{background:var(--ink);height:3px;margin-top:-.75px}
+  .lat .b i.bad{background:var(--red-mark);height:4px;margin-top:-1.25px}
+
+  /* 名册 */
+  .person{display:grid;grid-template-columns:38px 1fr auto;gap:14px;align-items:center;padding:12px 0;border-bottom:1px dotted var(--line)}
+  .person:last-child{border-bottom:0}
+  .p-stone{
+    width:38px;height:38px;border-radius:50%;background:radial-gradient(circle at 35% 30%, #2E2818, var(--black-stone) 70%);
+    box-shadow:0 2px 3px rgba(0,0,0,.3), inset 0 -2px 3px rgba(0,0,0,.4), inset 0 1px 1px rgba(255,255,255,.08);
+    display:flex;align-items:center;justify-content:center;color:var(--white-stone);font-family:"Source Han Serif SC",serif;font-weight:500;font-size:16px;
+  }
+  .p-stone.w{background:radial-gradient(circle at 35% 30%, #FFFFFF, var(--white-stone) 70%);color:var(--ink);box-shadow:0 2px 3px rgba(0,0,0,.22), inset 0 -2px 3px rgba(0,0,0,.08)}
+  .person b{font-family:"Source Han Serif SC",serif;font-weight:500;font-size:15.5px;letter-spacing:.04em}
+  .person small{display:block;font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--ink-2);margin-top:1px}
+  .role-rank{
+    font-family:"Cormorant Garamond",serif;font-style:italic;font-weight:600;font-size:14px;color:var(--ink-2);
+    border:1px solid var(--line);padding:2px 10px;
+  }
+  .role-rank.r{color:var(--red-mark);border-color:var(--red-mark)}
+
+  /* 账单 */
+  .bill .ln{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px dotted var(--line);font-family:"Cormorant Garamond",serif;font-size:14.5px;color:var(--ink)}
+  .bill .ln span{font-style:italic;color:var(--ink-2)}
+  .bill .ln b{font-family:"Source Han Serif SC",serif;font-weight:500;font-size:16px;font-variant-numeric:tabular-nums}
+  .bill .total{margin-top:8px;padding-top:14px;border-top:2px solid var(--ink);display:flex;justify-content:space-between;align-items:baseline}
+  .bill .total span{font-family:"Source Han Serif SC",serif;font-weight:500;font-size:15px;letter-spacing:.16em}
+  .bill .total b{font-family:"Source Han Serif SC",serif;font-weight:500;font-size:30px;color:var(--red-mark);letter-spacing:-.01em}
+  .gauge{margin-top:16px}
+  .gauge .top{display:flex;justify-content:space-between;font-family:"Cormorant Garamond",serif;font-style:italic;font-size:12px;color:var(--ink-2);margin-bottom:6px;letter-spacing:.04em}
+  .gauge .bar{height:2px;background:var(--line-2);position:relative;overflow:hidden}
+  .gauge .bar i{display:block;height:100%;width:72%;background:var(--ink)}
+  .gauge .bar::after{content:"";position:absolute;top:-3px;bottom:-3px;left:72%;width:1px;background:var(--red-mark)}
+
+  .btn{
+    display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);
+    font-family:"Source Han Serif SC",serif;font-weight:500;font-size:13.5px;letter-spacing:.06em;cursor:pointer;
+  }
+  .btn.r{background:var(--red-mark);color:var(--white-stone);border-color:var(--red-mark)}
+
+  footer{
+    margin-top:32px;padding-top:14px;border-top:1.5px solid var(--ink);
+    display:flex;justify-content:space-between;font-family:"Cormorant Garamond",serif;font-style:italic;font-size:13px;color:var(--ink-2);
+  }
+
+  @media (max-width:1100px){
+    .app{grid-template-columns:1fr}
+    aside{border-right:0;border-bottom:2px solid var(--ink)}
+    .kpis{grid-template-columns:1fr 1fr}
+    .grid{grid-template-columns:1fr}
+    main{padding:22px 18px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="brand">
+      <div class="stone-mark">北</div>
+      <div><b>Northwind</b><small>Goban · Vol. 01</small></div>
+    </div>
+    <div class="nav-section">总</div>
+    <nav class="nav">
+      <a class="active"><span class="stone"></span><span>仪表盘</span><span class="num">i</span></a>
+      <a><span class="stone"></span><span>实时调用</span><span class="num">ii</span></a>
+      <a><span class="stone"></span><span>区域分布</span><span class="num">iii</span></a>
+    </nav>
+    <div class="nav-section">资</div>
+    <nav class="nav">
+      <a><span class="stone"></span><span>API 密钥</span><span class="num">iv</span></a>
+      <a><span class="stone"></span><span>Webhook</span><span class="num">v</span></a>
+      <a><span class="stone"></span><span>数据导出</span><span class="num">vi</span></a>
+    </nav>
+    <div class="nav-section">账</div>
+    <nav class="nav">
+      <a><span class="stone"></span><span>名册</span><span class="num">vii</span></a>
+      <a><span class="stone"></span><span>账目</span><span class="num">viii</span></a>
+      <a><span class="stone"></span><span>偏好</span><span class="num">ix</span></a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="crumbs">控制台 · <b>仪表盘</b> · 卷一</div>
+    <div class="header">
+      <h1>本月运行 — <em>第十九手</em></h1>
+      <div class="meta">六月十九日 · 星期五<br><b>第 19 手 / 共 30 手</b>prod · ap-southeast-1</div>
+    </div>
+
+    <section class="board">
+      <div class="kpis">
+        <div class="kpi k1">
+          <span class="corner">A1</span>
+          <div class="l">本月调用</div>
+          <div class="v">2,418,<span class="red">902</span><small>req</small></div>
+          <div class="d"><span class="up">▲ 12.4%</span><span>tgt 3.0M</span></div>
+        </div>
+        <div class="kpi k2">
+          <span class="corner">B1</span>
+          <div class="l">活跃名册</div>
+          <div class="v">38<small>/ 50</small></div>
+          <div class="d"><span class="up">▲ 4 本周</span><span>idle 12</span></div>
+        </div>
+        <div class="kpi k3">
+          <span class="corner">C1</span>
+          <div class="l">错误率 24h</div>
+          <div class="v" style="color:var(--red-mark)">0.42<small>%</small></div>
+          <div class="d"><span class="down">▲ 0.08%</span><span>thr 0.5%</span></div>
+        </div>
+        <div class="kpi k4">
+          <span class="corner">D1</span>
+          <div class="l">本月账目</div>
+          <div class="v">¥ 2,879<small>.50</small></div>
+          <div class="d"><span>auto</span><span>T-11</span></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="grid">
+      <div>
+        <div class="sec-h">
+          <h3>本谱 <small>· 最近 100 手 · 实时</small></h3>
+          <div class="sec-tools">
+            <span class="active">全部</span><span>劫</span><span>损子</span>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th class="stone">手</th><th>时</th><th>来者</th><th>着点</th><th>状</th><th>耗</th></tr></thead>
+          <tbody>
+            <tr><td><span class="move-stone">19</span></td><td class="mono">14:02:11</td><td class="move">京东数科</td><td class="mono">POST /v2/orders/sync</td><td><span class="stat-mark ok">○</span></td><td><span class="lat">92 ms<span class="b"><i class="ok" style="width:18%"></i></span></span></td></tr>
+            <tr><td><span class="move-stone w">18</span></td><td class="mono">14:02:09</td><td class="move">内部 dashboard</td><td class="mono">GET /v2/metrics/window</td><td><span class="stat-mark ok">○</span></td><td><span class="lat">140 ms<span class="b"><i class="ok" style="width:28%"></i></span></span></td></tr>
+            <tr><td><span class="move-stone">17</span></td><td class="mono">14:02:08</td><td class="move">ACME</td><td class="mono">POST /v2/events/batch</td><td><span class="stat-mark warn">!</span></td><td><span class="lat">318 ms<span class="b"><i class="warn" style="width:65%"></i></span></span></td></tr>
+            <tr><td><span class="move-stone w">16</span></td><td class="mono">14:02:07</td><td class="move">Office</td><td class="mono">DELETE /v2/keys/ak_3f…</td><td><span class="stat-mark ok">○</span></td><td><span class="lat">58 ms<span class="b"><i class="ok" style="width:12%"></i></span></span></td></tr>
+            <tr><td><span class="move-stone r">15</span></td><td class="mono">14:02:05</td><td class="move">顺丰</td><td class="mono">GET /v2/orders?status=open</td><td><span class="stat-mark bad">×</span></td><td><span class="lat">1.42 s<span class="b"><i class="bad" style="width:88%"></i></span></span></td></tr>
+            <tr><td><span class="move-stone">14</span></td><td class="mono">14:02:03</td><td class="move">京东数科</td><td class="mono">POST /v2/webhooks/test</td><td><span class="stat-mark ok">○</span></td><td><span class="lat">110 ms<span class="b"><i class="ok" style="width:22%"></i></span></span></td></tr>
+            <tr><td><span class="move-stone w">13</span></td><td class="mono">14:02:01</td><td class="move">平安</td><td class="mono">PUT /v2/orders/12489</td><td><span class="stat-mark ok">○</span></td><td><span class="lat">181 ms<span class="b"><i class="ok" style="width:34%"></i></span></span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div>
+        <div class="sec-h">
+          <h3>对座 <small>· 38 在席 / 12 空座</small></h3>
+          <button class="btn">招延</button>
+        </div>
+        <div>
+          <div class="person"><div class="p-stone">林</div><div><b>林安琪</b><small>liananqi · 2 min</small></div><span class="role-rank r">先手</span></div>
+          <div class="person"><div class="p-stone w">陈</div><div><b>陈维</b><small>chenwei · 1 hr</small></div><span class="role-rank">协着</span></div>
+          <div class="person"><div class="p-stone">蒋</div><div><b>蒋克</b><small>jiangke · 1 d</small></div><span class="role-rank">研着</span></div>
+          <div class="person"><div class="p-stone w">袁</div><div><b>袁倩</b><small>vendor · 待复</small></div><span class="role-rank">观谱</span></div>
+        </div>
+
+        <div class="sec-h" style="margin-top:28px">
+          <h3>账目 <small>· 06.01 – 06.30 · 自动续</small></h3>
+          <button class="btn r">领回执</button>
+        </div>
+        <div class="bill">
+          <div class="ln"><span>Growth 段位</span><b>¥ 1,980.00</b></div>
+          <div class="ln"><span>超量手数 · 418,902</span><b>¥ 837.80</b></div>
+          <div class="ln"><span>Webhook 复盘 · 12,341</span><b>¥ 61.70</b></div>
+          <div class="total"><span>合计</span><b>¥ 2,879.50</b></div>
+          <div class="gauge">
+            <div class="top"><span>本段用量</span><span>72% · 2.42M / 3M</span></div>
+            <div class="bar"><i></i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <span>Northwind Goban · 第 19 手收子</span>
+      <span>06.19 14:02 · UTC+8</span>
+    </footer>
+  </main>
+</div>
+</body>
+</html>

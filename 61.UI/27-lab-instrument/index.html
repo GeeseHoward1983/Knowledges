@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>27 · 实验室仪表 — Northwind Cloud 控制台</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --case:#3A3D3F;            /* 机壳浅灰金属 */
+    --case-2:#2A2D2F;
+    --case-3:#1C1F22;
+    --brush:#5C6063;
+    --face:#1B2A2A;            /* 屏幕深绿 */
+    --face-2:#0E1A1A;
+    --face-grid:rgba(127,235,160,.08);
+    --crt:#7FEBA0;             /* CRT 浅磷绿 */
+    --crt-2:#42C075;
+    --amber:#F2A841;           /* 琥珀指示 */
+    --red:#E53E3E;
+    --ink-label:#D5D8DA;       /* 机壳标牌字 */
+    --ink-label-2:#888B8E;
+    --line:#0A0B0C;
+    --bolt:#1F2224;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;color:var(--ink-label);font-family:"Orbitron","Roboto Condensed","Inter","PingFang SC",sans-serif;background:#1E2123}
+  body{min-height:100vh;font-size:13px;line-height:1.5;
+    background:
+      radial-gradient(1200px 600px at 50% -100px, rgba(127,235,160,.05), transparent 60%),
+      linear-gradient(180deg,#1E2123 0%,#0E1011 100%);
+    background-attachment:fixed;
+  }
+
+  /* === 拉丝铝面板工具 === */
+  .panel-metal{
+    background:
+      /* 高光 */
+      linear-gradient(180deg, rgba(255,255,255,.06) 0%, transparent 30%, rgba(0,0,0,.18) 100%),
+      /* 拉丝 */
+      repeating-linear-gradient(90deg, var(--case) 0 1px, var(--case-2) 1px 2px),
+      var(--case);
+    border:1px solid var(--case-3);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.06),
+      inset 0 -1px 0 rgba(0,0,0,.4),
+      0 6px 14px rgba(0,0,0,.4);
+  }
+  /* 边角螺钉 */
+  .bolt{
+    position:absolute;width:10px;height:10px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #4A4D50, var(--bolt) 70%);
+    box-shadow:inset 0 -1px 1px rgba(0,0,0,.5), 0 1px 1px rgba(0,0,0,.4);
+  }
+  .bolt::after{
+    content:"";position:absolute;inset:3px;border-top:1px solid #050606;border-bottom:1px solid #050606;transform:rotate(45deg);
+  }
+  .bolt.tl{top:8px;left:8px}.bolt.tr{top:8px;right:8px}
+  .bolt.bl{bottom:8px;left:8px}.bolt.br{bottom:8px;right:8px}
+
+  /* CRT 屏 */
+  .screen{
+    background:
+      radial-gradient(ellipse at 50% 30%, #1F3A3A 0%, var(--face) 50%, var(--face-2) 100%),
+      var(--face);
+    color:var(--crt);
+    font-family:"VT323","JetBrains Mono",monospace;
+    border:2px solid #0A0B0C;border-radius:4px;
+    box-shadow:
+      inset 0 0 30px rgba(0,0,0,.7),
+      inset 0 0 0 1px rgba(127,235,160,.12);
+    position:relative;overflow:hidden;
+  }
+  .screen::before{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background:repeating-linear-gradient(0deg, transparent 0 2px, rgba(0,0,0,.18) 2px 3px);
+  }
+  .screen::after{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(180deg, rgba(127,235,160,.06), transparent 30%);
+  }
+
+  .app{display:grid;grid-template-columns:230px 1fr;min-height:100vh;padding:14px;gap:14px;position:relative}
+
+  /* 侧机柜 */
+  aside{
+    padding:18px 14px;position:relative;border-radius:4px;
+  }
+  .knob-row{display:flex;gap:8px;justify-content:center;margin-bottom:14px}
+  .knob{
+    width:30px;height:30px;border-radius:50%;
+    background:
+      radial-gradient(circle at 30% 25%, #6B6E70, #2A2D2F 70%);
+    border:1px solid #050606;
+    box-shadow:inset 0 -2px 4px rgba(0,0,0,.5), 0 1px 2px rgba(0,0,0,.4);
+    position:relative;
+  }
+  .knob::after{
+    content:"";position:absolute;top:3px;left:50%;width:2px;height:8px;background:var(--crt);transform:translateX(-50%);border-radius:1px;box-shadow:0 0 4px var(--crt);
+  }
+  .knob.amber::after{background:var(--amber);box-shadow:0 0 4px var(--amber)}
+  .knob.red::after{background:var(--red);box-shadow:0 0 4px var(--red)}
+
+  .brand-plate{
+    border:1px solid #050606;background:linear-gradient(180deg,#2A2D2F,#1B1E20);
+    padding:10px 12px;margin-bottom:16px;font-family:"Orbitron",sans-serif;font-weight:700;font-size:13px;letter-spacing:.18em;color:var(--ink-label);
+    text-align:center;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06), inset 0 -1px 0 rgba(0,0,0,.4);
+  }
+  .brand-plate small{display:block;font-family:"Roboto Condensed",sans-serif;font-weight:400;font-size:10.5px;letter-spacing:.22em;color:var(--ink-label-2);margin-top:2px;text-transform:uppercase}
+
+  .nav-section{
+    font-family:"Roboto Condensed",sans-serif;font-size:9.5px;letter-spacing:.28em;color:var(--ink-label-2);
+    margin:14px 4px 4px;font-weight:700;text-transform:uppercase;border-top:1px solid #050606;padding-top:6px;
+  }
+  .nav a{
+    display:flex;align-items:center;gap:9px;padding:7px 9px;
+    text-decoration:none;color:var(--ink-label);font-family:"Roboto Condensed",sans-serif;font-size:13px;letter-spacing:.04em;
+    border:1px solid transparent;text-transform:uppercase;font-weight:500;
+  }
+  .nav a:hover{color:#fff;border-color:#050606}
+  .nav a.active{
+    background:linear-gradient(180deg,rgba(127,235,160,.08),transparent);border-color:#050606;color:var(--crt);
+    box-shadow:inset 0 0 0 1px rgba(127,235,160,.16);
+  }
+  .nav a .led{
+    width:8px;height:8px;border-radius:50%;background:#1A1A1A;border:1px solid #050606;flex-shrink:0;
+  }
+  .nav a.active .led{background:var(--crt);box-shadow:0 0 6px var(--crt)}
+
+  /* 主区 */
+  main{display:flex;flex-direction:column;gap:14px;min-width:0}
+
+  /* 顶部 */
+  .header-bar{padding:12px 18px;border-radius:4px;position:relative;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .meter{
+    display:flex;align-items:center;gap:10px;padding:6px 12px;background:var(--face);border:1px solid #050606;border-radius:3px;
+    font-family:"VT323",monospace;font-size:15px;color:var(--crt);letter-spacing:.06em;
+    box-shadow:inset 0 0 8px rgba(0,0,0,.5);
+  }
+  .meter .led{width:7px;height:7px;border-radius:50%;background:var(--crt);box-shadow:0 0 6px var(--crt)}
+  .meter.amber .led{background:var(--amber);box-shadow:0 0 6px var(--amber)}
+  .meter.amber{color:var(--amber)}
+  .meter b{color:var(--ink-label);font-family:"Roboto Condensed",sans-serif;font-size:11px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+  .header-bar .spacer{flex:1}
+
+  /* 仪表 4 列 */
+  .gauges{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .gauge-mod{padding:18px 18px 22px;border-radius:4px;position:relative}
+  .gauge-mod .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+  .gauge-mod .top b{font-family:"Roboto Condensed",sans-serif;font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-label-2);font-weight:700}
+  .gauge-mod .top .led{width:8px;height:8px;border-radius:50%;background:var(--crt);box-shadow:0 0 6px var(--crt)}
+  .gauge-mod.warn .top .led{background:var(--amber);box-shadow:0 0 6px var(--amber)}
+  .gauge-mod.bad .top .led{background:var(--red);box-shadow:0 0 6px var(--red)}
+  .gauge-mod .screen-inset{
+    border-radius:3px;padding:12px 14px;min-height:96px;display:flex;flex-direction:column;justify-content:space-between;
+  }
+  .gauge-mod .v{font-family:"VT323",monospace;font-size:38px;letter-spacing:.02em;line-height:1;color:var(--crt);font-variant-numeric:tabular-nums}
+  .gauge-mod.warn .v{color:var(--amber)}
+  .gauge-mod.bad .v{color:var(--red)}
+  .gauge-mod .v small{font-size:14px;color:rgba(127,235,160,.65);margin-left:4px}
+  .gauge-mod.warn .v small{color:rgba(242,168,65,.65)}
+  .gauge-mod .d{font-family:"VT323",monospace;font-size:14px;color:rgba(127,235,160,.7);display:flex;justify-content:space-between;letter-spacing:.04em}
+
+  /* 主体 */
+  .grid{display:grid;grid-template-columns:1.6fr 1fr;gap:14px;flex:1;min-height:0}
+  .module{padding:14px;border-radius:4px;position:relative;display:flex;flex-direction:column;min-height:0}
+  .module-label{
+    font-family:"Orbitron",sans-serif;font-weight:700;font-size:11px;letter-spacing:.22em;color:var(--ink-label);text-transform:uppercase;
+    margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #050606;display:flex;justify-content:space-between;align-items:center;
+  }
+  .module-label small{font-family:"Roboto Condensed",sans-serif;font-size:10px;color:var(--ink-label-2);letter-spacing:.16em;font-weight:500}
+  .module-label .led-strip{display:flex;gap:4px}
+  .module-label .led-strip i{width:6px;height:6px;border-radius:50%;background:#1A1A1A;border:1px solid #050606}
+  .module-label .led-strip i.on{background:var(--crt);box-shadow:0 0 4px var(--crt)}
+
+  /* 屏内表 */
+  .screen-table{flex:1;overflow:auto;padding:10px 12px}
+  table{width:100%;border-collapse:collapse;font-family:"VT323",monospace;font-size:14px;color:var(--crt)}
+  th{text-align:left;font-family:"Roboto Condensed",sans-serif;font-weight:700;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:rgba(127,235,160,.65);padding:5px 8px;border-bottom:1px solid rgba(127,235,160,.18)}
+  td{padding:6px 8px;border-bottom:1px dotted rgba(127,235,160,.12);font-variant-numeric:tabular-nums}
+  tr:hover td{background:rgba(127,235,160,.05)}
+  tr:last-child td{border-bottom:0}
+  td.ep{color:rgba(127,235,160,.85)}
+  .st-ok{color:var(--crt)}
+  .st-warn{color:var(--amber)}
+  .st-bad{color:var(--red);text-shadow:0 0 4px rgba(229,62,62,.5)}
+  .lat-px{display:inline-flex;align-items:center;gap:6px}
+  .lat-px .b{width:54px;height:6px;background:#0E1A1A;border:1px solid #000;position:relative;display:inline-block;vertical-align:middle}
+  .lat-px .b i{display:block;height:100%}
+  .lat-px .b i.ok{background:var(--crt);box-shadow:0 0 4px var(--crt)}
+  .lat-px .b i.warn{background:var(--amber);box-shadow:0 0 4px var(--amber)}
+  .lat-px .b i.bad{background:var(--red);box-shadow:0 0 4px var(--red)}
+
+  /* 名册 / 账单：作为侧机柜屏 */
+  .right-stack{display:flex;flex-direction:column;gap:14px;min-height:0}
+  .members-screen{padding:8px 10px;flex:1;min-height:0;overflow:auto}
+  .person{display:grid;grid-template-columns:38px 1fr auto;gap:10px;align-items:center;padding:8px 8px;border-bottom:1px dotted rgba(127,235,160,.12)}
+  .person:last-child{border-bottom:0}
+  .px-led{
+    width:38px;height:38px;border:2px solid #050606;background:var(--face);
+    display:flex;align-items:center;justify-content:center;color:var(--crt);
+    font-family:"VT323",monospace;font-size:17px;
+    box-shadow:inset 0 0 10px rgba(0,0,0,.5), inset 0 0 0 1px rgba(127,235,160,.16);
+  }
+  .px-led.a2 i{color:var(--amber)}
+  .px-led.a3 i{color:#7FB4FF}
+  .px-led.a4 i{color:#E08AB3}
+  .person b{font-family:"VT323",monospace;font-size:17px;color:var(--crt)}
+  .person small{display:block;font-family:"VT323",monospace;font-size:13px;color:rgba(127,235,160,.55);margin-top:1px}
+  .role-pill{font-family:"Roboto Condensed",sans-serif;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;padding:3px 8px;border:1px solid rgba(127,235,160,.3);color:rgba(127,235,160,.85)}
+  .role-pill.r{color:var(--amber);border-color:rgba(242,168,65,.4)}
+
+  /* 账单屏 */
+  .bill-screen{padding:12px 14px;font-family:"VT323",monospace;font-size:15px;color:var(--crt)}
+  .bill-screen .ln{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px dotted rgba(127,235,160,.12)}
+  .bill-screen .ln b{font-family:"VT323",monospace;font-size:17px}
+  .bill-screen .total{
+    margin-top:6px;padding:8px 10px;border:1px solid var(--amber);background:rgba(242,168,65,.05);
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .bill-screen .total span{font-family:"Roboto Condensed",sans-serif;font-size:10.5px;letter-spacing:.18em;color:var(--amber);text-transform:uppercase;font-weight:700}
+  .bill-screen .total b{font-family:"VT323",monospace;font-size:26px;color:var(--amber)}
+  .needle{margin-top:10px}
+  .needle .top{display:flex;justify-content:space-between;font-family:"Roboto Condensed",sans-serif;font-size:9.5px;letter-spacing:.18em;color:rgba(127,235,160,.6);margin-bottom:4px;text-transform:uppercase;font-weight:700}
+  .needle .bar{height:14px;background:#0E1A1A;border:1px solid #000;position:relative;overflow:hidden}
+  .needle .bar i{display:block;height:100%;width:72%;background:linear-gradient(90deg,var(--crt-2),var(--crt) 50%,var(--amber));box-shadow:inset 0 0 6px rgba(127,235,160,.4)}
+  .needle .bar::after{content:"";position:absolute;top:-3px;bottom:-3px;left:50%;width:1px;background:rgba(255,255,255,.5)}
+
+  .toggle{
+    display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border:1px solid #050606;background:linear-gradient(180deg,#3A3D3F,#2A2D2F);
+    color:var(--ink-label);font-family:"Roboto Condensed",sans-serif;font-weight:700;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;cursor:pointer;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.08), inset 0 -1px 0 rgba(0,0,0,.5);
+  }
+  .toggle.on{background:linear-gradient(180deg,#2C5C36,#1A3F22);color:var(--crt);box-shadow:inset 0 0 6px rgba(127,235,160,.3)}
+
+  @media (max-width:1100px){
+    .app{grid-template-columns:1fr}
+    .gauges{grid-template-columns:1fr 1fr}
+    .grid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="panel-metal">
+    <span class="bolt tl"></span><span class="bolt tr"></span>
+    <span class="bolt bl"></span><span class="bolt br"></span>
+
+    <div class="brand-plate">
+      NORTHWIND
+      <small>CLOUD · MOD. 2.18</small>
+    </div>
+
+    <div class="knob-row">
+      <div class="knob" style="transform:rotate(-30deg)"></div>
+      <div class="knob amber" style="transform:rotate(45deg)"></div>
+      <div class="knob" style="transform:rotate(60deg)"></div>
+      <div class="knob red" style="transform:rotate(-15deg)"></div>
+    </div>
+
+    <div class="nav-section">SECT · A</div>
+    <nav class="nav">
+      <a class="active"><span class="led"></span>Dashboard</a>
+      <a><span class="led"></span>Live Calls</a>
+      <a><span class="led"></span>Regions</a>
+    </nav>
+    <div class="nav-section">SECT · B</div>
+    <nav class="nav">
+      <a><span class="led"></span>API Keys</a>
+      <a><span class="led"></span>Webhook</a>
+      <a><span class="led"></span>Export</a>
+    </nav>
+    <div class="nav-section">SECT · C</div>
+    <nav class="nav">
+      <a><span class="led"></span>Members</a>
+      <a><span class="led"></span>Billing</a>
+      <a><span class="led"></span>Config</a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="header-bar panel-metal">
+      <span class="bolt tl"></span><span class="bolt tr"></span>
+      <span class="bolt bl"></span><span class="bolt br"></span>
+      <div class="meter"><span class="led"></span><b>USR</b>liananqi</div>
+      <div class="meter"><span class="led"></span><b>ENV</b>PROD</div>
+      <div class="meter"><span class="led"></span><b>RGN</b>AP-SE-1</div>
+      <div class="spacer"></div>
+      <div class="meter amber"><span class="led"></span><b>P95</b>184 ms</div>
+      <div class="meter"><span class="led"></span><b>UPTIME</b>17d 04h</div>
+      <button class="toggle on">STREAM</button>
+      <button class="toggle">PAUSE</button>
+    </div>
+
+    <section class="gauges">
+      <div class="gauge-mod panel-metal">
+        <span class="bolt tl"></span><span class="bolt tr"></span>
+        <div class="top"><b>CALLS · MTD</b><span class="led"></span></div>
+        <div class="screen-inset screen">
+          <div class="v">2,418,902<small>req</small></div>
+          <div class="d"><span>▲ 12.4% MoM</span><span>TGT 3.0M</span></div>
+        </div>
+      </div>
+      <div class="gauge-mod panel-metal">
+        <span class="bolt tl"></span><span class="bolt tr"></span>
+        <div class="top"><b>MEMBERS · LIVE</b><span class="led"></span></div>
+        <div class="screen-inset screen">
+          <div class="v">38<small>/50</small></div>
+          <div class="d"><span>▲ 4 WK</span><span>IDLE 12</span></div>
+        </div>
+      </div>
+      <div class="gauge-mod panel-metal warn">
+        <span class="bolt tl"></span><span class="bolt tr"></span>
+        <div class="top"><b>ERROR · 24H</b><span class="led"></span></div>
+        <div class="screen-inset screen">
+          <div class="v">0.42<small>%</small></div>
+          <div class="d"><span>▲ 0.08%</span><span>THR 0.5%</span></div>
+        </div>
+      </div>
+      <div class="gauge-mod panel-metal">
+        <span class="bolt tl"></span><span class="bolt tr"></span>
+        <div class="top"><b>BILL · MTD</b><span class="led"></span></div>
+        <div class="screen-inset screen">
+          <div class="v">¥2,879<small>.50</small></div>
+          <div class="d"><span>AUTO RENEW</span><span>T-11</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="module panel-metal">
+        <span class="bolt tl"></span><span class="bolt tr"></span>
+        <span class="bolt bl"></span><span class="bolt br"></span>
+        <div class="module-label">
+          <span>CH-01 · ACCESS LOG <small>· TAIL -F · LAST 100</small></span>
+          <span class="led-strip"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span>
+        </div>
+        <div class="screen screen-table">
+          <table>
+            <thead><tr><th>T</th><th>CALLER</th><th>METHOD ENDPOINT</th><th>STAT</th><th>LAT</th></tr></thead>
+            <tbody>
+              <tr><td>14:02:11</td><td>京东数科</td><td class="ep">POST /v2/orders/sync</td><td class="st-ok">200</td><td><span class="lat-px">92ms<span class="b"><i class="ok" style="width:18%"></i></span></span></td></tr>
+              <tr><td>14:02:09</td><td>web dashboard</td><td class="ep">GET /v2/metrics/window</td><td class="st-ok">200</td><td><span class="lat-px">140ms<span class="b"><i class="ok" style="width:28%"></i></span></span></td></tr>
+              <tr><td>14:02:08</td><td>ACME</td><td class="ep">POST /v2/events/batch</td><td class="st-warn">429</td><td><span class="lat-px">318ms<span class="b"><i class="warn" style="width:65%"></i></span></span></td></tr>
+              <tr><td>14:02:07</td><td>Office</td><td class="ep">DELETE /v2/keys/ak_3f…</td><td class="st-ok">204</td><td><span class="lat-px">58ms<span class="b"><i class="ok" style="width:12%"></i></span></span></td></tr>
+              <tr><td>14:02:05</td><td>顺丰</td><td class="ep">GET /v2/orders?status=open</td><td class="st-bad">500</td><td><span class="lat-px">1.42s<span class="b"><i class="bad" style="width:88%"></i></span></span></td></tr>
+              <tr><td>14:02:03</td><td>京东数科</td><td class="ep">POST /v2/webhooks/test</td><td class="st-ok">200</td><td><span class="lat-px">110ms<span class="b"><i class="ok" style="width:22%"></i></span></span></td></tr>
+              <tr><td>14:02:01</td><td>平安</td><td class="ep">PUT /v2/orders/12489</td><td class="st-ok">200</td><td><span class="lat-px">181ms<span class="b"><i class="ok" style="width:34%"></i></span></span></td></tr>
+              <tr><td>14:02:00</td><td>京东数科</td><td class="ep">POST /v2/events</td><td class="st-ok">200</td><td><span class="lat-px">88ms<span class="b"><i class="ok" style="width:18%"></i></span></span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="right-stack">
+        <div class="module panel-metal" style="flex:1.1">
+          <span class="bolt tl"></span><span class="bolt tr"></span>
+          <span class="bolt bl"></span><span class="bolt br"></span>
+          <div class="module-label">
+            <span>CH-02 · ROSTER <small>· 38 / 50</small></span>
+            <button class="toggle">+ INVITE</button>
+          </div>
+          <div class="screen members-screen">
+            <div class="person"><div class="px-led"><i>林</i></div><div><b>林安琪</b><small>liananqi · 2 min</small></div><span class="role-pill r">OWNER</span></div>
+            <div class="person"><div class="px-led a2"><i>陈</i></div><div><b>陈维</b><small>chenwei · 1 hr</small></div><span class="role-pill">ADMIN</span></div>
+            <div class="person"><div class="px-led a3"><i>蒋</i></div><div><b>蒋克</b><small>jiangke · 1 d</small></div><span class="role-pill">DEV</span></div>
+            <div class="person"><div class="px-led a4"><i>袁</i></div><div><b>袁倩</b><small>vendor · pending</small></div><span class="role-pill">READ</span></div>
+          </div>
+        </div>
+
+        <div class="module panel-metal">
+          <span class="bolt tl"></span><span class="bolt tr"></span>
+          <span class="bolt bl"></span><span class="bolt br"></span>
+          <div class="module-label">
+            <span>CH-03 · BILLING <small>· 2026-06</small></span>
+            <button class="toggle on">INVOICE</button>
+          </div>
+          <div class="screen bill-screen">
+            <div class="ln"><span>GROWTH 套餐</span><b>¥ 1,980.00</b></div>
+            <div class="ln"><span>OVERAGE · 418,902</span><b>¥ 837.80</b></div>
+            <div class="ln"><span>WH RETRY · 12,341</span><b>¥ 61.70</b></div>
+            <div class="total"><span>TOTAL</span><b>¥ 2,879.50</b></div>
+            <div class="needle">
+              <div class="top"><span>QUOTA</span><span>72% · 2.42M / 3M</span></div>
+              <div class="bar"><i></i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+</body>
+</html>

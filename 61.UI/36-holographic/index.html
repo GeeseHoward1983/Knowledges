@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>36 · 全息 HUD — Northwind Cloud 控制台</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --bg:#000307;
+    --bg-2:#040A12;
+    --cyan:#5EE9FF;
+    --cyan-d:#1A8FAC;
+    --cyan-soft:rgba(94,233,255,.16);
+    --ink:#C8F5FF;
+    --ink-2:#5A8FA0;
+    --ink-3:#2D4B5E;
+    --amber:#FFB347;
+    --bad:#FF4D6A;
+    --line:rgba(94,233,255,.18);
+    --line-2:rgba(94,233,255,.4);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;color:var(--ink);
+    font-family:"Rajdhani","Saira","JetBrains Mono","Inter","PingFang SC",sans-serif;background:var(--bg)}
+  body{
+    min-height:100vh;font-size:13px;line-height:1.45;
+    background:
+      radial-gradient(900px 600px at 50% -100px, rgba(94,233,255,.05), transparent 60%),
+      linear-gradient(180deg, var(--bg) 0%, #010204 100%);
+    background-attachment:fixed;
+  }
+  /* 扫描线 */
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background:repeating-linear-gradient(0deg, transparent 0 2px, rgba(94,233,255,.025) 2px 3px);
+  }
+
+  .app{display:grid;grid-template-columns:230px 1fr;min-height:100vh;position:relative;z-index:1;padding:12px;gap:12px}
+
+  /* === 多边形描边工具 === */
+  .hex-frame{
+    position:relative;background:rgba(4,10,18,.6);backdrop-filter:blur(6px);
+    border:1px solid var(--line);
+    clip-path:polygon(12px 0, calc(100% - 12px) 0, 100% 12px, 100% calc(100% - 12px), calc(100% - 12px) 100%, 12px 100%, 0 calc(100% - 12px), 0 12px);
+  }
+  /* 边角 L 形 */
+  .corner-l{position:absolute;width:14px;height:14px;border:1.5px solid var(--cyan);pointer-events:none}
+  .corner-l.tl{top:-1px;left:-1px;border-right:0;border-bottom:0}
+  .corner-l.tr{top:-1px;right:-1px;border-left:0;border-bottom:0}
+  .corner-l.bl{bottom:-1px;left:-1px;border-right:0;border-top:0}
+  .corner-l.br{bottom:-1px;right:-1px;border-left:0;border-top:0}
+
+  /* 边栏 */
+  aside{padding:18px 14px;position:relative}
+  .brand{padding-bottom:14px;border-bottom:1px solid var(--line);margin-bottom:14px;text-align:center}
+  .brand-id{
+    width:60px;height:60px;margin:0 auto 8px;position:relative;
+    background:
+      conic-gradient(from 0deg, var(--cyan) 0deg, transparent 90deg, var(--cyan) 180deg, transparent 270deg);
+    -webkit-mask:radial-gradient(circle, transparent 22px, #000 24px);
+    mask:radial-gradient(circle, transparent 22px, #000 24px);
+  }
+  .brand-id::after{
+    content:"N";position:absolute;inset:8px;border:1px solid var(--cyan);border-radius:50%;
+    display:flex;align-items:center;justify-content:center;color:var(--cyan);font-family:"Rajdhani",sans-serif;font-weight:700;font-size:24px;
+    background:radial-gradient(circle at 30% 25%, rgba(94,233,255,.2), transparent 65%);
+    text-shadow:0 0 8px rgba(94,233,255,.6);
+  }
+  .brand b{display:block;font-family:"Rajdhani",sans-serif;font-weight:700;font-size:15px;letter-spacing:.28em;color:var(--cyan);text-shadow:0 0 8px rgba(94,233,255,.4);text-transform:uppercase}
+  .brand small{display:block;font-family:"JetBrains Mono",monospace;font-size:9.5px;color:var(--ink-2);letter-spacing:.32em;margin-top:4px;text-transform:uppercase}
+
+  .nav-section{
+    font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.32em;text-transform:uppercase;color:var(--ink-2);
+    margin:14px 4px 6px;display:flex;align-items:center;gap:8px;
+  }
+  .nav-section::before{content:"";width:6px;height:6px;background:var(--cyan);transform:rotate(45deg);flex-shrink:0;box-shadow:0 0 6px var(--cyan)}
+  .nav a{
+    display:flex;justify-content:space-between;align-items:center;padding:8px 12px;
+    text-decoration:none;color:var(--ink);font-family:"Rajdhani",sans-serif;font-size:14px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+    border:1px solid transparent;
+  }
+  .nav a:hover{border-color:var(--line);color:var(--cyan)}
+  .nav a.active{
+    color:var(--cyan);text-shadow:0 0 8px rgba(94,233,255,.5);
+    border:1px solid var(--line-2);background:rgba(94,233,255,.04);
+    box-shadow:inset 0 0 10px rgba(94,233,255,.1);
+  }
+  .nav a .n{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--ink-2);letter-spacing:.12em}
+
+  /* 主区 */
+  main{display:flex;flex-direction:column;gap:12px;min-width:0}
+
+  /* status bar */
+  .status-hud{display:flex;align-items:center;gap:14px;padding:10px 18px;flex-wrap:wrap}
+  .status-hud .seg{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.16em;color:var(--ink-2);text-transform:uppercase;display:flex;align-items:center;gap:6px}
+  .status-hud .seg b{color:var(--cyan);font-family:"Rajdhani",sans-serif;font-weight:600;font-size:12px;letter-spacing:.08em;text-transform:none;text-shadow:0 0 6px rgba(94,233,255,.4)}
+  .status-hud .seg .led{width:6px;height:6px;background:var(--cyan);transform:rotate(45deg);box-shadow:0 0 6px var(--cyan)}
+  .status-hud .seg .led.a{background:var(--amber);box-shadow:0 0 6px var(--amber)}
+  .status-hud .seg .led.b{background:var(--bad);box-shadow:0 0 6px var(--bad)}
+  .status-hud .spacer{flex:1}
+
+  /* HUD 主区 */
+  .hud-main{display:grid;grid-template-columns:1.4fr 1fr;gap:12px}
+
+  /* 左：大圆形雷达 + KPI */
+  .radar-block{display:flex;flex-direction:column;gap:12px}
+  .radar-wrap{padding:18px;display:flex;gap:18px;align-items:center;position:relative}
+  .radar{width:220px;height:220px;flex-shrink:0;position:relative}
+  .radar svg{width:100%;height:100%;display:block;filter:drop-shadow(0 0 8px rgba(94,233,255,.3))}
+  .radar .center-info{
+    position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+  }
+  .radar .center-info b{font-family:"Rajdhani",sans-serif;font-weight:700;font-size:42px;color:var(--cyan);letter-spacing:-.02em;line-height:1;text-shadow:0 0 12px rgba(94,233,255,.6);font-variant-numeric:tabular-nums}
+  .radar .center-info small{font-family:"JetBrains Mono",monospace;font-size:9.5px;color:var(--ink-2);letter-spacing:.32em;margin-top:6px;text-transform:uppercase}
+  .radar .center-info .m{font-family:"Rajdhani",sans-serif;font-weight:600;font-size:12px;color:var(--ink);letter-spacing:.12em;margin-top:4px;text-transform:uppercase}
+  .radar-data{flex:1;display:flex;flex-direction:column;gap:10px}
+  .radar-data .row{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px dashed var(--line);padding-bottom:6px;font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.16em;color:var(--ink-2);text-transform:uppercase}
+  .radar-data .row b{color:var(--cyan);font-family:"Rajdhani",sans-serif;font-weight:600;font-size:16px;letter-spacing:.04em;text-transform:none;text-shadow:0 0 6px rgba(94,233,255,.4)}
+
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .kpi{padding:14px 16px;position:relative}
+  .kpi .l{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.24em;color:var(--ink-2);text-transform:uppercase;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+  .kpi .l::after{content:"◢";color:var(--cyan);font-size:8px}
+  .kpi.warn .l::after{color:var(--amber)}
+  .kpi .v{font-family:"Rajdhani",sans-serif;font-weight:700;font-size:28px;letter-spacing:-.01em;line-height:1;color:var(--cyan);text-shadow:0 0 8px rgba(94,233,255,.4);font-variant-numeric:tabular-nums}
+  .kpi .v small{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-2);font-weight:400;margin-left:3px;text-shadow:none}
+  .kpi.warn .v{color:var(--amber);text-shadow:0 0 8px rgba(255,179,71,.5)}
+  .kpi .d{font-family:"JetBrains Mono",monospace;font-size:9.5px;color:var(--ink-2);display:flex;justify-content:space-between;margin-top:6px;letter-spacing:.06em}
+  .up{color:#90F2B5}
+  .down{color:var(--bad)}
+
+  /* 右：scan log + roster + bill */
+  .right-stack{display:flex;flex-direction:column;gap:12px;min-height:0}
+
+  .panel-head{display:flex;justify-content:space-between;align-items:center;padding:9px 16px;border-bottom:1px solid var(--line)}
+  .panel-title{font-family:"Rajdhani",sans-serif;font-weight:700;font-size:12px;letter-spacing:.28em;color:var(--cyan);text-transform:uppercase;text-shadow:0 0 6px rgba(94,233,255,.4);display:flex;align-items:center;gap:6px}
+  .panel-title::before{content:"▣"}
+  .panel-title small{display:block;font-family:"JetBrains Mono",monospace;font-weight:400;font-size:9.5px;color:var(--ink-2);margin-top:1px;letter-spacing:.16em;text-shadow:none;text-transform:none}
+  .panel-head .badge{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.16em;color:var(--cyan);padding:2px 8px;border:1px solid var(--line-2);background:rgba(94,233,255,.06);text-transform:uppercase}
+
+  /* log table */
+  table{width:100%;border-collapse:collapse;font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--ink)}
+  th{text-align:left;font-weight:700;font-size:9.5px;letter-spacing:.22em;color:var(--ink-2);padding:7px 16px;border-bottom:1px solid var(--line);text-transform:uppercase}
+  td{padding:8px 16px;border-bottom:1px dashed var(--line);font-variant-numeric:tabular-nums}
+  tr:last-child td{border-bottom:0}
+  tr:hover td{background:rgba(94,233,255,.04)}
+  .st{font-weight:700}
+  .st.ok{color:var(--cyan);text-shadow:0 0 4px rgba(94,233,255,.4)}
+  .st.warn{color:var(--amber);text-shadow:0 0 4px rgba(255,179,71,.4)}
+  .st.bad{color:var(--bad);text-shadow:0 0 6px rgba(255,77,106,.5)}
+  .lat{display:inline-flex;align-items:center;gap:7px}
+  .lat .b{width:50px;height:5px;background:rgba(94,233,255,.06);border:1px solid var(--line);position:relative;clip-path:polygon(3px 0,calc(100% - 3px) 0,100% 50%,calc(100% - 3px) 100%,3px 100%,0 50%)}
+  .lat .b i{display:block;height:100%}
+  .lat .b i.ok{background:var(--cyan);box-shadow:0 0 4px var(--cyan)}
+  .lat .b i.warn{background:var(--amber);box-shadow:0 0 4px var(--amber)}
+  .lat .b i.bad{background:var(--bad);box-shadow:0 0 6px var(--bad)}
+
+  /* 名册 */
+  .person{display:grid;grid-template-columns:34px 1fr auto;gap:12px;align-items:center;padding:9px 16px;border-bottom:1px dashed var(--line)}
+  .person:last-child{border-bottom:0}
+  .hex-av{
+    width:34px;height:34px;background:rgba(94,233,255,.08);border:1px solid var(--cyan);
+    clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);
+    display:flex;align-items:center;justify-content:center;color:var(--cyan);font-family:"Rajdhani",sans-serif;font-weight:700;font-size:13px;text-shadow:0 0 6px rgba(94,233,255,.5);
+  }
+  .hex-av.a{color:var(--amber);border-color:var(--amber);background:rgba(255,179,71,.06)}
+  .hex-av.b{color:#90F2B5;border-color:#90F2B5;background:rgba(144,242,181,.06)}
+  .hex-av.c{color:#B388FF;border-color:#B388FF;background:rgba(179,136,255,.06)}
+  .person b{font-family:"Rajdhani",sans-serif;font-weight:600;font-size:13px;color:var(--ink);letter-spacing:.06em}
+  .person small{display:block;font-family:"JetBrains Mono",monospace;font-size:9.5px;color:var(--ink-2);margin-top:1px;letter-spacing:.04em}
+  .role{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;padding:2px 8px;border:1px solid var(--line);color:var(--ink-2)}
+  .role.r{color:var(--cyan);border-color:var(--cyan)}
+
+  /* 账单 */
+  .bill{padding:14px 16px;font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--ink)}
+  .bill .ln{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px dashed var(--line)}
+  .bill .ln b{font-family:"Rajdhani",sans-serif;font-weight:600;font-size:13px;color:var(--ink)}
+  .bill .total{
+    margin-top:8px;padding:10px 12px;background:rgba(94,233,255,.08);border:1px solid var(--cyan);
+    display:flex;justify-content:space-between;align-items:center;
+    box-shadow:0 0 10px rgba(94,233,255,.15);
+  }
+  .bill .total span{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.22em;color:var(--cyan);text-transform:uppercase}
+  .bill .total b{font-family:"Rajdhani",sans-serif;font-weight:700;font-size:22px;color:var(--cyan);text-shadow:0 0 10px rgba(94,233,255,.5)}
+  .gauge{margin-top:12px}
+  .gauge .top{display:flex;justify-content:space-between;font-size:9.5px;color:var(--ink-2);letter-spacing:.18em;margin-bottom:4px;text-transform:uppercase}
+  .gauge .bar{height:6px;background:rgba(94,233,255,.04);border:1px solid var(--line);position:relative;overflow:hidden}
+  .gauge .bar i{display:block;height:100%;width:72%;background:linear-gradient(90deg,var(--cyan-d),var(--cyan));box-shadow:0 0 6px var(--cyan)}
+
+  .btn{
+    display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border:1px solid var(--line-2);background:rgba(94,233,255,.04);
+    color:var(--cyan);font-family:"Rajdhani",sans-serif;font-weight:600;font-size:11px;letter-spacing:.16em;cursor:pointer;text-transform:uppercase;
+    text-shadow:0 0 4px rgba(94,233,255,.4);
+  }
+  .btn:hover{background:rgba(94,233,255,.12)}
+
+  @media (max-width:1100px){
+    .app{grid-template-columns:1fr}
+    .radar-wrap{flex-direction:column}
+    .radar{width:180px;height:180px}
+    .kpis{grid-template-columns:1fr 1fr}
+    .hud-main{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="hex-frame">
+    <span class="corner-l tl"></span><span class="corner-l tr"></span>
+    <span class="corner-l bl"></span><span class="corner-l br"></span>
+    <div class="brand">
+      <div class="brand-id"></div>
+      <b>NORTHWIND</b>
+      <small>HUD · v2.18</small>
+    </div>
+    <div class="nav-section">overview</div>
+    <nav class="nav">
+      <a class="active"><span>Dashboard</span><span class="n">A1</span></a>
+      <a><span>Telemetry</span><span class="n">A2</span></a>
+      <a><span>Topology</span><span class="n">A3</span></a>
+    </nav>
+    <div class="nav-section">payload</div>
+    <nav class="nav">
+      <a><span>API Keys</span><span class="n">B1</span></a>
+      <a><span>Webhook</span><span class="n">B2</span></a>
+      <a><span>Export</span><span class="n">B3</span></a>
+    </nav>
+    <div class="nav-section">crew</div>
+    <nav class="nav">
+      <a><span>Members</span><span class="n">C1</span></a>
+      <a><span>Billing</span><span class="n">C2</span></a>
+      <a><span>Config</span><span class="n">C3</span></a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="status-hud hex-frame">
+      <span class="corner-l tl"></span><span class="corner-l tr"></span>
+      <span class="corner-l bl"></span><span class="corner-l br"></span>
+      <span class="seg"><span class="led"></span><b>USR</b>liananqi</span>
+      <span class="seg"><span class="led"></span><b>ENV</b>PROD</span>
+      <span class="seg"><span class="led"></span><b>RGN</b>AP-SE-1</span>
+      <span class="seg"><span class="led"></span><b>UPLINK</b>5s</span>
+      <span class="spacer"></span>
+      <span class="seg"><span class="led a"></span><b>P95</b>184ms</span>
+      <span class="seg"><span class="led"></span><b>UPTIME</b>17d 04h</span>
+      <span class="seg"><b>14:02:11 UTC+8</b></span>
+    </div>
+
+    <div class="hud-main">
+      <div class="radar-block">
+        <div class="hex-frame radar-wrap">
+          <span class="corner-l tl"></span><span class="corner-l tr"></span>
+          <span class="corner-l bl"></span><span class="corner-l br"></span>
+          <div class="radar">
+            <svg viewBox="0 0 220 220">
+              <defs>
+                <linearGradient id="rg" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#5EE9FF"/>
+                  <stop offset="100%" stop-color="#1A8FAC"/>
+                </linearGradient>
+              </defs>
+              <circle cx="110" cy="110" r="100" stroke="rgba(94,233,255,.2)" stroke-width="1" fill="none"/>
+              <circle cx="110" cy="110" r="78" stroke="rgba(94,233,255,.12)" stroke-width="1" fill="none" stroke-dasharray="2 3"/>
+              <circle cx="110" cy="110" r="56" stroke="rgba(94,233,255,.1)" stroke-width="1" fill="none"/>
+              <circle cx="110" cy="110" r="34" stroke="rgba(94,233,255,.08)" stroke-width="1" fill="none"/>
+              <!-- 十字线 -->
+              <line x1="10" y1="110" x2="210" y2="110" stroke="rgba(94,233,255,.16)" stroke-width="1"/>
+              <line x1="110" y1="10" x2="110" y2="210" stroke="rgba(94,233,255,.16)" stroke-width="1"/>
+              <!-- 进度环 -->
+              <circle cx="110" cy="110" r="92" stroke="url(#rg)" stroke-width="3" fill="none"
+                      stroke-dasharray="416 578" stroke-dashoffset="0" transform="rotate(-90 110 110)" stroke-linecap="round"/>
+              <!-- 雷达指针 -->
+              <line x1="110" y1="110" x2="110" y2="18" stroke="#5EE9FF" stroke-width="2" transform="rotate(127 110 110)" stroke-linecap="round"/>
+              <!-- 4 角刻度 -->
+              <g fill="#5EE9FF" font-family="JetBrains Mono,monospace" font-size="9" letter-spacing=".18em">
+                <text x="110" y="8" text-anchor="middle">N</text>
+                <text x="216" y="113" text-anchor="end">E</text>
+                <text x="110" y="218" text-anchor="middle">S</text>
+                <text x="4" y="113" text-anchor="start">W</text>
+              </g>
+              <!-- 数据点 -->
+              <circle cx="160" cy="60" r="3" fill="#FFB347"/>
+              <circle cx="60" cy="80" r="2.5" fill="#5EE9FF"/>
+              <circle cx="172" cy="140" r="3.5" fill="#FF4D6A"/>
+              <circle cx="78" cy="156" r="2" fill="#5EE9FF"/>
+              <circle cx="138" cy="170" r="2.5" fill="#5EE9FF"/>
+            </svg>
+            <div class="center-info">
+              <b>72%</b>
+              <small>QUOTA</small>
+              <span class="m">2.42 / 3.0 M</span>
+            </div>
+          </div>
+          <div class="radar-data">
+            <div class="row"><span>CALLS · MTD</span><b>2,418,902</b></div>
+            <div class="row"><span>MEMBERS</span><b>38 / 50</b></div>
+            <div class="row"><span>ERROR 24H</span><b style="color:var(--amber);text-shadow:0 0 6px rgba(255,179,71,.4)">0.42%</b></div>
+            <div class="row"><span>BILL · MTD</span><b>¥ 2,879.50</b></div>
+            <div class="row"><span>QPS NOW</span><b>312</b></div>
+            <div class="row"><span>P95 LATENCY</span><b>184 ms</b></div>
+            <div class="row"><span>T-MINUS</span><b>11D 09H</b></div>
+          </div>
+        </div>
+        <div class="kpis">
+          <div class="kpi hex-frame">
+            <span class="corner-l tl"></span><span class="corner-l br"></span>
+            <div class="l"><span>CALLS · MTD</span></div>
+            <div class="v">2.42<small>M</small></div>
+            <div class="d"><span class="up">▲ 12.4%</span><span>tgt 3.0M</span></div>
+          </div>
+          <div class="kpi hex-frame">
+            <span class="corner-l tl"></span><span class="corner-l br"></span>
+            <div class="l"><span>CREW · LIVE</span></div>
+            <div class="v">38<small>/50</small></div>
+            <div class="d"><span class="up">▲ 4 wk</span><span>idle 12</span></div>
+          </div>
+          <div class="kpi hex-frame warn">
+            <span class="corner-l tl"></span><span class="corner-l br"></span>
+            <div class="l"><span>ERROR · 24H</span></div>
+            <div class="v">0.42<small>%</small></div>
+            <div class="d"><span class="down">▲ 0.08%</span><span>thr 0.5%</span></div>
+          </div>
+          <div class="kpi hex-frame">
+            <span class="corner-l tl"></span><span class="corner-l br"></span>
+            <div class="l"><span>BILL · MTD</span></div>
+            <div class="v">¥2,879<small>.50</small></div>
+            <div class="d"><span>auto</span><span>T-11</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="right-stack">
+        <div class="hex-frame">
+          <span class="corner-l tl"></span><span class="corner-l tr"></span>
+          <span class="corner-l bl"></span><span class="corner-l br"></span>
+          <div class="panel-head">
+            <div class="panel-title">SCAN LOG<small>last 100 · prod</small></div>
+            <span class="badge">LIVE 5s</span>
+          </div>
+          <table>
+            <thead><tr><th>T</th><th>CALLER</th><th>ENDPOINT</th><th>STAT</th><th>LAT</th></tr></thead>
+            <tbody>
+              <tr><td>14:02:11</td><td>jd-digits</td><td>POST /v2/orders/sync</td><td class="st ok">200</td><td><span class="lat">92ms<span class="b"><i class="ok" style="width:18%"></i></span></span></td></tr>
+              <tr><td>14:02:09</td><td>dashboard</td><td>GET /v2/metrics/window</td><td class="st ok">200</td><td><span class="lat">140ms<span class="b"><i class="ok" style="width:28%"></i></span></span></td></tr>
+              <tr><td>14:02:08</td><td>ACME</td><td>POST /v2/events/batch</td><td class="st warn">429</td><td><span class="lat">318ms<span class="b"><i class="warn" style="width:65%"></i></span></span></td></tr>
+              <tr><td>14:02:07</td><td>Office</td><td>DELETE /v2/keys/ak_3f…</td><td class="st ok">204</td><td><span class="lat">58ms<span class="b"><i class="ok" style="width:12%"></i></span></span></td></tr>
+              <tr><td>14:02:05</td><td>SF-Express</td><td>GET /v2/orders?status=open</td><td class="st bad">500</td><td><span class="lat">1.42s<span class="b"><i class="bad" style="width:88%"></i></span></span></td></tr>
+              <tr><td>14:02:03</td><td>jd-digits</td><td>POST /v2/webhooks/test</td><td class="st ok">200</td><td><span class="lat">110ms<span class="b"><i class="ok" style="width:22%"></i></span></span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="hex-frame">
+          <span class="corner-l tl"></span><span class="corner-l tr"></span>
+          <span class="corner-l bl"></span><span class="corner-l br"></span>
+          <div class="panel-head">
+            <div class="panel-title">CREW ROSTER<small>38 / 50</small></div>
+            <button class="btn">+ INVITE</button>
+          </div>
+          <div>
+            <div class="person"><div class="hex-av">林</div><div><b>liananqi</b><small>2m · liananqi@…</small></div><span class="role r">OWNER</span></div>
+            <div class="person"><div class="hex-av a">陈</div><div><b>chenwei</b><small>1h · chenwei@…</small></div><span class="role">ADMIN</span></div>
+            <div class="person"><div class="hex-av b">蒋</div><div><b>jiangke</b><small>1d · jiangke@…</small></div><span class="role">DEV</span></div>
+            <div class="person"><div class="hex-av c">袁</div><div><b>yuanqian</b><small>vendor · pending</small></div><span class="role">READ</span></div>
+          </div>
+        </div>
+
+        <div class="hex-frame">
+          <span class="corner-l tl"></span><span class="corner-l tr"></span>
+          <span class="corner-l bl"></span><span class="corner-l br"></span>
+          <div class="panel-head">
+            <div class="panel-title">BILLING<small>06.01 – 06.30</small></div>
+            <button class="btn">INVOICE</button>
+          </div>
+          <div class="bill">
+            <div class="ln"><span>PLAN · GROWTH</span><b>¥ 1,980.00</b></div>
+            <div class="ln"><span>OVERAGE · 418,902</span><b>¥ 837.80</b></div>
+            <div class="ln"><span>WH RETRY · 12,341</span><b>¥ 61.70</b></div>
+            <div class="total"><span>TOTAL</span><b>¥ 2,879.50</b></div>
+            <div class="gauge">
+              <div class="top"><span>QUOTA 72%</span><span>2.42M / 3M</span></div>
+              <div class="bar"><i></i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

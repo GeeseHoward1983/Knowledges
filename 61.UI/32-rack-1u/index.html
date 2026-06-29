@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>32 · 服务器机柜 — Northwind Cloud 控制台</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --bg:#0E0F11;
+    --rack:#16181C;
+    --rack-2:#1D2026;
+    --bezel:#0A0B0D;
+    --rack-edge:#3A3F47;
+    --ink:#D5D9DE;
+    --ink-2:#8C939E;
+    --ink-3:#5C6270;
+    --line:#2A2E36;
+    --led-ok:#34D38A;
+    --led-warn:#E8A841;
+    --led-bad:#E54B5B;
+    --led-blue:#4FA8E8;
+    --led-on:#A0F2C8;
+    --amber:#FFB347;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;color:var(--ink);font-family:"Inter","Roboto Mono","PingFang SC",system-ui,sans-serif;background:var(--bg)}
+  body{min-height:100vh;font-size:13px;line-height:1.5}
+  .app{display:grid;grid-template-columns:200px 1fr;min-height:100vh}
+
+  /* 边栏：rack 标签条 */
+  aside{background:var(--rack);border-right:2px solid var(--bezel);padding:0}
+  .rack-tag{
+    padding:14px 14px;background:var(--bezel);border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:10px;
+  }
+  .rack-tag .led{width:8px;height:8px;border-radius:50%;background:var(--led-ok);box-shadow:0 0 6px var(--led-ok)}
+  .rack-tag b{font-family:"Roboto Mono",monospace;font-weight:700;font-size:13px;letter-spacing:.18em;color:var(--ink)}
+  .rack-tag small{display:block;font-family:"Roboto Mono",monospace;font-size:10px;color:var(--ink-3);letter-spacing:.2em;margin-top:2px}
+
+  .nav-section{
+    padding:10px 14px 4px;font-family:"Roboto Mono",monospace;font-size:9.5px;letter-spacing:.22em;color:var(--ink-3);text-transform:uppercase;
+    background:#13151A;border-bottom:1px solid var(--line);
+  }
+  .nav a{
+    display:grid;grid-template-columns:8px 1fr auto;align-items:center;gap:10px;
+    padding:9px 14px;text-decoration:none;color:var(--ink-2);font-family:"Roboto Mono",monospace;font-size:12px;letter-spacing:.04em;border-bottom:1px solid var(--line);
+  }
+  .nav a:hover{color:var(--ink);background:rgba(79,168,232,.04)}
+  .nav a.active{color:var(--ink);background:#21252D;border-left:3px solid var(--led-blue);padding-left:11px}
+  .nav a .led{width:6px;height:6px;border-radius:50%;background:#2A2E36}
+  .nav a.active .led{background:var(--led-ok);box-shadow:0 0 4px var(--led-ok)}
+  .nav a .u{font-size:9.5px;color:var(--ink-3);letter-spacing:.16em}
+
+  main{padding:14px;min-width:0;display:flex;flex-direction:column;gap:12px}
+
+  /* 顶部状态条 = 1U 模块 */
+  .status-1u{
+    background:var(--rack);border:1px solid var(--bezel);height:42px;display:flex;align-items:center;gap:14px;padding:0 18px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.04), inset 0 -1px 0 rgba(0,0,0,.4);
+  }
+  .status-1u .led{width:8px;height:8px;border-radius:50%;background:var(--led-ok);box-shadow:0 0 6px var(--led-ok)}
+  .status-1u .led.b{background:var(--led-blue);box-shadow:0 0 6px var(--led-blue)}
+  .status-1u .led.a{background:var(--amber);box-shadow:0 0 6px var(--amber)}
+  .status-1u .cell{font-family:"Roboto Mono",monospace;font-size:11.5px;color:var(--ink-2);letter-spacing:.12em;text-transform:uppercase;display:flex;align-items:center;gap:7px}
+  .status-1u .cell b{color:var(--ink);font-weight:600;letter-spacing:0;text-transform:none}
+  .status-1u .spacer{flex:1}
+
+  /* 2U 模块（KPI）*/
+  .row-2u{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .mod-2u{
+    background:var(--rack);border:1px solid var(--bezel);padding:14px 16px;height:96px;
+    display:flex;flex-direction:column;justify-content:space-between;position:relative;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.04), inset 0 -1px 0 rgba(0,0,0,.4);
+  }
+  .mod-2u .top{display:flex;justify-content:space-between;align-items:center}
+  .mod-2u .top b{font-family:"Roboto Mono",monospace;font-size:10px;letter-spacing:.2em;color:var(--ink-3);text-transform:uppercase}
+  .mod-2u .top .pwr{display:flex;gap:4px}
+  .mod-2u .top .pwr i{width:5px;height:5px;border-radius:50%;background:#2A2E36}
+  .mod-2u .top .pwr i.on{background:var(--led-ok);box-shadow:0 0 3px var(--led-ok)}
+  .mod-2u .top .pwr i.on.a{background:var(--amber);box-shadow:0 0 3px var(--amber)}
+  .mod-2u .top .pwr i.on.b{background:var(--led-blue);box-shadow:0 0 3px var(--led-blue)}
+  .mod-2u .v{font-family:"Roboto Mono",monospace;font-size:30px;font-weight:700;letter-spacing:-.01em;line-height:1;color:var(--ink);font-variant-numeric:tabular-nums}
+  .mod-2u .v small{font-size:12px;color:var(--ink-2);font-weight:400;margin-left:3px}
+  .mod-2u .v.warn{color:var(--amber)}
+  .mod-2u .v.bad{color:var(--led-bad)}
+  .mod-2u .d{display:flex;justify-content:space-between;font-family:"Roboto Mono",monospace;font-size:10.5px;color:var(--ink-3)}
+  .d .up{color:var(--led-ok)}
+  .d .down{color:var(--led-bad)}
+
+  /* 主区主 8U 模块 */
+  .grid{display:grid;grid-template-columns:1.55fr 1fr;gap:8px;flex:1;min-height:0}
+  .mod{background:var(--rack);border:1px solid var(--bezel);display:flex;flex-direction:column;min-height:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+  .mod-head{
+    display:flex;justify-content:space-between;align-items:center;padding:9px 16px;background:#13151A;border-bottom:1px solid var(--line);
+  }
+  .mod-head .title{font-family:"Roboto Mono",monospace;font-size:11px;font-weight:700;letter-spacing:.18em;color:var(--ink);text-transform:uppercase;display:flex;align-items:center;gap:8px}
+  .mod-head .title::before{content:"▣";color:var(--led-blue)}
+  .mod-head .title small{display:block;font-family:"Roboto Mono",monospace;font-weight:400;font-size:10px;color:var(--ink-3);letter-spacing:.12em;margin-top:1px;text-transform:none}
+  .mod-head .meta{font-family:"Roboto Mono",monospace;font-size:10.5px;color:var(--ink-3);letter-spacing:.14em}
+  .mod-head .meta b{color:var(--ink-2)}
+
+  table{width:100%;border-collapse:collapse;font-family:"Roboto Mono",monospace;font-size:12px;color:var(--ink)}
+  th{text-align:left;font-weight:700;font-size:9.5px;letter-spacing:.18em;color:var(--ink-3);padding:7px 16px;border-bottom:1px solid var(--line);background:#13151A;text-transform:uppercase}
+  td{padding:8px 16px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+  tr:last-child td{border-bottom:0}
+  tr:hover td{background:#1B1E24}
+  td.t{color:var(--ink-2)}
+  .st{font-weight:700}
+  .st.ok{color:var(--led-ok)}
+  .st.warn{color:var(--amber)}
+  .st.bad{color:var(--led-bad)}
+  .lat{display:inline-flex;align-items:center;gap:8px}
+  .lat .b{width:54px;height:5px;background:#0A0B0D;border:1px solid var(--line);position:relative}
+  .lat .b i{display:block;height:100%}
+  .lat .b i.ok{background:var(--led-ok)}
+  .lat .b i.warn{background:var(--amber)}
+  .lat .b i.bad{background:var(--led-bad);box-shadow:0 0 4px var(--led-bad)}
+
+  /* 名册 = rack U 行 */
+  .person{display:grid;grid-template-columns:30px 30px 1fr 60px 60px;gap:10px;align-items:center;padding:9px 16px;border-bottom:1px solid var(--line)}
+  .person:last-child{border-bottom:0}
+  .u-label{font-family:"Roboto Mono",monospace;font-size:9.5px;color:var(--ink-3);letter-spacing:.12em}
+  .led-px{
+    width:28px;height:28px;background:#0A0B0D;border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;color:var(--led-on);font-family:"Roboto Mono",monospace;font-weight:700;font-size:12px;
+    box-shadow:inset 0 0 6px rgba(0,0,0,.6), 0 0 4px rgba(160,242,200,.15);
+  }
+  .led-px.b{color:var(--led-blue);box-shadow:inset 0 0 6px rgba(0,0,0,.6), 0 0 4px rgba(79,168,232,.2)}
+  .led-px.a{color:var(--amber);box-shadow:inset 0 0 6px rgba(0,0,0,.6), 0 0 4px rgba(232,168,65,.2)}
+  .led-px.r{color:var(--led-bad);box-shadow:inset 0 0 6px rgba(0,0,0,.6), 0 0 4px rgba(229,75,91,.2)}
+  .person b{font-family:"Roboto Mono",monospace;font-weight:600;font-size:12px;color:var(--ink)}
+  .person small{display:block;font-family:"Roboto Mono",monospace;font-size:10px;color:var(--ink-3);margin-top:1px}
+  .role-tag{font-family:"Roboto Mono",monospace;font-size:9.5px;letter-spacing:.12em;color:var(--ink-3);text-align:center}
+  .role-tag.r{color:var(--led-bad)}
+
+  /* 账单 */
+  .bill-block{padding:14px 16px;font-family:"Roboto Mono",monospace;font-size:12px;color:var(--ink)}
+  .bill-block .ln{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px dotted var(--line)}
+  .bill-block .ln b{font-weight:600;font-size:13px}
+  .bill-block .total{
+    margin-top:10px;padding:10px 12px;background:#0A0B0D;border:1px solid var(--led-blue);
+    display:flex;justify-content:space-between;align-items:center;box-shadow:0 0 8px rgba(79,168,232,.15);
+  }
+  .bill-block .total span{font-size:10px;letter-spacing:.18em;color:var(--led-blue);text-transform:uppercase}
+  .bill-block .total b{font-size:22px;font-weight:700;color:var(--led-on);text-shadow:0 0 6px rgba(160,242,200,.4)}
+  .gauge-bar{margin-top:12px}
+  .gauge-bar .top{display:flex;justify-content:space-between;font-size:9.5px;color:var(--ink-3);letter-spacing:.16em;margin-bottom:4px;text-transform:uppercase}
+  .gauge-bar .bar{height:14px;background:#0A0B0D;border:1px solid var(--line);position:relative;overflow:hidden}
+  .gauge-bar .bar i{display:block;height:100%;width:72%;background:linear-gradient(90deg,var(--led-ok),var(--amber));box-shadow:inset 0 0 6px rgba(0,0,0,.6)}
+
+  .btn{
+    display:inline-flex;align-items:center;gap:5px;padding:5px 11px;background:#0A0B0D;border:1px solid var(--rack-edge);
+    color:var(--ink);font-family:"Roboto Mono",monospace;font-size:10px;font-weight:600;letter-spacing:.14em;cursor:pointer;text-transform:uppercase;
+  }
+  .btn:hover{border-color:var(--led-blue);color:var(--led-blue)}
+
+  @media (max-width:1100px){
+    .app{grid-template-columns:1fr}
+    .row-2u{grid-template-columns:1fr 1fr}
+    .grid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="rack-tag">
+      <span class="led"></span>
+      <div><b>RACK A-01</b><small>NORTHWIND · 42U</small></div>
+    </div>
+    <div class="nav-section">U41 · OVERVIEW</div>
+    <nav class="nav">
+      <a class="active"><span class="led"></span>Dashboard<span class="u">U41</span></a>
+      <a><span class="led"></span>Live Calls<span class="u">U40</span></a>
+      <a><span class="led"></span>Regions<span class="u">U39</span></a>
+    </nav>
+    <div class="nav-section">U36 · RESOURCE</div>
+    <nav class="nav">
+      <a><span class="led"></span>API Keys<span class="u">U36</span></a>
+      <a><span class="led"></span>Webhook<span class="u">U35</span></a>
+      <a><span class="led"></span>Export<span class="u">U34</span></a>
+    </nav>
+    <div class="nav-section">U30 · ACCOUNT</div>
+    <nav class="nav">
+      <a><span class="led"></span>Members<span class="u">U30</span></a>
+      <a><span class="led"></span>Billing<span class="u">U29</span></a>
+      <a><span class="led"></span>Config<span class="u">U28</span></a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="status-1u">
+      <span class="led"></span>
+      <span class="cell">RACK <b>A-01</b></span>
+      <span class="cell">PDU <b>OK</b></span>
+      <span class="cell">TEMP <b>22.4°C</b></span>
+      <span class="cell">FAN <b>3200 RPM</b></span>
+      <span class="cell">PWR <b>1.4 / 8 kW</b></span>
+      <span class="spacer"></span>
+      <span class="cell"><span class="led b"></span>STREAM <b>5s</b></span>
+      <span class="cell">UTC+8 <b>14:02:11</b></span>
+    </div>
+
+    <div class="row-2u">
+      <div class="mod-2u">
+        <div class="top"><b>CALLS · MTD</b><span class="pwr"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span></div>
+        <div class="v">2,418,902<small>req</small></div>
+        <div class="d"><span class="up">▲ 12.4% MoM</span><span>tgt 3.0M</span></div>
+      </div>
+      <div class="mod-2u">
+        <div class="top"><b>MEMBERS · LIVE</b><span class="pwr"><i class="on"></i><i class="on"></i><i class="on b"></i><i></i></span></div>
+        <div class="v">38<small>/50</small></div>
+        <div class="d"><span class="up">▲ 4 wk</span><span>idle 12</span></div>
+      </div>
+      <div class="mod-2u">
+        <div class="top"><b>ERROR · 24H</b><span class="pwr"><i class="on a"></i><i class="on a"></i><i></i><i></i></span></div>
+        <div class="v warn">0.42<small>%</small></div>
+        <div class="d"><span class="down">▲ 0.08%</span><span>thr 0.5%</span></div>
+      </div>
+      <div class="mod-2u">
+        <div class="top"><b>BILL · MTD</b><span class="pwr"><i class="on b"></i><i class="on b"></i><i class="on b"></i><i class="on b"></i></span></div>
+        <div class="v">¥ 2,879<small>.50</small></div>
+        <div class="d"><span>auto-renew</span><span>T-11</span></div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="mod">
+        <div class="mod-head">
+          <span class="title">U24-U18 · ACCESS LOG<small>· tail -f · last 100 · prod</small></span>
+          <span class="meta">port <b>9001</b> · iface <b>eth0</b></span>
+        </div>
+        <div style="flex:1;overflow:auto;min-height:0">
+          <table>
+            <thead><tr><th>T</th><th>CALLER</th><th>METHOD ENDPOINT</th><th>STAT</th><th>LAT</th></tr></thead>
+            <tbody>
+              <tr><td class="t">14:02:11</td><td>jd-digits · node@1.8</td><td>POST /v2/orders/sync</td><td class="st ok">200</td><td><span class="lat">92ms<span class="b"><i class="ok" style="width:18%"></i></span></span></td></tr>
+              <tr><td class="t">14:02:09</td><td>web dashboard</td><td>GET /v2/metrics/window</td><td class="st ok">200</td><td><span class="lat">140ms<span class="b"><i class="ok" style="width:28%"></i></span></span></td></tr>
+              <tr><td class="t">14:02:08</td><td>acme · py@2.3</td><td>POST /v2/events/batch</td><td class="st warn">429</td><td><span class="lat">318ms<span class="b"><i class="warn" style="width:65%"></i></span></span></td></tr>
+              <tr><td class="t">14:02:07</td><td>office · curl/8.4</td><td>DELETE /v2/keys/ak_3f…</td><td class="st ok">204</td><td><span class="lat">58ms<span class="b"><i class="ok" style="width:12%"></i></span></span></td></tr>
+              <tr><td class="t">14:02:05</td><td>sf · go@1.1</td><td>GET /v2/orders?status=open</td><td class="st bad">500</td><td><span class="lat">1.42s<span class="b"><i class="bad" style="width:88%"></i></span></span></td></tr>
+              <tr><td class="t">14:02:03</td><td>jd-digits · node@1.8</td><td>POST /v2/webhooks/test</td><td class="st ok">200</td><td><span class="lat">110ms<span class="b"><i class="ok" style="width:22%"></i></span></span></td></tr>
+              <tr><td class="t">14:02:01</td><td>pingan · java@3.0</td><td>PUT /v2/orders/12489</td><td class="st ok">200</td><td><span class="lat">181ms<span class="b"><i class="ok" style="width:34%"></i></span></span></td></tr>
+              <tr><td class="t">14:02:00</td><td>jd-digits · node@1.8</td><td>POST /v2/events</td><td class="st ok">200</td><td><span class="lat">88ms<span class="b"><i class="ok" style="width:18%"></i></span></span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:8px;min-width:0">
+        <div class="mod" style="flex:1.1">
+          <div class="mod-head">
+            <span class="title">U17-U12 · MEMBERS<small>· 38 / 50</small></span>
+            <button class="btn">+ INVITE</button>
+          </div>
+          <div>
+            <div class="person"><span class="u-label">U17</span><div class="led-px r">林</div><div><b>liananqi</b><small>liananqi@northwind.io · 2m</small></div><span class="role-tag r">OWNER</span><span class="role-tag">RW</span></div>
+            <div class="person"><span class="u-label">U16</span><div class="led-px b">陈</div><div><b>chenwei</b><small>chenwei@northwind.io · 1h</small></div><span class="role-tag">ADMIN</span><span class="role-tag">RW</span></div>
+            <div class="person"><span class="u-label">U15</span><div class="led-px">蒋</div><div><b>jiangke</b><small>jiangke@northwind.io · 1d</small></div><span class="role-tag">DEV</span><span class="role-tag">RW</span></div>
+            <div class="person"><span class="u-label">U14</span><div class="led-px a">袁</div><div><b>yuanqian</b><small>yuanqian@vendor.com · pending</small></div><span class="role-tag">READ</span><span class="role-tag">R-</span></div>
+          </div>
+        </div>
+
+        <div class="mod">
+          <div class="mod-head">
+            <span class="title">U11-U08 · BILLING<small>· 06.01 – 06.30</small></span>
+            <button class="btn">INVOICE</button>
+          </div>
+          <div class="bill-block">
+            <div class="ln"><span>PLAN · GROWTH</span><b>¥ 1,980.00</b></div>
+            <div class="ln"><span>OVERAGE · 418,902</span><b>¥ 837.80</b></div>
+            <div class="ln"><span>WH RETRY · 12,341</span><b>¥ 61.70</b></div>
+            <div class="total"><span>TOTAL</span><b>¥ 2,879.50</b></div>
+            <div class="gauge-bar">
+              <div class="top"><span>QUOTA</span><span>72% · 2.42M / 3M</span></div>
+              <div class="bar"><i></i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>15 · 韩系明亮 — Northwind Cloud 控制台</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --bg:#F5F7FB;
+    --paper:#FFFFFF;
+    --soft:#EEF1F7;
+    --ink:#191F28;
+    --ink-2:#525965;
+    --ink-3:#8B95A1;
+    --line:#E5E8EE;
+    --blue:#3182F6;          /* Toss 蓝 */
+    --blue-soft:#E7F1FF;
+    --blue-d:#1B64DA;
+    --ok:#1AB36A;
+    --warn:#FF9800;
+    --bad:#F04452;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;color:var(--ink);font-family:"Pretendard","Inter","PingFang SC",system-ui,sans-serif;background:var(--bg)}
+  body{min-height:100vh;font-size:14px;line-height:1.5}
+  .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+
+  /* 边栏 */
+  aside{background:var(--paper);border-right:1px solid var(--line);padding:24px 18px}
+  .brand{display:flex;align-items:center;gap:10px;margin-bottom:24px}
+  .brand-mark{
+    width:36px;height:36px;border-radius:11px;background:var(--blue);
+    display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:17px;letter-spacing:-.02em;
+  }
+  .brand-name{font-weight:700;font-size:16.5px;letter-spacing:-.01em}
+  .brand-name small{display:block;font-weight:500;font-size:11.5px;color:var(--ink-3);margin-top:1px;letter-spacing:.04em}
+
+  .nav-section{font-size:11.5px;font-weight:600;letter-spacing:.02em;color:var(--ink-3);margin:18px 10px 4px}
+  .nav a{
+    display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;
+    text-decoration:none;color:var(--ink-2);font-size:14.5px;font-weight:600;
+  }
+  .nav a:hover{background:var(--soft);color:var(--ink)}
+  .nav a.active{background:var(--blue-soft);color:var(--blue-d)}
+  .nav a .em{
+    width:22px;height:22px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;
+    background:var(--soft);color:var(--ink-2);
+  }
+  .nav a.active .em{background:var(--blue);color:#fff}
+
+  /* 主区 */
+  main{padding:28px 32px 40px;min-width:0}
+
+  /* 顶 */
+  .topbar{display:flex;align-items:center;gap:14px;margin-bottom:24px;flex-wrap:wrap}
+  .greet h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em;line-height:1.25}
+  .greet h1 em{font-style:normal;color:var(--blue)}
+  .greet p{margin:4px 0 0;font-size:13.5px;color:var(--ink-3);font-weight:500}
+  .topbar .spacer{flex:1}
+  .search{
+    display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:14px;background:var(--paper);
+    border:1px solid var(--line);font-size:14px;color:var(--ink-3);min-width:280px;
+  }
+  .search input{flex:1;background:transparent;border:0;outline:0;font:inherit;color:var(--ink);font-weight:500}
+  .btn{
+    display:inline-flex;align-items:center;gap:6px;padding:10px 16px;border-radius:12px;border:1px solid var(--line);background:var(--paper);
+    color:var(--ink);font:inherit;font-weight:600;font-size:13.5px;cursor:pointer;
+  }
+  .btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+  .btn.primary:hover{background:var(--blue-d)}
+  .av{
+    width:40px;height:40px;border-radius:50%;background:var(--soft);border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:var(--ink);
+  }
+
+  /* Hero：友好图示 + 大数字 */
+  .hero{
+    background:var(--paper);border-radius:20px;border:1px solid var(--line);
+    padding:28px 32px;margin-bottom:18px;display:grid;grid-template-columns:1.4fr 1fr;gap:30px;align-items:center;
+  }
+  .hero .eyebrow{font-size:13px;color:var(--blue);font-weight:700;margin-bottom:8px}
+  .hero h2{margin:0 0 4px;font-size:34px;font-weight:800;letter-spacing:-.025em;line-height:1.1}
+  .hero h2 em{font-style:normal;color:var(--blue)}
+  .hero p{margin:8px 0 16px;font-size:14.5px;color:var(--ink-2);line-height:1.7;max-width:520px}
+  .hero p b{color:var(--ink);font-weight:700}
+  .hero .cta{display:flex;gap:10px;flex-wrap:wrap}
+
+  .hero .figure{display:flex;justify-content:center;align-items:center}
+  .hero .figure svg{width:100%;max-width:260px;height:auto;display:block}
+
+  /* KPI 大卡 */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+  .kpi{background:var(--paper);border-radius:18px;border:1px solid var(--line);padding:20px 22px;display:flex;flex-direction:column;gap:6px}
+  .kpi .top{display:flex;align-items:center;gap:10px}
+  .kpi .ic{
+    width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;font-weight:700;
+  }
+  .ic.b{background:var(--blue)}
+  .ic.g{background:var(--ok)}
+  .ic.o{background:var(--warn)}
+  .ic.p{background:#9D6BC6}
+  .kpi .l{font-size:13.5px;color:var(--ink-2);font-weight:600}
+  .kpi .v{font-size:28px;font-weight:800;letter-spacing:-.025em;line-height:1.1;margin-top:2px}
+  .kpi .v small{font-size:13px;color:var(--ink-3);font-weight:600;margin-left:3px}
+  .kpi .d{font-size:12.5px;color:var(--ink-2);font-weight:600;display:flex;align-items:center;gap:6px}
+  .pill{padding:3px 8px;border-radius:7px;font-size:11.5px;font-weight:700}
+  .pill.up{background:rgba(26,179,106,.12);color:var(--ok)}
+  .pill.down{background:rgba(240,68,82,.12);color:var(--bad)}
+  .pill.flat{background:var(--soft);color:var(--ink-2)}
+
+  /* 主体两栏 */
+  .grid{display:grid;grid-template-columns:1.6fr 1fr;gap:18px}
+
+  .card{background:var(--paper);border-radius:20px;border:1px solid var(--line);overflow:hidden}
+  .card-head{display:flex;justify-content:space-between;align-items:center;padding:20px 24px;border-bottom:1px solid var(--line)}
+  .card-title{font-weight:800;font-size:17px;letter-spacing:-.01em}
+  .card-title small{display:block;font-size:13px;color:var(--ink-3);font-weight:500;margin-top:1px}
+  .tabs{display:flex;gap:4px;padding:4px;background:var(--soft);border-radius:11px}
+  .tab{padding:6px 12px;font-size:13px;font-weight:600;border-radius:8px;cursor:pointer;color:var(--ink-2)}
+  .tab.active{background:var(--paper);color:var(--ink);box-shadow:0 1px 2px rgba(25,31,40,.04)}
+
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th{text-align:left;font-weight:600;font-size:12px;letter-spacing:.02em;color:var(--ink-3);padding:12px 24px;background:#FAFBFD;border-bottom:1px solid var(--line)}
+  td{padding:16px 24px;border-bottom:1px solid var(--line)}
+  tr:last-child td{border-bottom:0}
+  tr:hover td{background:#FAFBFD}
+  td.mono{font-family:"JetBrains Mono",monospace;font-size:13px;color:var(--ink)}
+  .chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:8px;font-size:12px;font-weight:700}
+  .chip.ok{background:rgba(26,179,106,.12);color:var(--ok)}
+  .chip.warn{background:rgba(255,152,0,.14);color:#B36800}
+  .chip.bad{background:rgba(240,68,82,.12);color:var(--bad)}
+  .lat{display:inline-flex;align-items:center;gap:10px;font-family:"JetBrains Mono",monospace;font-size:12.5px}
+  .lat .b{width:60px;height:6px;border-radius:99px;background:var(--soft);overflow:hidden}
+  .lat .b i{display:block;height:100%;border-radius:99px}
+  .lat .b i.ok{background:var(--ok)}
+  .lat .b i.warn{background:var(--warn)}
+  .lat .b i.bad{background:var(--bad)}
+
+  /* 成员 */
+  .members{padding:8px 0}
+  .member{display:grid;grid-template-columns:44px 1fr auto;gap:14px;align-items:center;padding:14px 24px;border-bottom:1px solid var(--line)}
+  .member:last-child{border-bottom:0}
+  .m-av{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px}
+  .m-av.a1{background:var(--blue)}
+  .m-av.a2{background:var(--ok)}
+  .m-av.a3{background:var(--warn)}
+  .m-av.a4{background:#9D6BC6}
+  .member b{font-weight:700;font-size:14.5px}
+  .member small{display:block;font-size:12.5px;color:var(--ink-3);font-weight:500;margin-top:1px}
+  .role{padding:5px 11px;border-radius:8px;font-size:12px;font-weight:700;background:var(--soft);color:var(--ink-2)}
+
+  /* 账单 */
+  .bill{padding:24px}
+  .bill .ln{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--line);font-size:14px}
+  .bill .ln b{font-weight:700;font-size:16px}
+  .bill .total{
+    margin-top:14px;padding:18px 20px;border-radius:14px;background:var(--blue);color:#fff;
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .bill .total b{font-weight:800;font-size:24px;letter-spacing:-.02em}
+  .gauge{margin-top:14px}
+  .gauge .top{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-2);font-weight:600;margin-bottom:6px}
+  .gauge .bar{height:10px;border-radius:99px;background:var(--soft);overflow:hidden}
+  .gauge .bar i{display:block;height:100%;width:72%;border-radius:99px;background:var(--blue)}
+
+  @media (max-width:1100px){
+    .app{grid-template-columns:1fr}
+    .hero{grid-template-columns:1fr}
+    .hero .figure{order:-1;max-height:200px;overflow:hidden}
+    .kpis{grid-template-columns:1fr 1fr}
+    .grid{grid-template-columns:1fr}
+    main{padding:20px 16px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="brand">
+      <div class="brand-mark">N</div>
+      <div class="brand-name">Northwind<small>Cloud Console</small></div>
+    </div>
+    <div class="nav-section">총괄 · 总览</div>
+    <nav class="nav">
+      <a class="active"><span class="em">◔</span>仪表盘</a>
+      <a><span class="em">⚡</span>实时调用</a>
+      <a><span class="em">◐</span>区域分布</a>
+    </nav>
+    <div class="nav-section">자원 · 资源</div>
+    <nav class="nav">
+      <a><span class="em">⚿</span>API 密钥</a>
+      <a><span class="em">↻</span>Webhook</a>
+      <a><span class="em">↓</span>数据导出</a>
+    </nav>
+    <div class="nav-section">계정 · 账户</div>
+    <nav class="nav">
+      <a><span class="em">☺</span>成员</a>
+      <a><span class="em">¥</span>账单</a>
+      <a><span class="em">⚙</span>设置</a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="topbar">
+      <div class="greet">
+        <h1>下午好，林安琪 — 这周的 <em>状态不错</em></h1>
+        <p>06.19 · 周五 · 生产环境 · ap-southeast-1</p>
+      </div>
+      <div class="spacer"></div>
+      <div class="search">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg>
+        <input placeholder="搜索 API、成员、调用…">
+      </div>
+      <button class="btn">通知 3</button>
+      <button class="btn primary">＋ 新建 API Key</button>
+      <div class="av">LA</div>
+    </div>
+
+    <section class="hero">
+      <div>
+        <div class="eyebrow">本月调用 · MTD</div>
+        <h2>调用量已经突破 <em>240 万次</em>了 🎉<br>距离月度目标还差 <em>24%</em></h2>
+        <p>对比上月 <b>+12.4%</b>，按当前速度看，会在 <b>6 月 27 日</b> 触顶套餐上限。
+        要不要现在就考虑升级到 <b>Scale 套餐</b>？升级后月底可省下大约 <b>¥640</b>。</p>
+        <div class="cta">
+          <button class="btn primary">查看 Scale 套餐 →</button>
+          <button class="btn">先看看用量明细</button>
+        </div>
+      </div>
+      <div class="figure">
+        <!-- 友好 SVG 插画：上升的曲线 + 小旗 + 云 -->
+        <svg viewBox="0 0 260 200" xmlns="http://www.w3.org/2000/svg">
+          <!-- 圆形装饰底 -->
+          <circle cx="130" cy="120" r="80" fill="#E7F1FF"/>
+          <!-- 云 -->
+          <ellipse cx="60" cy="48" rx="22" ry="8" fill="#fff"/>
+          <ellipse cx="78" cy="42" rx="14" ry="6" fill="#fff"/>
+          <ellipse cx="200" cy="60" rx="24" ry="9" fill="#fff"/>
+          <!-- 上升折线 -->
+          <polyline points="50,170 90,150 120,135 155,105 195,75 225,55" stroke="#3182F6" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <!-- 圆点 -->
+          <circle cx="50" cy="170" r="5" fill="#3182F6"/>
+          <circle cx="120" cy="135" r="5" fill="#3182F6"/>
+          <circle cx="195" cy="75" r="5" fill="#3182F6"/>
+          <!-- 顶部小旗 -->
+          <line x1="225" y1="55" x2="225" y2="30" stroke="#191F28" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M225,30 L245,38 L225,46 Z" fill="#1AB36A"/>
+          <!-- 笑脸数据点 -->
+          <circle cx="120" cy="135" r="14" fill="#FF9800"/>
+          <circle cx="116" cy="133" r="1.5" fill="#191F28"/>
+          <circle cx="124" cy="133" r="1.5" fill="#191F28"/>
+          <path d="M116,138 Q120,142 124,138" stroke="#191F28" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </section>
+
+    <section class="kpis">
+      <div class="kpi">
+        <div class="top"><div class="ic b">⚡</div><div class="l">本月调用</div></div>
+        <div class="v">2.42<small>M req</small></div>
+        <div class="d"><span class="pill up">▲ 12.4%</span>对比上月</div>
+      </div>
+      <div class="kpi">
+        <div class="top"><div class="ic g">☺</div><div class="l">活跃成员</div></div>
+        <div class="v">38<small>/ 50 席</small></div>
+        <div class="d"><span class="pill up">▲ 4</span>本周新增</div>
+      </div>
+      <div class="kpi">
+        <div class="top"><div class="ic o">!</div><div class="l">24h 错误率</div></div>
+        <div class="v" style="color:var(--bad)">0.42<small>%</small></div>
+        <div class="d"><span class="pill down">▲ 0.08%</span>阈值 0.5%</div>
+      </div>
+      <div class="kpi">
+        <div class="top"><div class="ic p">¥</div><div class="l">本月账单</div></div>
+        <div class="v">¥ 2,879<small>.50</small></div>
+        <div class="d"><span class="pill flat">自动续费</span>T-11</div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">最近调用日志<small>实时 · 最近 100 条 · 生产</small></div>
+          <div class="tabs">
+            <span class="tab active">全部</span>
+            <span class="tab">错误</span>
+            <span class="tab">慢请求</span>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>时间</th><th>调用方</th><th>端点</th><th>状态</th><th>耗时</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">14:02:11</td><td>京东数科</td><td class="mono">POST /v2/orders/sync</td>
+              <td><span class="chip ok">200</span></td>
+              <td><span class="lat">92 ms<span class="b"><i class="ok" style="width:18%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:09</td><td>内部 dashboard</td><td class="mono">GET /v2/metrics/window</td>
+              <td><span class="chip ok">200</span></td>
+              <td><span class="lat">140 ms<span class="b"><i class="ok" style="width:28%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:08</td><td>ACME</td><td class="mono">POST /v2/events/batch</td>
+              <td><span class="chip warn">429</span></td>
+              <td><span class="lat">318 ms<span class="b"><i class="warn" style="width:65%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:07</td><td>Office</td><td class="mono">DELETE /v2/keys/ak_3f…</td>
+              <td><span class="chip ok">204</span></td>
+              <td><span class="lat">58 ms<span class="b"><i class="ok" style="width:12%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:05</td><td>顺丰</td><td class="mono">GET /v2/orders?status=open</td>
+              <td><span class="chip bad">500</span></td>
+              <td><span class="lat">1.42 s<span class="b"><i class="bad" style="width:88%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:03</td><td>京东数科</td><td class="mono">POST /v2/webhooks/test</td>
+              <td><span class="chip ok">200</span></td>
+              <td><span class="lat">110 ms<span class="b"><i class="ok" style="width:22%"></i></span></span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:18px">
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">成员<small>38 在岗</small></div>
+            <button class="btn primary">＋ 邀请</button>
+          </div>
+          <div class="members">
+            <div class="member"><div class="m-av a1">LA</div><div><b>林安琪</b><small>2 分钟前活跃</small></div><span class="role">所有者</span></div>
+            <div class="member"><div class="m-av a2">CW</div><div><b>陈维</b><small>1 小时前活跃</small></div><span class="role">管理员</span></div>
+            <div class="member"><div class="m-av a3">JK</div><div><b>蒋克</b><small>昨日活跃</small></div><span class="role">开发者</span></div>
+            <div class="member"><div class="m-av a4">YQ</div><div><b>袁倩</b><small>受邀待复</small></div><span class="role">只读</span></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">本月账单<small>06.01 – 06.30 · 自动续费</small></div>
+            <button class="btn">发票</button>
+          </div>
+          <div class="bill">
+            <div class="ln"><span>Growth 套餐</span><b>¥ 1,980.00</b></div>
+            <div class="ln"><span>超量调用 · 418,902</span><b>¥ 837.80</b></div>
+            <div class="ln"><span>Webhook 重试 · 12,341</span><b>¥ 61.70</b></div>
+            <div class="total"><span style="font-weight:700">本月小计</span><b>¥ 2,879.50</b></div>
+            <div class="gauge">
+              <div class="top"><span>套餐用量 72%</span><span>2.42M / 3M</span></div>
+              <div class="bar"><i></i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+</body>
+</html>

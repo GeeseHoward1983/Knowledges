@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>24 · 矿物标本 — Northwind Cloud 控制台</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --paper:#F3EFE3;          /* 标本纸 */
+    --paper-2:#E8E2D1;
+    --ink:#1A1810;
+    --ink-2:#5C5648;
+    --ink-3:#8A8472;
+    --rule:#1A1810;
+    --rule-2:#BCB29A;
+    --azurite:#2E5A8A;        /* 蓝铜矿 */
+    --malachite:#3E7855;      /* 孔雀石 */
+    --pyrite:#C5A23A;         /* 黄铁矿 */
+    --cinnabar:#A8392C;       /* 朱砂矿 */
+    --amethyst:#6B4C8C;       /* 紫水晶 */
+    --rose:#C8728E;           /* 蔷薇辉石 */
+    --hematite:#5C2A28;       /* 赤铁矿 */
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;color:var(--ink);font-family:"Cormorant Garamond","Source Han Serif SC",serif;background:var(--paper)}
+  body{
+    min-height:100vh;font-size:14.5px;line-height:1.55;
+    background:
+      /* 标本纸的脏纸纹 */
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.95' numOctaves='2'/><feColorMatrix values='0 0 0 0 .15  0 0 0 0 .12  0 0 0 0 .08  0 0 0 .07 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
+      var(--paper);
+  }
+  .app{display:grid;grid-template-columns:230px 1fr;min-height:100vh;position:relative}
+
+  /* 边栏 = 抽屉柜立面 */
+  aside{
+    padding:24px 18px;border-right:1.5px solid var(--rule);background:var(--paper-2);
+  }
+  .case{
+    border:1.5px solid var(--rule);padding:14px 14px 12px;text-align:center;background:var(--paper);margin-bottom:20px;
+  }
+  .case b{
+    display:block;font-family:"Cormorant Garamond",serif;font-weight:500;font-size:24px;letter-spacing:.04em;color:var(--ink);font-style:italic;
+  }
+  .case small{display:block;font-family:"Inter",sans-serif;font-style:normal;font-size:9.5px;letter-spacing:.32em;text-transform:uppercase;color:var(--ink-2);margin-top:6px;font-weight:600}
+  .case .ix{font-family:"Inter",sans-serif;font-size:10px;letter-spacing:.18em;color:var(--ink-3);margin-top:6px;font-weight:600}
+
+  .nav-section{
+    font-family:"Cormorant Garamond",serif;font-style:italic;font-size:14px;color:var(--ink-2);margin:16px 4px 4px;
+    border-bottom:1px solid var(--rule-2);padding-bottom:3px;
+  }
+  .nav a{
+    display:grid;grid-template-columns:14px 1fr auto;align-items:baseline;gap:8px;padding:5px 4px;text-decoration:none;color:var(--ink);font-size:14px;
+    border-bottom:1px dotted var(--rule-2);
+  }
+  .nav a:hover{color:var(--azurite)}
+  .nav a.active{color:var(--ink);font-weight:600}
+  .nav a .sp{width:8px;height:8px;display:inline-block;border:1px solid var(--rule)}
+  .nav a.active .sp{background:var(--cinnabar)}
+  .nav a:nth-child(2) .sp{background:var(--azurite)}
+  .nav a:nth-child(3) .sp{background:var(--malachite)}
+  .nav a .n{font-family:"Inter",sans-serif;font-size:10px;color:var(--ink-3);font-weight:600;letter-spacing:.06em}
+
+  main{padding:28px 36px 40px;min-width:0}
+
+  /* 顶 */
+  .crumbs{font-family:"Cormorant Garamond",serif;font-style:italic;color:var(--ink-2);font-size:14px;margin-bottom:6px;letter-spacing:.04em}
+  .crumbs b{color:var(--ink);font-style:normal;font-weight:600}
+  .header{
+    display:grid;grid-template-columns:1fr auto;align-items:end;gap:24px;padding-bottom:20px;border-bottom:1.5px solid var(--rule);margin-bottom:30px;
+  }
+  .header h1{
+    margin:0;font-family:"Cormorant Garamond","Source Han Serif SC",serif;font-weight:500;font-size:42px;letter-spacing:-.01em;line-height:1.15;
+  }
+  .header h1 em{font-style:italic}
+  .header h1 .latin{display:block;font-family:"Cormorant Garamond",serif;font-style:italic;font-size:18px;color:var(--ink-2);margin-top:4px;font-weight:400;letter-spacing:.04em}
+  .header .stamp{
+    text-align:right;font-family:"Inter",sans-serif;font-size:10.5px;color:var(--ink-2);letter-spacing:.22em;text-transform:uppercase;line-height:1.8;font-weight:600;
+  }
+  .header .stamp b{display:block;font-family:"Cormorant Garamond",serif;font-style:italic;font-weight:500;color:var(--ink);font-size:18px;letter-spacing:0;text-transform:none}
+
+  /* KPI = 4 个矿物标本卡 */
+  .specimens{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:30px}
+  .spec{
+    border:1.5px solid var(--rule);background:var(--paper);padding:0;display:flex;flex-direction:column;position:relative;
+  }
+  /* 顶部小色片 = 矿物本体 */
+  .spec .min{
+    height:64px;border-bottom:1.5px solid var(--rule);position:relative;overflow:hidden;
+  }
+  .spec.s1 .min{background:linear-gradient(135deg,#3a6ea0,var(--azurite) 40%,#1d3e63);}
+  .spec.s2 .min{background:linear-gradient(135deg,#5a9472,var(--malachite) 50%,#23553b);}
+  .spec.s3 .min{background:linear-gradient(135deg,#d8b94e,var(--pyrite) 40%,#8a7320);}
+  .spec.s4 .min{background:linear-gradient(135deg,#bf513f,var(--cinnabar) 40%,#7d2820);}
+  .spec .min::after{
+    content:"";position:absolute;inset:0;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='80'><g opacity='.35' fill='%23fff'><polygon points='10,30 40,18 60,42 24,58'/><polygon points='80,10 110,32 90,60 60,38'/><polygon points='140,40 180,14 178,52 152,68'/></g></svg>");
+    mix-blend-mode:screen;
+  }
+  /* 标签卡 */
+  .spec .body{padding:14px 16px 16px;flex:1;display:flex;flex-direction:column;gap:6px}
+  .spec .name{font-family:"Cormorant Garamond",serif;font-style:italic;font-weight:500;font-size:13.5px;color:var(--ink-2);letter-spacing:.04em;border-bottom:1px dotted var(--rule-2);padding-bottom:4px}
+  .spec .name b{font-style:normal;font-weight:600;color:var(--ink);font-family:"Inter",sans-serif;font-size:11px;letter-spacing:.18em;text-transform:uppercase;display:block;margin-bottom:2px}
+  .spec .v{font-family:"Cormorant Garamond","Source Han Serif SC",serif;font-weight:500;font-size:34px;letter-spacing:-.01em;line-height:1;font-variant-numeric:tabular-nums}
+  .spec .v small{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:14px;color:var(--ink-2);margin-left:4px;font-weight:500}
+  .spec .d{font-family:"Inter",sans-serif;font-size:11.5px;color:var(--ink-2);margin-top:4px;display:flex;justify-content:space-between;letter-spacing:.04em;font-weight:600}
+  .up{color:var(--malachite)}
+  .down{color:var(--cinnabar)}
+  .spec .lot{
+    position:absolute;top:8px;right:10px;font-family:"Inter",sans-serif;font-size:9px;letter-spacing:.18em;color:rgba(255,255,255,.85);font-weight:700;background:rgba(0,0,0,.25);padding:2px 6px;border-radius:1px;
+  }
+
+  /* 主体两栏 */
+  .grid{display:grid;grid-template-columns:1.6fr 1fr;gap:24px}
+  .panel{border:1.5px solid var(--rule);background:var(--paper);overflow:hidden}
+  .panel-head{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:12px 22px;border-bottom:1.5px solid var(--rule);background:var(--paper-2);
+  }
+  .panel-title{font-family:"Cormorant Garamond","Source Han Serif SC",serif;font-weight:600;font-size:19px;letter-spacing:.01em}
+  .panel-title em{font-family:"Cormorant Garamond",serif;font-style:italic;font-weight:500;color:var(--ink-2);font-size:14px;margin-left:6px}
+  .panel-title small{display:block;font-family:"Inter",sans-serif;font-weight:500;font-size:11px;color:var(--ink-2);margin-top:2px;letter-spacing:.14em;text-transform:uppercase}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th{text-align:left;font-family:"Inter",sans-serif;font-weight:700;font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-2);padding:9px 22px;border-bottom:1.5px solid var(--rule);background:var(--paper-2)}
+  td{padding:13px 22px;border-bottom:1px dotted var(--rule-2);font-variant-numeric:tabular-nums}
+  tr:last-child td{border-bottom:0}
+  td.mono{font-family:"JetBrains Mono",monospace;font-size:12.5px}
+  td.cl{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:15px}
+  .stat{font-family:"Inter",sans-serif;font-weight:700;font-size:11.5px;letter-spacing:.06em;padding:3px 9px;border:1px solid}
+  .stat.ok{color:var(--malachite);border-color:var(--malachite);background:rgba(62,120,85,.06)}
+  .stat.warn{color:#8A7320;border-color:var(--pyrite);background:rgba(197,162,58,.1)}
+  .stat.bad{color:var(--cinnabar);border-color:var(--cinnabar);background:rgba(168,57,44,.07)}
+  .lat{display:inline-flex;align-items:center;gap:10px;font-family:"JetBrains Mono",monospace;font-size:12px}
+  .lat .b{width:54px;height:2px;background:var(--rule-2);position:relative}
+  .lat .b i{display:block;height:3px;margin-top:-.5px}
+  .lat .b i.ok{background:var(--malachite)}
+  .lat .b i.warn{background:var(--pyrite)}
+  .lat .b i.bad{background:var(--cinnabar);height:4px;margin-top:-1px}
+
+  /* 名册 */
+  .members{padding:6px 0}
+  .person{display:grid;grid-template-columns:46px 1fr auto;gap:14px;align-items:center;padding:13px 22px;border-bottom:1px dotted var(--rule-2)}
+  .person:last-child{border-bottom:0}
+  .mineral{
+    width:46px;height:46px;display:flex;align-items:center;justify-content:center;color:#fff;
+    font-family:"Cormorant Garamond",serif;font-weight:500;font-size:20px;border:1.5px solid var(--rule);
+    clip-path:polygon(20% 0,80% 0,100% 35%,80% 100%,20% 100%,0 35%);
+  }
+  .mineral.m1{background:radial-gradient(circle at 35% 30%,#4c80b0,var(--azurite))}
+  .mineral.m2{background:radial-gradient(circle at 35% 30%,#6ba585,var(--malachite))}
+  .mineral.m3{background:radial-gradient(circle at 35% 30%,#dabd50,var(--pyrite));color:var(--ink)}
+  .mineral.m4{background:radial-gradient(circle at 35% 30%,#946eb8,var(--amethyst))}
+  .person b{font-family:"Cormorant Garamond","Source Han Serif SC",serif;font-weight:600;font-size:16px;letter-spacing:.02em}
+  .person small{display:block;font-family:"Cormorant Garamond",serif;font-style:italic;font-size:13px;color:var(--ink-2);margin-top:1px}
+  .latin{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:11.5px;color:var(--ink-3);text-align:right;letter-spacing:.04em}
+  .latin b{display:block;font-family:"Inter",sans-serif;font-style:normal;font-size:10.5px;color:var(--ink-2);letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+
+  /* 账单 */
+  .bill{padding:20px 24px}
+  .bill .ln{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px dotted var(--rule-2);font-family:"Cormorant Garamond",serif;font-size:15px}
+  .bill .ln span{font-style:italic;color:var(--ink-2)}
+  .bill .ln b{font-family:"Cormorant Garamond",serif;font-weight:600;font-size:16px;font-variant-numeric:tabular-nums}
+  .bill .total{margin-top:8px;padding-top:12px;border-top:1.5px solid var(--rule);display:flex;justify-content:space-between;align-items:baseline}
+  .bill .total span{font-family:"Inter",sans-serif;font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-2)}
+  .bill .total b{font-family:"Cormorant Garamond","Source Han Serif SC",serif;font-weight:500;font-size:30px;color:var(--hematite);letter-spacing:-.01em}
+  .gauge{margin-top:16px}
+  .gauge .top{display:flex;justify-content:space-between;font-family:"Inter",sans-serif;font-size:10.5px;color:var(--ink-2);letter-spacing:.16em;text-transform:uppercase;font-weight:700;margin-bottom:6px}
+  .gauge .bar{height:8px;border:1px solid var(--rule);position:relative;overflow:hidden;background:var(--paper-2)}
+  .gauge .bar i{display:block;height:100%;width:72%;background:repeating-linear-gradient(45deg,var(--azurite) 0 5px,var(--malachite) 5px 10px)}
+
+  /* 按钮 */
+  .btn{
+    display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1.5px solid var(--rule);background:var(--paper);
+    color:var(--ink);font-family:"Cormorant Garamond",serif;font-style:italic;font-size:14px;cursor:pointer;
+  }
+  .btn:hover{background:var(--paper-2)}
+  .btn.h{background:var(--hematite);color:#F3EFE3;border-color:var(--hematite);font-style:normal;font-weight:600}
+
+  footer{
+    margin-top:34px;padding-top:16px;border-top:1.5px solid var(--rule);
+    display:flex;justify-content:space-between;font-family:"Cormorant Garamond",serif;font-style:italic;font-size:13px;color:var(--ink-3);
+  }
+  footer b{font-family:"Inter",sans-serif;font-style:normal;font-weight:600;color:var(--ink-2);font-size:11px;letter-spacing:.16em;text-transform:uppercase}
+
+  @media (max-width:1100px){
+    .app{grid-template-columns:1fr}
+    aside{border-right:0;border-bottom:1.5px solid var(--rule)}
+    main{padding:20px 18px}
+    .header{grid-template-columns:1fr}
+    .specimens{grid-template-columns:1fr 1fr}
+    .grid{grid-template-columns:1fr}
+    .header h1{font-size:32px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="case">
+      <b>Northwind</b>
+      <small>Cloud Cabinet</small>
+      <div class="ix">CAT. № 01 / VOL. XII</div>
+    </div>
+    <div class="nav-section">Sectio I · 总览</div>
+    <nav class="nav">
+      <a class="active"><span class="sp"></span><span>仪表盘</span><span class="n">01.A</span></a>
+      <a><span class="sp"></span><span>实时调用</span><span class="n">01.B</span></a>
+      <a><span class="sp"></span><span>区域分布</span><span class="n">01.C</span></a>
+    </nav>
+    <div class="nav-section">Sectio II · 资源</div>
+    <nav class="nav">
+      <a><span class="sp"></span><span>API 密钥</span><span class="n">02.A</span></a>
+      <a><span class="sp"></span><span>Webhook</span><span class="n">02.B</span></a>
+      <a><span class="sp"></span><span>数据导出</span><span class="n">02.C</span></a>
+    </nav>
+    <div class="nav-section">Sectio III · 账户</div>
+    <nav class="nav">
+      <a><span class="sp"></span><span>名册</span><span class="n">03.A</span></a>
+      <a><span class="sp"></span><span>账目</span><span class="n">03.B</span></a>
+      <a><span class="sp"></span><span>偏好</span><span class="n">03.C</span></a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="crumbs">Cabinet · <em>Sectio I</em> · <b>仪表盘</b></div>
+    <div class="header">
+      <div>
+        <h1>本月运行 · 一份编目<em>。</em>
+          <span class="latin">Specimen Sheet № 01 — Aestus mensis Iunii MMXXVI</span>
+        </h1>
+      </div>
+      <div class="stamp">
+        Cabinet of Northwind<br>
+        <b>06 — 19 — 2026</b>
+        Sheet 01 / Folio XII<br>
+        Prod / ap-southeast-1
+      </div>
+    </div>
+
+    <section class="specimens">
+      <div class="spec s1">
+        <div class="min"><span class="lot">SP-01</span></div>
+        <div class="body">
+          <div class="name"><b>本月调用</b><em>Vocationes Mensis</em></div>
+          <div class="v">2,418,902<small>req</small></div>
+          <div class="d"><span class="up">▲ 12.4% MoM</span><span>tgt 3.0M</span></div>
+        </div>
+      </div>
+      <div class="spec s2">
+        <div class="min"><span class="lot">SP-02</span></div>
+        <div class="body">
+          <div class="name"><b>活跃名册</b><em>Membra Activa</em></div>
+          <div class="v">38<small>/ 50</small></div>
+          <div class="d"><span class="up">▲ 4 wk</span><span>idle 12</span></div>
+        </div>
+      </div>
+      <div class="spec s3">
+        <div class="min"><span class="lot">SP-03</span></div>
+        <div class="body">
+          <div class="name"><b>错误率 24h</b><em>Ratio Erroris</em></div>
+          <div class="v" style="color:#8A6818">0.42<small>%</small></div>
+          <div class="d"><span class="down">▲ 0.08%</span><span>thr 0.5%</span></div>
+        </div>
+      </div>
+      <div class="spec s4">
+        <div class="min"><span class="lot">SP-04</span></div>
+        <div class="body">
+          <div class="name"><b>本月账目</b><em>Computatio Mensis</em></div>
+          <div class="v">¥ 2,879<small>.50</small></div>
+          <div class="d"><span>auto-renew</span><span>T-11</span></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="grid">
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title">流水编目 <em>· Catalogus Vocationum</em><small>last 100 · prod</small></div>
+          <button class="btn">仅看异常</button>
+        </div>
+        <table>
+          <thead><tr><th>时</th><th>来者</th><th>端点 · vocatio</th><th>状</th><th>耗</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">14:02:11</td><td class="cl">京东数科</td><td class="mono">POST /v2/orders/sync</td>
+              <td><span class="stat ok">200</span></td>
+              <td><span class="lat">92 ms<span class="b"><i class="ok" style="width:18%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:09</td><td class="cl">内部 dashboard</td><td class="mono">GET /v2/metrics/window</td>
+              <td><span class="stat ok">200</span></td>
+              <td><span class="lat">140 ms<span class="b"><i class="ok" style="width:28%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:08</td><td class="cl">ACME</td><td class="mono">POST /v2/events/batch</td>
+              <td><span class="stat warn">429</span></td>
+              <td><span class="lat">318 ms<span class="b"><i class="warn" style="width:65%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:07</td><td class="cl">Office</td><td class="mono">DELETE /v2/keys/ak_3f…</td>
+              <td><span class="stat ok">204</span></td>
+              <td><span class="lat">58 ms<span class="b"><i class="ok" style="width:12%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:05</td><td class="cl">顺丰</td><td class="mono">GET /v2/orders?status=open</td>
+              <td><span class="stat bad">500</span></td>
+              <td><span class="lat">1.42 s<span class="b"><i class="bad" style="width:88%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:03</td><td class="cl">京东数科</td><td class="mono">POST /v2/webhooks/test</td>
+              <td><span class="stat ok">200</span></td>
+              <td><span class="lat">110 ms<span class="b"><i class="ok" style="width:22%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:01</td><td class="cl">平安</td><td class="mono">PUT /v2/orders/12489</td>
+              <td><span class="stat ok">200</span></td>
+              <td><span class="lat">181 ms<span class="b"><i class="ok" style="width:34%"></i></span></span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:24px">
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">名册 <em>· Index Membrorum</em><small>38 / 50</small></div>
+            <button class="btn">邀请</button>
+          </div>
+          <div class="members">
+            <div class="person"><div class="mineral m1">林</div><div><b>林安琪</b><small>liananqi · 2 min</small></div><div class="latin"><b>Owner</b>Azurite</div></div>
+            <div class="person"><div class="mineral m2">陈</div><div><b>陈维</b><small>chenwei · 1 hr</small></div><div class="latin"><b>Admin</b>Malachite</div></div>
+            <div class="person"><div class="mineral m3">蒋</div><div><b>蒋克</b><small>jiangke · 1 d</small></div><div class="latin"><b>Dev</b>Pyrite</div></div>
+            <div class="person"><div class="mineral m4">袁</div><div><b>袁倩</b><small>vendor · pending</small></div><div class="latin"><b>Read</b>Amethyst</div></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">账目 <em>· Computatio</em><small>06.01 – 06.30</small></div>
+            <button class="btn h">发票</button>
+          </div>
+          <div class="bill">
+            <div class="ln"><span>Growth 套餐</span><b>¥ 1,980.00</b></div>
+            <div class="ln"><span>超量调用 · 418,902 次</span><b>¥ 837.80</b></div>
+            <div class="ln"><span>Webhook 重试 · 12,341 次</span><b>¥ 61.70</b></div>
+            <div class="total"><span>Summa</span><b>¥ 2,879.50</b></div>
+            <div class="gauge">
+              <div class="top"><span>套餐用量 · ρ</span><span>72% · 2.42M / 3M</span></div>
+              <div class="bar"><i></i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <span><em>Cabinet of Northwind Cloud · Folio</em> <b>SHEET 01 / XII</b></span>
+      <span><b>UTC+8 · 14:02</b></span>
+    </footer>
+  </main>
+</div>
+</body>
+</html>

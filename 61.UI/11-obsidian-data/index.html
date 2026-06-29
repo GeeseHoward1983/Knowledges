@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>11 · 黑曜数据 — Northwind Cloud 控制台</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --bg:#0E1116;            /* 深石黑 */
+    --bg-2:#151921;
+    --panel:#1A1F28;
+    --panel-2:#222732;
+    --ink:#E8ECF2;
+    --ink-2:#8A93A1;
+    --ink-3:#4A5260;
+    --line:#262C36;
+    --line-2:#323948;
+    --amber:#E8A547;        /* Bloomberg 琥珀，主点缀 */
+    --amber-2:#FFC76B;
+    --ok:#7CB87B;
+    --warn:#E8A547;
+    --bad:#D86A6A;
+    --cyan:#6FB3CC;
+    --gold:#D4B86A;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;color:var(--ink);font-family:"IBM Plex Sans","PingFang SC",system-ui,sans-serif;background:var(--bg);font-size:12.5px;line-height:1.45}
+  body{min-height:100vh}
+  .app{display:grid;grid-template-columns:200px 1fr;min-height:100vh}
+
+  /* 边栏：交易终端式 */
+  aside{
+    background:var(--bg-2);border-right:1px solid var(--line);padding:0;
+  }
+  .brand{
+    padding:10px 14px;border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:9px;background:var(--panel);
+  }
+  .brand b{font-weight:700;font-size:13px;letter-spacing:.04em}
+  .brand small{display:block;color:var(--amber);font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.1em;margin-top:1px}
+
+  .nav-section{
+    padding:8px 14px 4px;font-family:"JetBrains Mono",monospace;font-size:10px;
+    color:var(--ink-3);letter-spacing:.16em;text-transform:uppercase;background:var(--bg-2);
+  }
+  .nav a{
+    display:grid;grid-template-columns:18px 1fr auto;align-items:center;gap:8px;
+    padding:5px 14px;text-decoration:none;color:var(--ink-2);font-size:12.5px;
+  }
+  .nav a:hover{background:var(--panel);color:var(--ink)}
+  .nav a.active{background:var(--panel-2);color:var(--amber);border-left:2px solid var(--amber);padding-left:12px}
+  .nav a .k{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--ink-3)}
+
+  /* 顶 toolbar */
+  main{padding:0;min-width:0;display:flex;flex-direction:column}
+  .toolbar{
+    display:flex;align-items:center;gap:10px;
+    padding:6px 14px;background:var(--bg-2);border-bottom:1px solid var(--line);
+    font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-2);
+  }
+  .toolbar .crumb b{color:var(--amber);font-weight:600;text-transform:uppercase}
+  .toolbar .spacer{flex:1}
+  .toolbar .clock{color:var(--amber);font-weight:600}
+  .pill{padding:2px 7px;border:1px solid var(--line-2);color:var(--ink-2);font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.08em}
+  .pill.live{border-color:var(--ok);color:var(--ok)}
+  .pill.live::before{content:"●";margin-right:4px}
+
+  /* ticker */
+  .ticker{
+    display:flex;gap:0;overflow:hidden;background:var(--bg);
+    border-bottom:1px solid var(--line);font-family:"JetBrains Mono",monospace;font-size:11.5px;
+  }
+  .ticker .t{
+    padding:6px 16px;border-right:1px solid var(--line);display:flex;gap:8px;white-space:nowrap;color:var(--ink-2);
+  }
+  .ticker .t b{color:var(--ink);font-weight:600}
+  .ticker .t .up{color:var(--ok)}
+  .ticker .t .down{color:var(--bad)}
+
+  /* 主区四象限网格 */
+  .grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto;gap:1px;background:var(--line);flex:1}
+
+  .pane{background:var(--bg);display:flex;flex-direction:column;min-height:0;min-width:0}
+  .pane-head{
+    display:flex;align-items:center;gap:10px;
+    padding:6px 12px;border-bottom:1px solid var(--line);background:var(--bg-2);
+  }
+  .pane-head .h{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--amber);font-weight:700}
+  .pane-head .sub{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--ink-3);letter-spacing:.06em}
+  .pane-head .spacer{flex:1}
+  .pane-head .meta{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--ink-3)}
+  .pane-head .meta b{color:var(--ink-2)}
+
+  /* PANE 1: KPI grid */
+  .kpi-mat{
+    display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(2,1fr);gap:1px;background:var(--line);flex:1;
+  }
+  .kpi-c{background:var(--bg);padding:10px 12px;display:flex;flex-direction:column;justify-content:space-between}
+  .kpi-c .l{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--ink-3);letter-spacing:.16em;text-transform:uppercase}
+  .kpi-c .v{font-family:"JetBrains Mono",monospace;font-size:22px;font-weight:700;color:var(--ink);letter-spacing:-.01em;line-height:1;margin-top:6px;font-variant-numeric:tabular-nums}
+  .kpi-c .v small{font-size:10px;color:var(--ink-3);margin-left:3px;font-weight:400}
+  .kpi-c .v.acc{color:var(--amber)}
+  .kpi-c .v.ok{color:var(--ok)}
+  .kpi-c .v.bad{color:var(--bad)}
+  .kpi-c .d{display:flex;justify-content:space-between;font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--ink-3);margin-top:6px}
+  .kpi-c .d .up{color:var(--ok)}
+  .kpi-c .d .down{color:var(--bad)}
+  /* 微型条形图列：直接在 cell 里画 sparkbars */
+  .kpi-c .bars{display:flex;gap:2px;align-items:flex-end;height:24px;margin-top:6px}
+  .kpi-c .bars span{width:6px;background:var(--ink-3)}
+  .kpi-c .bars span.cur{background:var(--amber)}
+
+  /* PANE 2: 日志表 */
+  table{width:100%;border-collapse:collapse;font-family:"JetBrains Mono",monospace;font-size:11.5px}
+  th{
+    text-align:left;font-weight:700;font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3);
+    padding:5px 10px;border-bottom:1px solid var(--line);background:var(--bg-2);position:sticky;top:0;
+  }
+  td{padding:5px 10px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+  tr:hover td{background:var(--panel)}
+  td.t{color:var(--ink-2)}
+  td.ep{color:var(--ink)}
+  .st{font-weight:700}
+  .st.ok{color:var(--ok)}
+  .st.warn{color:var(--amber)}
+  .st.bad{color:var(--bad)}
+  /* 表格里的微型条形 */
+  .micro-bar{display:inline-flex;gap:1px;align-items:flex-end;height:12px;vertical-align:middle;margin-left:6px}
+  .micro-bar span{width:2px;background:var(--ink-3)}
+  .micro-bar.warn span{background:var(--amber)}
+  .micro-bar.bad span{background:var(--bad)}
+  .scroll{flex:1;overflow:auto}
+
+  /* PANE 3: book / members */
+  .book{display:grid;grid-template-columns:24px 1fr 70px 60px;font-family:"JetBrains Mono",monospace;font-size:11.5px}
+  .book-h{
+    grid-column:1/-1;background:var(--bg-2);padding:5px 10px;border-bottom:1px solid var(--line);
+    font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3);font-weight:700;
+    display:grid;grid-template-columns:subgrid;
+  }
+  .book .ix{color:var(--ink-3);padding:5px 10px;border-bottom:1px solid var(--line)}
+  .book .who{padding:5px 10px;border-bottom:1px solid var(--line);color:var(--ink)}
+  .book .who small{display:block;color:var(--ink-3);font-size:10px;margin-top:1px}
+  .book .role{padding:5px 10px;border-bottom:1px solid var(--line);color:var(--amber);font-weight:600}
+  .book .age{padding:5px 10px;border-bottom:1px solid var(--line);color:var(--ink-2);text-align:right}
+  .book .age.live{color:var(--ok)}
+
+  /* PANE 4: bill block + heatmap */
+  .bill-mat{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);flex:1;min-height:0}
+  .bill-cell{background:var(--bg);padding:10px 12px;font-family:"JetBrains Mono",monospace;font-size:11.5px;display:flex;flex-direction:column;min-height:0}
+  .bill-cell .h{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3);font-weight:700;margin-bottom:8px}
+  .bill-cell .ln{display:flex;justify-content:space-between;padding:3px 0;color:var(--ink-2)}
+  .bill-cell .ln b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+  .bill-cell .ln.total{border-top:1px solid var(--line-2);margin-top:6px;padding-top:8px}
+  .bill-cell .ln.total b{color:var(--amber);font-size:18px}
+  .bill-cell .gauge{margin-top:8px;height:10px;background:var(--bg-2);position:relative;border:1px solid var(--line)}
+  .bill-cell .gauge i{display:block;height:100%;width:72%;background:var(--amber)}
+  .bill-cell .gauge::after{content:"";position:absolute;top:-3px;bottom:-3px;left:50%;width:1px;background:var(--ok)}
+  .bill-cell .legend{display:flex;justify-content:space-between;font-size:10px;color:var(--ink-3);margin-top:4px}
+
+  /* 热力图 */
+  .heat{display:grid;grid-template-columns:repeat(24,1fr);grid-template-rows:repeat(7,1fr);gap:2px;flex:1;margin-top:6px;min-height:0}
+  .heat i{display:block;background:var(--bg-2);min-height:8px}
+  .heat-labels{display:flex;justify-content:space-between;font-size:9px;color:var(--ink-3);margin-top:4px;font-family:"JetBrains Mono",monospace}
+
+  /* 状态栏 */
+  .statusbar{
+    display:flex;align-items:center;gap:14px;padding:4px 14px;background:var(--bg-2);border-top:1px solid var(--line);
+    font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-3);
+  }
+  .statusbar b{color:var(--ink-2)}
+  .statusbar .spacer{flex:1}
+  .statusbar .ok{color:var(--ok)}
+
+  @media (max-width:1100px){
+    .app{grid-template-columns:1fr}
+    aside{border-right:0;border-bottom:1px solid var(--line)}
+    .grid{grid-template-columns:1fr}
+    .kpi-mat{grid-template-columns:1fr 1fr;grid-template-rows:repeat(4,1fr)}
+    .bill-mat{grid-template-columns:1fr}
+    .ticker{flex-wrap:wrap}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="brand">
+      <b>NWND</b><small>CLOUD v2.18</small>
+    </div>
+    <div class="nav-section">OVERVIEW</div>
+    <nav class="nav">
+      <a class="active"><span class="k">F1</span><span>Dashboard</span><span class="k">●</span></a>
+      <a><span class="k">F2</span><span>Traffic</span><span class="k">02</span></a>
+      <a><span class="k">F3</span><span>Regions</span><span class="k">03</span></a>
+    </nav>
+    <div class="nav-section">RESOURCES</div>
+    <nav class="nav">
+      <a><span class="k">F4</span><span>Keys</span><span class="k">12</span></a>
+      <a><span class="k">F5</span><span>Webhooks</span><span class="k">07</span></a>
+      <a><span class="k">F6</span><span>Export</span><span class="k">—</span></a>
+    </nav>
+    <div class="nav-section">ACCOUNT</div>
+    <nav class="nav">
+      <a><span class="k">F7</span><span>Members</span><span class="k">38</span></a>
+      <a><span class="k">F8</span><span>Billing</span><span class="k">—</span></a>
+      <a><span class="k">F9</span><span>Config</span><span class="k">—</span></a>
+    </nav>
+    <div class="nav-section">DANGER</div>
+    <nav class="nav">
+      <a><span class="k">F10</span><span>Rotate Keys</span><span class="k">!</span></a>
+      <a><span class="k">F12</span><span>Quit</span><span class="k">Q</span></a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="toolbar">
+      <span class="crumb">ORG <b>NORTHWIND</b> · ENV <b>PROD</b> · REGION <b>AP-SE-1</b></span>
+      <span class="spacer"></span>
+      <span class="pill live">STREAMING 5S</span>
+      <span class="pill">F1 HELP</span>
+      <span class="pill">CMD ⌘K</span>
+      <span class="clock">2026-06-19 · 14:02:11 CST</span>
+    </div>
+
+    <div class="ticker">
+      <div class="t">CALLS.M <b>2,418,902</b> <span class="up">▲ 12.4%</span></div>
+      <div class="t">CALLS.D <b>168,433</b> <span class="up">▲ 3.1%</span></div>
+      <div class="t">ERR.24H <b style="color:var(--amber)">0.42%</b> <span class="down">▲ 0.08%</span></div>
+      <div class="t">P95.LAT <b>184ms</b> <span class="down">▲ 12ms</span></div>
+      <div class="t">QPS.NOW <b>312</b> <span class="up">▲ 24</span></div>
+      <div class="t">MBR.LIVE <b>38</b> <span class="up">▲ 4</span></div>
+      <div class="t">QUOTA.USED <b>72%</b></div>
+      <div class="t">BILL.MTD <b>¥ 2,879.50</b></div>
+      <div class="t">PLAN <b>GROWTH</b></div>
+      <div class="t">T-MINUS <b>11d 09h</b></div>
+    </div>
+
+    <div class="grid">
+      <!-- PANE 1: KPI matrix -->
+      <section class="pane">
+        <div class="pane-head">
+          <span class="h">KPI · 4×2</span>
+          <span class="sub">aggregate / 30d</span>
+          <span class="spacer"></span>
+          <span class="meta">refresh <b>5s</b></span>
+        </div>
+        <div class="kpi-mat">
+          <div class="kpi-c">
+            <div class="l">CALLS · MTD</div>
+            <div class="v">2,418,902</div>
+            <div class="d"><span class="up">+12.4% MoM</span><span>tgt 3.0M</span></div>
+          </div>
+          <div class="kpi-c">
+            <div class="l">ERR.RATE · 24H</div>
+            <div class="v acc">0.42%</div>
+            <div class="d"><span class="down">+0.08%</span><span>thr 0.5%</span></div>
+          </div>
+          <div class="kpi-c">
+            <div class="l">P95 LAT · 1H</div>
+            <div class="v">184<small>ms</small></div>
+            <div class="d"><span class="down">+12ms</span><span>SLO 200ms</span></div>
+          </div>
+          <div class="kpi-c">
+            <div class="l">QPS · NOW</div>
+            <div class="v ok">312</div>
+            <div class="bars">
+              <span style="height:30%"></span><span style="height:42%"></span><span style="height:55%"></span>
+              <span style="height:48%"></span><span style="height:62%"></span><span style="height:80%"></span><span class="cur" style="height:95%"></span>
+            </div>
+          </div>
+          <div class="kpi-c">
+            <div class="l">MEMBERS · LIVE</div>
+            <div class="v">38<small>/50</small></div>
+            <div class="d"><span class="up">+4 wk</span><span>idle 12</span></div>
+          </div>
+          <div class="kpi-c">
+            <div class="l">KEYS · ACTIVE</div>
+            <div class="v">12</div>
+            <div class="d"><span>rotated 06.12</span><span>ttl 23h</span></div>
+          </div>
+          <div class="kpi-c">
+            <div class="l">QUOTA · USED</div>
+            <div class="v acc">72<small>%</small></div>
+            <div class="bars">
+              <span style="height:40%"></span><span style="height:50%"></span><span style="height:60%"></span>
+              <span style="height:65%"></span><span style="height:70%"></span><span class="cur" style="height:72%"></span><span style="height:0"></span>
+            </div>
+          </div>
+          <div class="kpi-c">
+            <div class="l">BILL · MTD</div>
+            <div class="v">¥ 2,879<small>.50</small></div>
+            <div class="d"><span>auto-renew</span><span>T-11d</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PANE 2: log -->
+      <section class="pane">
+        <div class="pane-head">
+          <span class="h">ACCESS LOG · TAIL -F</span>
+          <span class="sub">last 100 · prod</span>
+          <span class="spacer"></span>
+          <span class="meta">filter <b>all</b> sort <b>t↓</b></span>
+        </div>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>T</th><th>CALLER</th><th>METHOD ENDPOINT</th><th>STAT</th><th>LAT</th></tr></thead>
+            <tbody>
+              <tr><td class="t">14:02:11.314</td><td>jd-digits · node@1.8</td><td class="ep">POST /v2/orders/sync</td><td class="st ok">200</td><td>92ms<span class="micro-bar"><span style="height:30%"></span><span style="height:40%"></span><span style="height:35%"></span></span></td></tr>
+              <tr><td class="t">14:02:09.870</td><td>web · dashboard</td><td class="ep">GET /v2/metrics/window</td><td class="st ok">200</td><td>140ms<span class="micro-bar"><span style="height:30%"></span><span style="height:55%"></span><span style="height:60%"></span></span></td></tr>
+              <tr><td class="t">14:02:08.005</td><td>acme · py@2.3</td><td class="ep">POST /v2/events/batch</td><td class="st warn">429</td><td>318ms<span class="micro-bar warn"><span style="height:60%"></span><span style="height:80%"></span><span style="height:100%"></span></span></td></tr>
+              <tr><td class="t">14:02:07.121</td><td>office · curl/8.4</td><td class="ep">DELETE /v2/keys/ak_3f…</td><td class="st ok">204</td><td>58ms<span class="micro-bar"><span style="height:18%"></span><span style="height:30%"></span><span style="height:22%"></span></span></td></tr>
+              <tr><td class="t">14:02:05.443</td><td>sf · go@1.1</td><td class="ep">GET /v2/orders?status=open</td><td class="st bad">500</td><td>1.42s<span class="micro-bar bad"><span style="height:90%"></span><span style="height:100%"></span><span style="height:95%"></span></span></td></tr>
+              <tr><td class="t">14:02:03.018</td><td>jd-digits · node@1.8</td><td class="ep">POST /v2/webhooks/test</td><td class="st ok">200</td><td>110ms<span class="micro-bar"><span style="height:25%"></span><span style="height:38%"></span><span style="height:30%"></span></span></td></tr>
+              <tr><td class="t">14:02:01.770</td><td>pingan · java@3.0</td><td class="ep">PUT /v2/orders/12489</td><td class="st ok">200</td><td>181ms<span class="micro-bar"><span style="height:40%"></span><span style="height:55%"></span><span style="height:60%"></span></span></td></tr>
+              <tr><td class="t">14:02:00.110</td><td>jd-digits · node@1.8</td><td class="ep">POST /v2/events</td><td class="st ok">200</td><td>88ms<span class="micro-bar"><span style="height:20%"></span><span style="height:32%"></span><span style="height:28%"></span></span></td></tr>
+              <tr><td class="t">14:01:58.620</td><td>web · dashboard</td><td class="ep">GET /v2/billing/current</td><td class="st ok">200</td><td>72ms<span class="micro-bar"><span style="height:18%"></span><span style="height:24%"></span><span style="height:22%"></span></span></td></tr>
+              <tr><td class="t">14:01:57.301</td><td>acme · py@2.3</td><td class="ep">POST /v2/events/batch</td><td class="st warn">429</td><td>302ms<span class="micro-bar warn"><span style="height:55%"></span><span style="height:80%"></span><span style="height:95%"></span></span></td></tr>
+              <tr><td class="t">14:01:55.110</td><td>internal · cron</td><td class="ep">POST /v2/jobs/reconcile</td><td class="st ok">200</td><td>620ms<span class="micro-bar"><span style="height:50%"></span><span style="height:70%"></span><span style="height:85%"></span></span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- PANE 3: members book -->
+      <section class="pane">
+        <div class="pane-head">
+          <span class="h">ORDER BOOK · MEMBERS</span>
+          <span class="sub">38 in / 12 idle</span>
+          <span class="spacer"></span>
+          <span class="meta">org <b>northwind</b></span>
+        </div>
+        <div class="book">
+          <div class="book-h">
+            <span class="ix">UID</span><span class="who">USER · EMAIL</span><span class="role">ROLE</span><span class="age">SEEN</span>
+          </div>
+          <span class="ix">001</span><span class="who">liananqi <small>liananqi@northwind.io</small></span><span class="role">OWNER</span><span class="age live">2m</span>
+          <span class="ix">002</span><span class="who">chenwei <small>chenwei@northwind.io</small></span><span class="role">ADMIN</span><span class="age live">1h</span>
+          <span class="ix">003</span><span class="who">jiangke <small>jiangke@northwind.io</small></span><span class="role">DEV</span><span class="age">1d</span>
+          <span class="ix">004</span><span class="who">yuanqian <small>yuanqian@vendor.com</small></span><span class="role">READ</span><span class="age">PEND</span>
+          <span class="ix">005</span><span class="who">huming <small>huming@northwind.io</small></span><span class="role">DEV</span><span class="age">3d</span>
+          <span class="ix">006</span><span class="who">sumin <small>sumin@northwind.io</small></span><span class="role">DEV</span><span class="age">5d</span>
+          <span class="ix">007</span><span class="who">guotao <small>guotao@vendor.com</small></span><span class="role">READ</span><span class="age">2w</span>
+          <span class="ix">008</span><span class="who">wuyifei <small>wuyifei@northwind.io</small></span><span class="role">DEV</span><span class="age live">42m</span>
+          <span class="ix">009</span><span class="who">lijing <small>lijing@northwind.io</small></span><span class="role">ADMIN</span><span class="age">6h</span>
+          <span class="ix">010</span><span class="who">zhangtao <small>zhangtao@vendor.com</small></span><span class="role">READ</span><span class="age">3w</span>
+          <span class="ix">011</span><span class="who">caichen <small>caichen@northwind.io</small></span><span class="role">DEV</span><span class="age">2d</span>
+          <span class="ix">012</span><span class="who">…</span><span class="role">26 more</span><span class="age">—</span>
+        </div>
+      </section>
+
+      <!-- PANE 4: bill + heatmap -->
+      <section class="pane">
+        <div class="pane-head">
+          <span class="h">BILLING · MTD + HEAT</span>
+          <span class="sub">2026-06</span>
+          <span class="spacer"></span>
+          <span class="meta">plan <b>GROWTH</b></span>
+        </div>
+        <div class="bill-mat">
+          <div class="bill-cell">
+            <div class="h">CHARGES</div>
+            <div class="ln"><span>PLAN · GROWTH</span><b>¥ 1,980.00</b></div>
+            <div class="ln"><span>OVERAGE · 418,902</span><b>¥ 837.80</b></div>
+            <div class="ln"><span>WH RETRY · 12,341</span><b>¥ 61.70</b></div>
+            <div class="ln total"><span>TOTAL · 06</span><b>¥ 2,879.50</b></div>
+            <div class="gauge"><i></i></div>
+            <div class="legend"><span>72% USED</span><span>2.42M / 3M</span></div>
+          </div>
+          <div class="bill-cell" style="min-height:0">
+            <div class="h">HEATMAP · CALLS / HOUR · 7D</div>
+            <div class="heat">
+              <!-- 7 rows × 24 cols 简化生成 -->
+              <i style="background:#1A1F28"></i><i style="background:#1A1F28"></i><i style="background:#222732"></i><i style="background:#222732"></i><i style="background:#2A2F3A"></i><i style="background:#3A3F4A"></i><i style="background:#4A4F5C"></i><i style="background:#5A5346"></i><i style="background:#7A6638"></i><i style="background:#8A7530"></i><i style="background:#A88928"></i><i style="background:#E8A547"></i><i style="background:#E8A547"></i><i style="background:#A88928"></i><i style="background:#8A7530"></i><i style="background:#6A5C40"></i><i style="background:#5A5346"></i><i style="background:#4A4F5C"></i><i style="background:#3A3F4A"></i><i style="background:#2A2F3A"></i><i style="background:#222732"></i><i style="background:#222732"></i><i style="background:#1A1F28"></i><i style="background:#1A1F28"></i>
+              <i style="background:#1A1F28"></i><i style="background:#222732"></i><i style="background:#222732"></i><i style="background:#2A2F3A"></i><i style="background:#3A3F4A"></i><i style="background:#4A4F5C"></i><i style="background:#5A5346"></i><i style="background:#7A6638"></i><i style="background:#8A7530"></i><i style="background:#A88928"></i><i style="background:#E8A547"></i><i style="background:#FFC76B"></i><i style="background:#E8A547"></i><i style="background:#A88928"></i><i style="background:#8A7530"></i><i style="background:#6A5C40"></i><i style="background:#4A4F5C"></i><i style="background:#3A3F4A"></i><i style="background:#2A2F3A"></i><i style="background:#222732"></i><i style="background:#222732"></i><i style="background:#1A1F28"></i><i style="background:#1A1F28"></i><i style="background:#1A1F28"></i>
+              <i style="background:#1A1F28"></i><i style="background:#1A1F28"></i><i style="background:#222732"></i><i style="background:#222732"></i><i style="background:#3A3F4A"></i><i style="background:#4A4F5C"></i><i style="background:#6A5C40"></i><i style="background:#7A6638"></i><i style="background:#A88928"></i><i style="background:#E8A547"></i><i style="background:#E8A547"></i><i style="background:#FFC76B"></i><i style="background:#FFC76B"></i><i style="background:#E8A547"></i><i style="background:#A88928"></i><i style="background:#8A7530"></i><i style="background:#6A5C40"></i><i style="background:#4A4F5C"></i><i style="background:#3A3F4A"></i><i style="background:#2A2F3A"></i><i style="background:#222732"></i><i style="background:#1A1F28"></i><i style="background:#1A1F28"></i><i style="background:#1A1F28"></i>
+              <i style="background:#1A1F28"></i><i style="background:#222732"></i><i style="background:#222732"></i><i style="background:#2A2F3A"></i><i style="background:#3A3F4A"></i><i style="background:#4A4F5C"></i><i style="background:#5A5346"></i><i style="background:#7A6638"></i><i style="background:#8A7530"></i><i style="background:#A88928"></i><i style="background:#D86A6A"></i><i style="background:#D86A6A"></i><i style="background:#E8A547"></i><i style="background:#A88928"></i><i style="background:#8A7530"></i><i style="background:#6A5C40"></i><i style="background:#4A4F5C"></i><i style="background:#3A3F4A"></i><i style="background:#2A2F3A"></i><i style="background:#222732"></i><i style="background:#222732"></i><i style="background:#1A1F28"></i><i style="background:#1A1F28"></i><i style="background:#1A1F28"></i>
+              <i style="background:#1A1F28"></i><i style="background:#1A1F28"></i><i style="background:#222732"></i><i style="background:#2A2F3A"></i><i style="background:#3A3F4A"></i><i style="background:#5A5346"></i><i style="background:#7A6638"></i><i style="background:#A88928"></i><i style="background:#A88928"></i><i style="background:#E8A547"></i><i style="background:#E8A547"></i><i style="background:#FFC76B"></i><i style="background:#E8A547"></i><i style="background:#A88928"></i><i style="background:#8A7530"></i><i style="background:#6A5C40"></i><i style="background:#4A4F5C"></i><i style="background:#3A3F4A"></i><i style="background:#2A2F3A"></i><i style="background:#222732"></i><i style="background:#222732"></i><i style="background:#1A1F28"></i><i style="background:#1A1F28"></i><i style="background:#1A1F28"></i>
+              <i style="background:#1A1F28"></i><i style="background:#222732"></i><i style="background:#222732"></i><i style="background:#222732"></i><i style="background:#2A2F3A"></i><i style="background:#3A3F4A"></i><i style="background:#4A4F5C"></i><i style="background:#5A5346"></i><i style="background:#6A5C40"></i><i style="background:#7A6638"></i><i style="background:#8A7530"></i><i style="background:#A88928"></i><i style="background:#A88928"></i><i style="background:#8A7530"></i><i style="background:#7A6638"></i><i style="background:#6A5C40"></i><i style="background:#5A5346"></i><i style="background:#4A4F5C"></i><i style="background:#3A3F4A"></i><i style="background:#2A2F3A"></i><i style="background:#222732"></i><i style="background:#1A1F28"></i><i style="background:#1A1F28"></i><i style="background:#1A1F28"></i>
+              <i style="background:#1A1F28"></i><i style="background:#1A1F28"></i><i style="background:#222732"></i><i style="background:#222732"></i><i style="background:#222732"></i><i style="background:#2A2F3A"></i><i style="background:#3A3F4A"></i><i style="background:#4A4F5C"></i><i style="background:#5A5346"></i><i style="background:#6A5C40"></i><i style="background:#7A6638"></i><i style="background:#7A6638"></i><i style="background:#6A5C40"></i><i style="background:#5A5346"></i><i style="background:#4A4F5C"></i><i style="background:#3A3F4A"></i><i style="background:#2A2F3A"></i><i style="background:#222732"></i><i style="background:#222732"></i><i style="background:#1A1F28"></i><i style="background:#1A1F28"></i><i style="background:#1A1F28"></i><i style="background:#1A1F28"></i><i style="background:#1A1F28"></i>
+            </div>
+            <div class="heat-labels"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="statusbar">
+      <span>USR <b>liananqi</b></span>
+      <span>TKN <b>ak_3f…b91c</b></span>
+      <span>TTL <b>23h</b></span>
+      <span class="spacer"></span>
+      <span class="ok">● STREAM OK</span>
+      <span>LAT <b>42ms</b></span>
+      <span>LOAD <b>0.42 0.38 0.31</b></span>
+      <span>UPTIME <b>17d 04:22</b></span>
+    </div>
+  </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>21 · 莫奈花园 — Northwind Cloud 控制台</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --ink:#2A3142;
+    --ink-2:#5A6378;
+    --ink-3:#8B93A6;
+    --paper:rgba(255,255,255,.55);
+    --line:rgba(42,49,66,.1);
+    --line-2:rgba(42,49,66,.2);
+    --lily:#D8A3C4;       /* 睡莲粉 */
+    --pond:#5A8FA8;       /* 池蓝 */
+    --willow:#7BA665;     /* 柳绿 */
+    --sun:#E8C76B;        /* 日金 */
+    --iris:#6E7BB8;       /* 鸢尾紫 */
+    --ok:#5BA37D;
+    --warn:#D49A4F;
+    --bad:#C16569;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;color:var(--ink);font-family:"DM Serif Display","Manrope","PingFang SC",serif;background:#E8EAF0}
+  body{
+    min-height:100vh;font-size:14.5px;line-height:1.55;overflow-x:hidden;position:relative;
+    background:
+      /* 油画底色斑 */
+      radial-gradient(900px 600px at 12% 18%, #C9D8E0 0%, transparent 55%),
+      radial-gradient(700px 500px at 88% 28%, #E2D2DE 0%, transparent 60%),
+      radial-gradient(800px 600px at 28% 92%, #D6E0C2 0%, transparent 55%),
+      radial-gradient(600px 460px at 78% 88%, #EFD9A6 0%, transparent 55%),
+      linear-gradient(180deg, #E8EAF0 0%, #F0E6E2 100%);
+    background-attachment:fixed;
+  }
+  /* 笔触斑点（SVG 噪点 + 椭圆笔触叠加） */
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='620' height='620'><g opacity='.45'><ellipse cx='90' cy='110' rx='28' ry='6' fill='%237BA665' transform='rotate(20 90 110)'/><ellipse cx='420' cy='80' rx='22' ry='4' fill='%23D8A3C4' transform='rotate(-15 420 80)'/><ellipse cx='220' cy='280' rx='30' ry='5' fill='%235A8FA8' transform='rotate(35 220 280)'/><ellipse cx='540' cy='340' rx='26' ry='5' fill='%23E8C76B' transform='rotate(-10 540 340)'/><ellipse cx='160' cy='480' rx='30' ry='6' fill='%236E7BB8' transform='rotate(40 160 480)'/><ellipse cx='480' cy='540' rx='26' ry='5' fill='%237BA665' transform='rotate(-20 480 540)'/><ellipse cx='340' cy='180' rx='18' ry='4' fill='%23D8A3C4' transform='rotate(10 340 180)'/><ellipse cx='60' cy='320' rx='20' ry='4' fill='%23E8C76B' transform='rotate(-30 60 320)'/></g></svg>");
+    opacity:.6;
+  }
+  body::after{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .05 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+
+  .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh;position:relative;z-index:1}
+
+  /* 玻璃 */
+  .glass{
+    background:var(--paper);
+    backdrop-filter:blur(24px) saturate(140%);
+    -webkit-backdrop-filter:blur(24px) saturate(140%);
+    border:1px solid rgba(255,255,255,.6);
+    border-radius:22px;
+    box-shadow:0 1px 0 rgba(255,255,255,.8) inset, 0 16px 50px rgba(42,49,66,.06);
+  }
+
+  aside{margin:18px;padding:24px 18px}
+  .brand{display:flex;align-items:center;gap:12px;margin-bottom:22px}
+  .brand-mark{
+    width:44px;height:44px;border-radius:50%;position:relative;overflow:hidden;
+    background:
+      radial-gradient(circle at 30% 30%, var(--lily) 0%, transparent 55%),
+      radial-gradient(circle at 70% 60%, var(--pond) 0%, transparent 55%),
+      radial-gradient(circle at 40% 80%, var(--willow) 0%, transparent 55%),
+      var(--sun);
+  }
+  .brand-name{font-family:"DM Serif Display",serif;font-weight:400;font-size:22px;letter-spacing:.01em;line-height:1}
+  .brand-name small{display:block;font-family:"Manrope",sans-serif;font-weight:600;font-size:10.5px;color:var(--ink-2);letter-spacing:.22em;text-transform:uppercase;margin-top:3px}
+
+  .nav-section{font-family:"Manrope",sans-serif;font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-2);margin:18px 6px 4px;font-weight:700}
+  .nav a{
+    display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:11px;
+    text-decoration:none;color:var(--ink);font-family:"Manrope",sans-serif;font-size:14px;font-weight:600;
+  }
+  .nav a:hover{background:rgba(255,255,255,.45)}
+  .nav a.active{background:rgba(255,255,255,.75);box-shadow:0 1px 2px rgba(42,49,66,.06)}
+  .nav a .dot{width:8px;height:8px;border-radius:50%;background:var(--pond);box-shadow:0 0 0 2px rgba(90,143,168,.18)}
+  .nav a.active .dot{background:var(--lily);box-shadow:0 0 0 3px rgba(216,163,196,.3)}
+
+  main{padding:18px 18px 32px 0;min-width:0}
+
+  /* Hero */
+  .hero{padding:30px 32px;margin-bottom:18px;position:relative;overflow:hidden}
+  .eyebrow{font-family:"Manrope",sans-serif;font-size:11.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--pond);font-weight:700}
+  .hero h1{
+    margin:8px 0 6px;font-family:"DM Serif Display","Source Han Serif SC",serif;
+    font-weight:400;font-size:54px;letter-spacing:-.02em;line-height:1.05;
+  }
+  .hero h1 em{font-style:italic;color:var(--lily)}
+  .hero p{margin:10px 0 0;color:var(--ink-2);font-family:"Manrope",sans-serif;font-size:14px;max-width:540px;line-height:1.8}
+  .hero p b{color:var(--ink);font-weight:700}
+  .hero .right{position:absolute;right:24px;top:24px;text-align:right;font-family:"Manrope",sans-serif;font-size:11.5px;color:var(--ink-2);letter-spacing:.18em;text-transform:uppercase;line-height:1.8}
+  .hero .right b{display:block;font-family:"DM Serif Display",serif;font-weight:400;font-size:22px;color:var(--ink);letter-spacing:0;text-transform:none}
+
+  /* KPI 油画卡 */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:18px 0}
+  .kpi{padding:18px 20px;display:flex;flex-direction:column;gap:6px;position:relative;overflow:hidden}
+  .kpi .swatch{
+    position:absolute;top:-30px;right:-30px;width:110px;height:110px;border-radius:50%;opacity:.5;filter:blur(20px);
+  }
+  .kpi.k1 .swatch{background:var(--lily)}
+  .kpi.k2 .swatch{background:var(--willow)}
+  .kpi.k3 .swatch{background:var(--sun)}
+  .kpi.k4 .swatch{background:var(--iris)}
+  .kpi .l{font-family:"Manrope",sans-serif;font-size:11px;color:var(--ink-2);font-weight:700;letter-spacing:.18em;text-transform:uppercase}
+  .kpi .v{font-family:"DM Serif Display",serif;font-weight:400;font-size:36px;letter-spacing:-.01em;line-height:1.05;position:relative}
+  .kpi .v small{font-family:"Manrope",sans-serif;font-weight:500;font-size:12px;color:var(--ink-2);margin-left:4px}
+  .kpi .d{font-family:"Manrope",sans-serif;font-size:12px;color:var(--ink-2);font-weight:600;display:flex;justify-content:space-between;position:relative}
+  .up{color:var(--ok)}
+  .down{color:var(--bad)}
+
+  /* 主区 */
+  .grid{display:grid;grid-template-columns:1.55fr 1fr;gap:18px}
+  .panel{padding:0;overflow:hidden}
+  .panel-head{display:flex;justify-content:space-between;align-items:center;padding:20px 24px;border-bottom:1px solid var(--line)}
+  .panel-title{font-family:"DM Serif Display",serif;font-weight:400;font-size:22px;letter-spacing:-.01em}
+  .panel-title small{display:block;font-family:"Manrope",sans-serif;font-weight:500;font-size:12px;color:var(--ink-2);margin-top:1px;letter-spacing:.04em}
+
+  .tabs{display:flex;gap:4px;padding:4px;background:rgba(255,255,255,.55);border-radius:11px;border:1px solid var(--line)}
+  .tab{padding:5px 12px;font-family:"Manrope",sans-serif;font-size:12.5px;font-weight:600;border-radius:8px;cursor:pointer;color:var(--ink-2)}
+  .tab.active{background:#fff;color:var(--ink)}
+
+  table{width:100%;border-collapse:collapse;font-family:"Manrope",sans-serif;font-size:13.5px}
+  th{text-align:left;font-weight:700;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-2);padding:10px 24px;border-bottom:1px solid var(--line)}
+  td{padding:14px 24px;border-bottom:1px dotted var(--line-2)}
+  tr:last-child td{border-bottom:0}
+  td.mono{font-family:"JetBrains Mono",monospace;font-size:12.5px;color:var(--ink)}
+  .chip{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:99px;font-size:11.5px;font-weight:700}
+  .chip.ok{background:rgba(91,163,125,.18);color:#2D6B4C}
+  .chip.warn{background:rgba(212,154,79,.2);color:#7A5118}
+  .chip.bad{background:rgba(193,101,105,.2);color:#7A2A2E}
+  .lat{display:inline-flex;align-items:center;gap:10px;font-family:"JetBrains Mono",monospace;font-size:12px}
+  .lat .b{width:54px;height:6px;border-radius:99px;background:rgba(42,49,66,.08);overflow:hidden}
+  .lat .b i{display:block;height:100%;border-radius:99px}
+  .lat .b i.ok{background:linear-gradient(90deg,var(--willow),var(--pond))}
+  .lat .b i.warn{background:linear-gradient(90deg,var(--sun),var(--warn))}
+  .lat .b i.bad{background:linear-gradient(90deg,var(--lily),var(--bad))}
+
+  .members{padding:6px 0}
+  .member{display:grid;grid-template-columns:42px 1fr auto;gap:14px;align-items:center;padding:13px 24px;border-bottom:1px dotted var(--line-2)}
+  .member:last-child{border-bottom:0}
+  .m-av{
+    width:42px;height:42px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;color:#fff;font-family:"DM Serif Display",serif;font-weight:400;font-size:18px;
+  }
+  .m-av.a1{background:radial-gradient(circle at 30% 30%,var(--lily),#A36B92)}
+  .m-av.a2{background:radial-gradient(circle at 30% 30%,var(--pond),#2F5A6E)}
+  .m-av.a3{background:radial-gradient(circle at 30% 30%,var(--willow),#4F7639)}
+  .m-av.a4{background:radial-gradient(circle at 30% 30%,var(--iris),#3F4D87)}
+  .member b{font-family:"DM Serif Display",serif;font-weight:400;font-size:17px}
+  .member small{display:block;font-family:"Manrope",sans-serif;font-size:11.5px;color:var(--ink-2);font-weight:500;margin-top:1px}
+  .role{font-family:"Manrope",sans-serif;font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--ink-2);border:1px solid var(--line-2);padding:3px 9px;border-radius:99px;background:rgba(255,255,255,.5)}
+  .role.acc{color:var(--lily);border-color:var(--lily);background:rgba(216,163,196,.12)}
+
+  .bill{padding:20px 24px}
+  .bill .ln{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px dotted var(--line-2);font-family:"Manrope",sans-serif;font-size:13.5px}
+  .bill .ln b{font-family:"DM Serif Display",serif;font-weight:400;font-size:17px}
+  .bill .total{margin-top:8px;padding-top:14px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:baseline}
+  .bill .total b{font-family:"DM Serif Display",serif;font-weight:400;font-size:30px;color:var(--lily)}
+  .gauge{margin-top:14px}
+  .gauge .top{display:flex;justify-content:space-between;font-family:"Manrope",sans-serif;font-size:11px;color:var(--ink-2);letter-spacing:.14em;text-transform:uppercase;font-weight:600;margin-bottom:6px}
+  .gauge .bar{height:10px;border-radius:99px;background:rgba(42,49,66,.08);overflow:hidden}
+  .gauge .bar i{display:block;height:100%;width:72%;border-radius:99px;background:linear-gradient(90deg,var(--willow),var(--lily) 60%,var(--sun))}
+
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:12px;border:1px solid var(--line-2);background:rgba(255,255,255,.6);
+    color:var(--ink);font-family:"Manrope",sans-serif;font-weight:600;font-size:13px;cursor:pointer;
+  }
+  .btn.primary{background:linear-gradient(110deg,var(--lily),var(--iris) 70%);border:0;color:#fff;box-shadow:0 8px 18px rgba(110,123,184,.3)}
+
+  .topbar{display:flex;align-items:center;gap:14px;margin-bottom:18px;padding:12px 18px;flex-wrap:wrap}
+  .search{
+    display:flex;align-items:center;gap:8px;padding:9px 14px;border-radius:13px;background:rgba(255,255,255,.5);border:1px solid var(--line-2);
+    font-family:"Manrope",sans-serif;font-size:13px;color:var(--ink-2);min-width:240px;
+  }
+  .search input{flex:1;background:transparent;border:0;outline:0;font:inherit;color:var(--ink);font-weight:500}
+  .topbar .spacer{flex:1}
+
+  @media (max-width:1100px){
+    .app{grid-template-columns:1fr}
+    aside{margin:14px 14px 0}
+    main{padding:14px}
+    .kpis{grid-template-columns:1fr 1fr}
+    .grid{grid-template-columns:1fr}
+    .hero h1{font-size:38px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="glass">
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div class="brand-name">Northwind<small>Cloud · Jardin</small></div>
+    </div>
+    <div class="nav-section">总览</div>
+    <nav class="nav">
+      <a class="active"><span class="dot"></span>仪表盘</a>
+      <a><span class="dot"></span>实时调用</a>
+      <a><span class="dot"></span>区域分布</a>
+    </nav>
+    <div class="nav-section">资源</div>
+    <nav class="nav">
+      <a><span class="dot"></span>API 密钥</a>
+      <a><span class="dot"></span>Webhook</a>
+      <a><span class="dot"></span>数据导出</a>
+    </nav>
+    <div class="nav-section">账户</div>
+    <nav class="nav">
+      <a><span class="dot"></span>成员</a>
+      <a><span class="dot"></span>账单</a>
+      <a><span class="dot"></span>设置</a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="topbar glass">
+      <div class="search">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg>
+        <input placeholder="搜索 API、成员、调用…">
+      </div>
+      <div class="spacer"></div>
+      <button class="btn">通知 3</button>
+      <button class="btn primary">＋ 新建 Key</button>
+    </div>
+
+    <section class="hero glass">
+      <div class="eyebrow">本月调用 · MTD · 实时</div>
+      <h1>晨光里的 <em>240 万次</em><br>正在往岸上轻轻爬。</h1>
+      <p>对比上月同期 <b>+12.4%</b>，按当前速度看，会在 <b>6 月 27 日</b> 抵达 3,000,000 套餐上限。
+        24h 错误率 <b>0.42%</b>，仍在水面以下；建议追溯顺丰侧 500 异常。</p>
+      <div class="right">星期五 · 多云<br><b>06 / 19</b>14:02 UTC+8</div>
+    </section>
+
+    <section class="kpis">
+      <div class="kpi k1 glass">
+        <div class="swatch"></div>
+        <span class="l">本月调用</span>
+        <span class="v">2.42<small>M req</small></span>
+        <span class="d"><span class="up">▲ 12.4%</span><span>tgt 3.0M</span></span>
+      </div>
+      <div class="kpi k2 glass">
+        <div class="swatch"></div>
+        <span class="l">活跃成员</span>
+        <span class="v">38<small>/ 50 席</small></span>
+        <span class="d"><span class="up">▲ 4 本周</span><span>空闲 12</span></span>
+      </div>
+      <div class="kpi k3 glass">
+        <div class="swatch"></div>
+        <span class="l">错误率 24h</span>
+        <span class="v" style="color:#A8501A">0.42<small>%</small></span>
+        <span class="d"><span class="down">▲ 0.08%</span><span>阈值 0.5%</span></span>
+      </div>
+      <div class="kpi k4 glass">
+        <div class="swatch"></div>
+        <span class="l">本月账单</span>
+        <span class="v">¥ 2,879<small>.50</small></span>
+        <span class="d"><span>自动续费</span><span>T-11</span></span>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="panel glass">
+        <div class="panel-head">
+          <div class="panel-title">调用日志<small>实时 · 最近 100 条 · 生产</small></div>
+          <div class="tabs">
+            <span class="tab active">全部</span>
+            <span class="tab">错误</span>
+            <span class="tab">慢请求</span>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>时间</th><th>调用方</th><th>端点</th><th>状态</th><th>耗时</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">14:02:11</td><td>京东数科</td><td class="mono">POST /v2/orders/sync</td>
+              <td><span class="chip ok">200</span></td>
+              <td><span class="lat">92 ms<span class="b"><i class="ok" style="width:18%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:09</td><td>内部 dashboard</td><td class="mono">GET /v2/metrics/window</td>
+              <td><span class="chip ok">200</span></td>
+              <td><span class="lat">140 ms<span class="b"><i class="ok" style="width:28%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:08</td><td>ACME</td><td class="mono">POST /v2/events/batch</td>
+              <td><span class="chip warn">429</span></td>
+              <td><span class="lat">318 ms<span class="b"><i class="warn" style="width:65%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:07</td><td>Office</td><td class="mono">DELETE /v2/keys/ak_3f…</td>
+              <td><span class="chip ok">204</span></td>
+              <td><span class="lat">58 ms<span class="b"><i class="ok" style="width:12%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:05</td><td>顺丰</td><td class="mono">GET /v2/orders?status=open</td>
+              <td><span class="chip bad">500</span></td>
+              <td><span class="lat">1.42 s<span class="b"><i class="bad" style="width:88%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:03</td><td>京东数科</td><td class="mono">POST /v2/webhooks/test</td>
+              <td><span class="chip ok">200</span></td>
+              <td><span class="lat">110 ms<span class="b"><i class="ok" style="width:22%"></i></span></span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:18px">
+        <div class="panel glass">
+          <div class="panel-head">
+            <div class="panel-title">名册<small>38 在岗</small></div>
+            <button class="btn">邀请</button>
+          </div>
+          <div class="members">
+            <div class="member"><div class="m-av a1">林</div><div><b>林安琪</b><small>2 分钟前活跃 · liananqi@…</small></div><span class="role acc">所有者</span></div>
+            <div class="member"><div class="m-av a2">陈</div><div><b>陈维</b><small>1 小时前活跃 · chenwei@…</small></div><span class="role">管理员</span></div>
+            <div class="member"><div class="m-av a3">蒋</div><div><b>蒋克</b><small>昨日活跃 · jiangke@…</small></div><span class="role">开发者</span></div>
+            <div class="member"><div class="m-av a4">袁</div><div><b>袁倩</b><small>受邀待复 · yuanqian@…</small></div><span class="role">只读</span></div>
+          </div>
+        </div>
+
+        <div class="panel glass">
+          <div class="panel-head">
+            <div class="panel-title">本期账单<small>06.01 – 06.30</small></div>
+            <button class="btn primary">发票</button>
+          </div>
+          <div class="bill">
+            <div class="ln"><span>Growth 套餐</span><b>¥ 1,980.00</b></div>
+            <div class="ln"><span>超量调用 · 418,902</span><b>¥ 837.80</b></div>
+            <div class="ln"><span>Webhook 重试 · 12,341</span><b>¥ 61.70</b></div>
+            <div class="total"><span style="font-family:'Manrope',sans-serif;font-weight:700;font-size:13px;letter-spacing:.04em">合计</span><b>¥ 2,879.50</b></div>
+            <div class="gauge">
+              <div class="top"><span>套餐用量 72%</span><span>2.42M / 3M</span></div>
+              <div class="bar"><i></i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+</body>
+</html>

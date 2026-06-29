@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>20 · 渐变流光 — Northwind Cloud 控制台</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --ink:#0E1130;
+    --ink-2:#5B5F86;
+    --ink-3:#9094B5;
+    --paper:rgba(255,255,255,.65);
+    --paper-2:rgba(255,255,255,.45);
+    --line:rgba(14,17,48,.08);
+    --line-2:rgba(14,17,48,.18);
+    --aurora-1:#7C5BFF;        /* 极光紫 */
+    --aurora-2:#3DC2FF;        /* 极光青 */
+    --aurora-3:#FF6FAE;        /* 极光粉 */
+    --aurora-4:#FFD06F;        /* 极光金 */
+    --ok:#28C285;
+    --warn:#FF9442;
+    --bad:#FF4E6E;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;color:var(--ink);font-family:"Manrope","Inter","PingFang SC",system-ui,sans-serif;background:#F5F4FF}
+  body{
+    min-height:100vh;overflow-x:hidden;font-size:14px;line-height:1.55;position:relative;
+  }
+
+  /* === 真极光：4 团模糊的渐变球在背景里慢慢飘动 === */
+  .aurora{position:fixed;inset:0;z-index:-1;overflow:hidden;background:linear-gradient(180deg,#F5F4FF 0%,#FFF4F8 100%)}
+  .blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:.7;mix-blend-mode:multiply}
+  .b1{width:620px;height:620px;background:radial-gradient(circle,var(--aurora-1) 0%,transparent 70%);top:-200px;left:-100px;animation:f1 22s ease-in-out infinite alternate}
+  .b2{width:540px;height:540px;background:radial-gradient(circle,var(--aurora-2) 0%,transparent 70%);top:10%;right:-150px;animation:f2 26s ease-in-out infinite alternate}
+  .b3{width:480px;height:480px;background:radial-gradient(circle,var(--aurora-3) 0%,transparent 70%);bottom:-180px;left:30%;animation:f3 30s ease-in-out infinite alternate}
+  .b4{width:420px;height:420px;background:radial-gradient(circle,var(--aurora-4) 0%,transparent 70%);bottom:5%;right:20%;animation:f4 28s ease-in-out infinite alternate}
+  @keyframes f1{from{transform:translate(0,0) scale(1)}to{transform:translate(120px,80px) scale(1.15)}}
+  @keyframes f2{from{transform:translate(0,0) scale(1.1)}to{transform:translate(-100px,60px) scale(.95)}}
+  @keyframes f3{from{transform:translate(0,0) scale(1)}to{transform:translate(-90px,-80px) scale(1.2)}}
+  @keyframes f4{from{transform:translate(0,0) scale(.95)}to{transform:translate(100px,-60px) scale(1.1)}}
+
+  .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh;position:relative}
+
+  /* 玻璃工具 */
+  .glass{
+    background:var(--paper);
+    backdrop-filter:blur(28px) saturate(160%);
+    -webkit-backdrop-filter:blur(28px) saturate(160%);
+    border:1px solid rgba(255,255,255,.6);
+    border-radius:24px;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.8) inset,
+      0 18px 60px rgba(14,17,48,.07);
+  }
+
+  /* 边栏 */
+  aside{
+    margin:18px;padding:24px 18px;
+  }
+  .brand{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+  .brand-mark{
+    width:42px;height:42px;border-radius:14px;position:relative;overflow:hidden;
+    background:conic-gradient(from 220deg at 50% 50%,
+      var(--aurora-1) 0%, var(--aurora-2) 30%, var(--aurora-3) 60%, var(--aurora-4) 80%, var(--aurora-1) 100%);
+    box-shadow:0 10px 24px rgba(124,91,255,.32);
+  }
+  .brand-mark::after{
+    content:"N";position:absolute;inset:3px;border-radius:11px;background:rgba(255,255,255,.85);
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;color:var(--ink);
+    backdrop-filter:blur(8px);
+  }
+  .brand-name{font-weight:700;font-size:17px;letter-spacing:-.01em}
+  .brand-name small{display:block;font-weight:500;font-size:11.5px;color:var(--ink-2);letter-spacing:.18em;text-transform:uppercase;margin-top:2px}
+
+  .nav-section{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-2);margin:18px 8px 6px;font-weight:600}
+  .nav a{
+    display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:12px;
+    text-decoration:none;color:var(--ink);font-size:14px;font-weight:600;
+  }
+  .nav a:hover{background:var(--paper-2)}
+  .nav a.active{
+    background:linear-gradient(110deg,rgba(124,91,255,.18),rgba(61,194,255,.12));
+    box-shadow:inset 0 0 0 1px rgba(124,91,255,.25);
+    color:var(--ink);
+  }
+  .nav a .em{
+    width:24px;height:24px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;
+    background:rgba(255,255,255,.6);color:var(--ink-2);
+  }
+  .nav a.active .em{
+    background:conic-gradient(from 90deg,var(--aurora-1),var(--aurora-2),var(--aurora-3),var(--aurora-4),var(--aurora-1));
+    color:#fff;
+  }
+
+  /* 主区 */
+  main{padding:18px 18px 30px 0;min-width:0}
+
+  /* 顶栏 */
+  .topbar{
+    display:flex;align-items:center;gap:14px;margin-bottom:18px;padding:12px 18px;flex-wrap:wrap;
+  }
+  .greet h1{margin:0;font-size:22px;font-weight:800;letter-spacing:-.02em;line-height:1.3}
+  .greet h1 em{
+    font-style:normal;
+    background:linear-gradient(90deg,var(--aurora-1),var(--aurora-3) 70%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .greet p{margin:2px 0 0;font-size:12.5px;color:var(--ink-2);font-weight:500}
+  .topbar .spacer{flex:1}
+  .search{
+    display:flex;align-items:center;gap:8px;padding:9px 14px;border-radius:14px;
+    background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.6);font-size:13px;color:var(--ink-2);min-width:240px;
+  }
+  .search input{flex:1;background:transparent;border:0;outline:0;font:inherit;color:var(--ink);font-weight:500}
+  .btn{
+    display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:13px;border:1px solid rgba(255,255,255,.6);
+    background:rgba(255,255,255,.55);color:var(--ink);font:inherit;font-weight:600;font-size:13px;cursor:pointer;
+  }
+  .btn.aurora{
+    background:linear-gradient(110deg,var(--aurora-1),var(--aurora-2) 70%);border:0;color:#fff;
+    box-shadow:0 8px 22px rgba(124,91,255,.4);
+  }
+  .av{
+    width:40px;height:40px;border-radius:50%;padding:2px;
+    background:conic-gradient(from 0deg,var(--aurora-1),var(--aurora-2),var(--aurora-3),var(--aurora-4),var(--aurora-1));
+  }
+  .av i{display:block;width:100%;height:100%;border-radius:50%;background:#fff;color:var(--ink);font-style:normal;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center}
+
+  /* Hero：大渐变数字 */
+  .hero{
+    padding:30px 32px;margin-bottom:18px;position:relative;overflow:hidden;
+    display:grid;grid-template-columns:1.5fr 1fr;gap:30px;align-items:center;
+  }
+  .hero::before{
+    content:"";position:absolute;inset:-1px;border-radius:24px;padding:1px;
+    background:linear-gradient(135deg,rgba(124,91,255,.5),rgba(61,194,255,.3) 40%,rgba(255,111,174,.3) 70%,rgba(255,208,111,.4) 100%);
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;
+  }
+  .hero .eyebrow{
+    font-size:12px;letter-spacing:.22em;text-transform:uppercase;font-weight:700;margin-bottom:8px;
+    background:linear-gradient(90deg,var(--aurora-1),var(--aurora-3));-webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .hero .big{
+    font-size:78px;font-weight:800;letter-spacing:-.04em;line-height:.95;
+    background:linear-gradient(120deg,var(--ink) 0%,var(--aurora-1) 50%,var(--aurora-3) 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .hero .sub{color:var(--ink-2);font-size:14px;margin-top:12px;max-width:480px;line-height:1.8}
+  .hero .sub b{color:var(--ink);font-weight:700}
+  .hero .cta{margin-top:16px;display:flex;gap:10px;flex-wrap:wrap}
+
+  /* 流光环 */
+  .hero .ring{display:flex;justify-content:center;align-items:center;position:relative}
+  .hero .ring svg{width:100%;max-width:260px;height:auto;display:block}
+
+  /* KPI 圆角玻璃 */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+  .kpi{padding:18px 20px;display:flex;flex-direction:column;gap:6px}
+  .kpi .top{display:flex;align-items:center;gap:10px}
+  .kpi .em{
+    width:34px;height:34px;border-radius:11px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;
+  }
+  .em.e1{background:linear-gradient(135deg,var(--aurora-1),var(--aurora-2))}
+  .em.e2{background:linear-gradient(135deg,var(--aurora-2),var(--aurora-3))}
+  .em.e3{background:linear-gradient(135deg,var(--aurora-3),var(--aurora-4))}
+  .em.e4{background:linear-gradient(135deg,var(--aurora-4),var(--aurora-1))}
+  .kpi .l{font-size:12.5px;color:var(--ink-2);font-weight:600;letter-spacing:.02em}
+  .kpi .v{font-size:28px;font-weight:800;letter-spacing:-.02em;line-height:1.05}
+  .kpi .v small{font-size:13px;color:var(--ink-2);font-weight:600;margin-left:3px}
+  .kpi .v.warn{
+    background:linear-gradient(90deg,var(--warn),var(--bad));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .kpi .d{font-size:12px;color:var(--ink-2);font-weight:600;display:flex;justify-content:space-between;align-items:center}
+  .pill{padding:3px 8px;border-radius:8px;font-size:11.5px;font-weight:700}
+  .pill.up{background:rgba(40,194,133,.16);color:#067653}
+  .pill.down{background:rgba(255,78,110,.14);color:#A8253D}
+  .pill.flat{background:rgba(14,17,48,.08);color:var(--ink-2)}
+
+  /* 主体 */
+  .grid{display:grid;grid-template-columns:1.55fr 1fr;gap:18px}
+  .panel{padding:0;overflow:hidden}
+  .panel-head{
+    display:flex;justify-content:space-between;align-items:center;padding:18px 24px;
+    border-bottom:1px solid var(--line);
+  }
+  .panel-title{font-weight:800;font-size:16px;letter-spacing:-.01em}
+  .panel-title small{display:block;font-size:12.5px;color:var(--ink-2);font-weight:500;margin-top:2px}
+  .tabs{display:flex;gap:4px;padding:4px;background:rgba(255,255,255,.55);border-radius:11px;border:1px solid var(--line)}
+  .tab{padding:5px 12px;font-size:12.5px;font-weight:600;border-radius:8px;cursor:pointer;color:var(--ink-2)}
+  .tab.active{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(14,17,48,.04)}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th{text-align:left;font-weight:600;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2);padding:11px 24px;border-bottom:1px solid var(--line)}
+  td{padding:14px 24px;border-bottom:1px solid var(--line)}
+  tr:last-child td{border-bottom:0}
+  td.mono{font-family:"JetBrains Mono",monospace;font-size:12.5px;color:var(--ink)}
+  .chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:99px;font-size:11.5px;font-weight:700;color:#fff}
+  .chip.ok{background:linear-gradient(110deg,#43E0A0,var(--ok))}
+  .chip.warn{background:linear-gradient(110deg,var(--aurora-4),var(--warn))}
+  .chip.bad{background:linear-gradient(110deg,var(--aurora-3),var(--bad))}
+  .lat{display:inline-flex;align-items:center;gap:10px;font-family:"JetBrains Mono",monospace;font-size:12.5px}
+  .lat .b{width:60px;height:6px;border-radius:99px;background:rgba(14,17,48,.08);overflow:hidden}
+  .lat .b i{display:block;height:100%;border-radius:99px}
+  .lat .b i.ok{background:linear-gradient(90deg,var(--aurora-2),var(--ok))}
+  .lat .b i.warn{background:linear-gradient(90deg,var(--aurora-4),var(--warn))}
+  .lat .b i.bad{background:linear-gradient(90deg,var(--aurora-3),var(--bad))}
+
+  /* 成员 */
+  .members{padding:6px 0}
+  .member{display:grid;grid-template-columns:44px 1fr auto;gap:14px;align-items:center;padding:14px 24px;border-bottom:1px solid var(--line)}
+  .member:last-child{border-bottom:0}
+  .m-av{width:44px;height:44px;border-radius:50%;padding:2px;background:conic-gradient(from 0deg,var(--aurora-1),var(--aurora-2),var(--aurora-3),var(--aurora-4),var(--aurora-1))}
+  .m-av i{display:flex;align-items:center;justify-content:center;width:100%;height:100%;border-radius:50%;background:#fff;color:var(--ink);font-style:normal;font-weight:700;font-size:13px}
+  .member b{font-weight:700;font-size:14.5px}
+  .member small{display:block;font-size:12px;color:var(--ink-2);font-weight:500;margin-top:1px}
+  .role{padding:5px 11px;border-radius:8px;font-size:11.5px;font-weight:700;background:rgba(255,255,255,.55);border:1px solid var(--line);color:var(--ink)}
+  .role.acc{
+    background:linear-gradient(110deg,rgba(124,91,255,.2),rgba(255,111,174,.16));
+    color:#5235C8;border:0;
+  }
+
+  /* 账单 */
+  .bill{padding:22px 24px}
+  .bill .ln{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+  .bill .ln b{font-weight:700;font-size:15px}
+  .bill .total{
+    margin-top:12px;padding:16px 20px;border-radius:16px;color:#fff;
+    background:linear-gradient(110deg,var(--aurora-1),var(--aurora-2) 70%);
+    display:flex;justify-content:space-between;align-items:baseline;
+    box-shadow:0 16px 36px rgba(124,91,255,.3);
+  }
+  .bill .total b{font-weight:800;font-size:26px;letter-spacing:-.02em}
+  .gauge{margin-top:14px}
+  .gauge .top{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-2);font-weight:600;margin-bottom:6px}
+  .gauge .bar{height:10px;border-radius:99px;background:rgba(14,17,48,.08);overflow:hidden}
+  .gauge .bar i{display:block;height:100%;width:72%;border-radius:99px;background:linear-gradient(90deg,var(--aurora-1),var(--aurora-3) 60%,var(--aurora-4))}
+
+  @media (max-width:1100px){
+    .app{grid-template-columns:1fr}
+    aside{margin:14px 14px 0}
+    main{padding:14px}
+    .hero{grid-template-columns:1fr}
+    .hero .ring{order:-1;max-height:180px;overflow:hidden}
+    .hero .big{font-size:60px}
+    .kpis{grid-template-columns:1fr 1fr}
+    .grid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="aurora">
+  <div class="blob b1"></div>
+  <div class="blob b2"></div>
+  <div class="blob b3"></div>
+  <div class="blob b4"></div>
+</div>
+
+<div class="app">
+  <aside class="glass">
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div class="brand-name">Northwind<small>Cloud Console</small></div>
+    </div>
+    <div class="nav-section">总览</div>
+    <nav class="nav">
+      <a class="active"><span class="em">◔</span>仪表盘</a>
+      <a><span class="em">⚡</span>实时调用</a>
+      <a><span class="em">◐</span>区域分布</a>
+    </nav>
+    <div class="nav-section">资源</div>
+    <nav class="nav">
+      <a><span class="em">⚿</span>API 密钥</a>
+      <a><span class="em">↻</span>Webhook</a>
+      <a><span class="em">↓</span>数据导出</a>
+    </nav>
+    <div class="nav-section">账户</div>
+    <nav class="nav">
+      <a><span class="em">☺</span>成员</a>
+      <a><span class="em">¥</span>账单</a>
+      <a><span class="em">⚙</span>设置</a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="topbar glass">
+      <div class="greet">
+        <h1>下午好，林安琪 — <em>这周状态不错</em></h1>
+        <p>06.19 · 周五 · 生产环境 · ap-southeast-1</p>
+      </div>
+      <div class="spacer"></div>
+      <div class="search">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg>
+        <input placeholder="搜索 API、成员、调用…">
+      </div>
+      <button class="btn">通知 3</button>
+      <button class="btn aurora">＋ 新建 Key</button>
+      <div class="av"><i>LA</i></div>
+    </div>
+
+    <section class="hero glass">
+      <div>
+        <div class="eyebrow">本月调用 · MTD · 实时</div>
+        <div class="big">2,418,902</div>
+        <div class="sub">对比上月同期 <b>▲ 12.4%</b>，按当前速度，距离 <b>3,000,000</b> 套餐上限还有 <b>11 天</b>，预计 <b>6 月 27 日</b> 触顶。
+          要不要顺手看看 <b>Scale 套餐</b>？升级后月底大概省 <b>¥640</b>。</div>
+        <div class="cta">
+          <button class="btn aurora">查看 Scale →</button>
+          <button class="btn">用量明细</button>
+        </div>
+      </div>
+      <div class="ring">
+        <!-- 流光环 -->
+        <svg viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#7C5BFF"/>
+              <stop offset="35%" stop-color="#3DC2FF"/>
+              <stop offset="70%" stop-color="#FF6FAE"/>
+              <stop offset="100%" stop-color="#FFD06F"/>
+            </linearGradient>
+            <linearGradient id="g2" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="rgba(255,255,255,.0)"/>
+              <stop offset="50%" stop-color="rgba(255,255,255,.6)"/>
+              <stop offset="100%" stop-color="rgba(255,255,255,.0)"/>
+            </linearGradient>
+          </defs>
+          <!-- 主环 -->
+          <circle cx="120" cy="120" r="98" stroke="url(#g1)" stroke-width="14" fill="none" stroke-linecap="round"
+                  stroke-dasharray="480 200" stroke-dashoffset="0" transform="rotate(-90 120 120)"/>
+          <!-- 次环 -->
+          <circle cx="120" cy="120" r="78" stroke="rgba(124,91,255,.18)" stroke-width="2" fill="none" stroke-dasharray="3 6"/>
+          <!-- 中心 -->
+          <text x="120" y="108" text-anchor="middle" font-family="Manrope,Inter,sans-serif" font-weight="700" font-size="13" letter-spacing="2" fill="#5B5F86">QUOTA</text>
+          <text x="120" y="142" text-anchor="middle" font-family="Manrope,Inter,sans-serif" font-weight="800" font-size="36" letter-spacing="-1" fill="#0E1130">72%</text>
+          <text x="120" y="162" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#9094B5">2.42M / 3M</text>
+        </svg>
+      </div>
+    </section>
+
+    <section class="kpis">
+      <div class="kpi glass">
+        <div class="top"><div class="em e1">⚡</div><div class="l">本月调用</div></div>
+        <div class="v">2.42<small>M req</small></div>
+        <div class="d"><span class="pill up">▲ 12.4%</span><span>对比上月</span></div>
+      </div>
+      <div class="kpi glass">
+        <div class="top"><div class="em e2">☺</div><div class="l">活跃成员</div></div>
+        <div class="v">38<small>/ 50 席</small></div>
+        <div class="d"><span class="pill up">▲ 4 本周</span><span>空闲 12</span></div>
+      </div>
+      <div class="kpi glass">
+        <div class="top"><div class="em e3">!</div><div class="l">错误率 · 24h</div></div>
+        <div class="v warn">0.42<small>%</small></div>
+        <div class="d"><span class="pill down">▲ 0.08%</span><span>阈值 0.5%</span></div>
+      </div>
+      <div class="kpi glass">
+        <div class="top"><div class="em e4">¥</div><div class="l">本月账单</div></div>
+        <div class="v">¥ 2,879<small>.50</small></div>
+        <div class="d"><span class="pill flat">自动续费</span><span>T-11</span></div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="panel glass">
+        <div class="panel-head">
+          <div class="panel-title">最近调用日志<small>实时 · 最近 100 条 · 生产</small></div>
+          <div class="tabs">
+            <span class="tab active">全部</span>
+            <span class="tab">错误</span>
+            <span class="tab">慢请求</span>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>时间</th><th>调用方</th><th>端点</th><th>状态</th><th>耗时</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">14:02:11</td><td>京东数科</td><td class="mono">POST /v2/orders/sync</td>
+              <td><span class="chip ok">200</span></td>
+              <td><span class="lat">92 ms<span class="b"><i class="ok" style="width:18%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:09</td><td>内部 dashboard</td><td class="mono">GET /v2/metrics/window</td>
+              <td><span class="chip ok">200</span></td>
+              <td><span class="lat">140 ms<span class="b"><i class="ok" style="width:28%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:08</td><td>ACME</td><td class="mono">POST /v2/events/batch</td>
+              <td><span class="chip warn">429</span></td>
+              <td><span class="lat">318 ms<span class="b"><i class="warn" style="width:65%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:07</td><td>Office</td><td class="mono">DELETE /v2/keys/ak_3f…</td>
+              <td><span class="chip ok">204</span></td>
+              <td><span class="lat">58 ms<span class="b"><i class="ok" style="width:12%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:05</td><td>顺丰</td><td class="mono">GET /v2/orders?status=open</td>
+              <td><span class="chip bad">500</span></td>
+              <td><span class="lat">1.42 s<span class="b"><i class="bad" style="width:88%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:03</td><td>京东数科</td><td class="mono">POST /v2/webhooks/test</td>
+              <td><span class="chip ok">200</span></td>
+              <td><span class="lat">110 ms<span class="b"><i class="ok" style="width:22%"></i></span></span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:18px">
+        <div class="panel glass">
+          <div class="panel-head">
+            <div class="panel-title">成员<small>38 在岗</small></div>
+            <button class="btn">邀请</button>
+          </div>
+          <div class="members">
+            <div class="member"><div class="m-av"><i>LA</i></div><div><b>林安琪</b><small>2 分钟前活跃</small></div><span class="role acc">所有者</span></div>
+            <div class="member"><div class="m-av"><i>CW</i></div><div><b>陈维</b><small>1 小时前活跃</small></div><span class="role">管理员</span></div>
+            <div class="member"><div class="m-av"><i>JK</i></div><div><b>蒋克</b><small>昨日活跃</small></div><span class="role">开发者</span></div>
+            <div class="member"><div class="m-av"><i>YQ</i></div><div><b>袁倩</b><small>受邀待复</small></div><span class="role">只读</span></div>
+          </div>
+        </div>
+
+        <div class="panel glass">
+          <div class="panel-head">
+            <div class="panel-title">本月账单<small>06.01 – 06.30</small></div>
+            <button class="btn">发票</button>
+          </div>
+          <div class="bill">
+            <div class="ln"><span>Growth 套餐</span><b>¥ 1,980.00</b></div>
+            <div class="ln"><span>超量调用 · 418,902</span><b>¥ 837.80</b></div>
+            <div class="ln"><span>Webhook 重试 · 12,341</span><b>¥ 61.70</b></div>
+            <div class="total"><span style="font-weight:700;font-size:13px">本月小计</span><b>¥ 2,879.50</b></div>
+            <div class="gauge">
+              <div class="top"><span>套餐用量 72%</span><span>2.42M / 3M</span></div>
+              <div class="bar"><i></i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+</body>
+</html>

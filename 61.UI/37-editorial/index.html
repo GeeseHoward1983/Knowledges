@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>37 · 杂志 — Northwind Cloud 控制台</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --paper:#FAFAF7;
+    --paper-2:#F3F1EA;
+    --ink:#1A1A18;
+    --ink-2:#5A5852;
+    --ink-3:#9A968C;
+    --line:#1A1A18;
+    --line-2:#D8D4C8;
+    --rule:#1A1A18;
+    --accent:#7E5532;       /* 杂志棕褐 */
+    --warn:#B58A1F;
+    --bad:#A8362C;
+    --ok:#4A6B3A;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;color:var(--ink);font-family:"Cormorant Garamond","Source Han Serif SC","STSong",serif;background:var(--paper)}
+  body{min-height:100vh;font-size:15px;line-height:1.75}
+
+  .app{display:grid;grid-template-columns:200px 1fr;min-height:100vh}
+
+  /* 边栏 = 杂志目录 */
+  aside{padding:36px 22px 30px;border-right:1px solid var(--line)}
+  .brand{padding:0 0 18px;border-bottom:1px solid var(--line);margin-bottom:24px}
+  .brand b{
+    display:block;font-family:"Cormorant Garamond","Source Han Serif SC",serif;font-weight:500;font-size:24px;letter-spacing:-.02em;line-height:1;
+  }
+  .brand small{display:block;font-family:"Inter",sans-serif;font-weight:500;font-size:10px;letter-spacing:.32em;color:var(--ink-2);margin-top:6px;text-transform:uppercase}
+
+  .toc{font-family:"Inter",sans-serif;font-size:9.5px;letter-spacing:.32em;color:var(--ink-2);font-weight:600;text-transform:uppercase;margin:18px 0 4px;border-top:1px solid var(--line-2);padding-top:6px}
+  .nav a{
+    display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;text-decoration:none;color:var(--ink);
+    font-family:"Cormorant Garamond","Source Han Serif SC",serif;font-size:17px;letter-spacing:.02em;
+    border-bottom:1px dotted var(--line-2);
+  }
+  .nav a:hover{color:var(--accent)}
+  .nav a.active{color:var(--ink);font-style:italic;font-weight:500}
+  .nav a.active::before{content:"› ";color:var(--accent)}
+  .nav a .p{font-family:"Inter",sans-serif;font-size:11.5px;color:var(--ink-3);font-weight:500;letter-spacing:.04em}
+
+  /* 主区 = 杂志页 */
+  main{padding:48px 64px 48px;min-width:0;max-width:none}
+
+  /* 杂志头：刊号 */
+  .issue{
+    display:flex;justify-content:space-between;align-items:baseline;padding-bottom:14px;border-bottom:1px solid var(--line);margin-bottom:48px;
+    font-family:"Inter",sans-serif;font-size:11px;letter-spacing:.32em;color:var(--ink-2);font-weight:600;text-transform:uppercase;
+  }
+  .issue b{color:var(--ink)}
+
+  /* 居中大字头条 */
+  .feature{text-align:center;margin-bottom:60px}
+  .feature .kicker{font-family:"Inter",sans-serif;font-weight:600;font-size:11px;letter-spacing:.42em;color:var(--accent);text-transform:uppercase;margin-bottom:24px;display:inline-block;border-top:1px solid var(--accent);border-bottom:1px solid var(--accent);padding:6px 18px}
+  .feature h1{
+    margin:0;font-family:"Cormorant Garamond","Source Han Serif SC",serif;font-weight:400;font-size:88px;letter-spacing:-.025em;line-height:.95;color:var(--ink);
+  }
+  .feature h1 em{font-style:italic;color:var(--accent)}
+  .feature .lede{
+    margin-top:30px;font-family:"Cormorant Garamond","Source Han Serif SC",serif;font-style:italic;font-weight:400;font-size:22px;letter-spacing:.01em;color:var(--ink-2);line-height:1.55;max-width:720px;margin-left:auto;margin-right:auto;
+  }
+  .feature .lede b{font-style:normal;font-weight:500;color:var(--ink)}
+  .feature .byline{margin-top:30px;font-family:"Inter",sans-serif;font-size:11.5px;letter-spacing:.28em;color:var(--ink-2);font-weight:600;text-transform:uppercase}
+
+  /* 大照片区（用大色块 + SVG 图案模拟杂志大图） */
+  .photo{
+    height:280px;background:var(--paper-2);border:1px solid var(--line);margin-bottom:14px;position:relative;overflow:hidden;
+  }
+  .photo svg{width:100%;height:100%;display:block}
+  .photo .caption{
+    position:absolute;bottom:14px;left:18px;right:18px;display:flex;justify-content:space-between;font-family:"Inter",sans-serif;font-size:10px;letter-spacing:.22em;color:var(--ink-2);font-weight:600;text-transform:uppercase;
+  }
+  .photo .caption b{color:var(--ink)}
+  .credit{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:13px;color:var(--ink-2);text-align:right;margin-bottom:48px}
+
+  /* 数据块 4 列 */
+  .figures{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:30px;padding:32px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-bottom:60px;
+  }
+  .fig{text-align:left;border-right:1px solid var(--line-2);padding-right:24px}
+  .fig:last-child{border-right:0;padding-right:0}
+  .fig .l{font-family:"Inter",sans-serif;font-size:10.5px;letter-spacing:.28em;text-transform:uppercase;color:var(--ink-2);font-weight:600;margin-bottom:14px}
+  .fig .v{font-family:"Cormorant Garamond",serif;font-weight:400;font-size:54px;letter-spacing:-.025em;line-height:1;font-variant-numeric:tabular-nums}
+  .fig .v small{font-family:"Inter",sans-serif;font-size:11px;color:var(--ink-2);font-weight:500;margin-left:4px;letter-spacing:.04em}
+  .fig .v .acc{color:var(--accent)}
+  .fig .d{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:14.5px;color:var(--ink-2);margin-top:8px}
+  .up{color:var(--ok)}
+  .down{color:var(--bad)}
+
+  /* 文章式日志 */
+  .article-grid{display:grid;grid-template-columns:1.55fr 1fr;gap:60px;margin-bottom:48px}
+
+  .col h2{
+    margin:0 0 22px;font-family:"Cormorant Garamond","Source Han Serif SC",serif;font-weight:500;font-size:30px;letter-spacing:-.015em;line-height:1.1;
+    border-bottom:1px solid var(--line);padding-bottom:8px;
+  }
+  .col h2 .num{font-family:"Inter",sans-serif;font-size:11px;letter-spacing:.32em;color:var(--accent);font-weight:600;text-transform:uppercase;margin-left:10px;vertical-align:8px}
+  .col .sub{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:15px;color:var(--ink-2);margin:-12px 0 18px}
+
+  table{width:100%;border-collapse:collapse;font-family:"Cormorant Garamond","Source Han Serif SC",serif;font-size:14.5px}
+  th{text-align:left;font-family:"Inter",sans-serif;font-weight:600;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-2);padding:9px 0;border-bottom:1px solid var(--line);font-style:normal}
+  td{padding:11px 0;border-bottom:1px solid var(--line-2);font-variant-numeric:tabular-nums}
+  tr:last-child td{border-bottom:0}
+  td.mono{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--ink)}
+  td.client{font-style:italic;font-weight:500;font-size:15.5px}
+  .stat{font-family:"Inter",sans-serif;font-weight:600;font-size:12px;letter-spacing:.04em}
+  .stat.ok{color:var(--ink)}
+  .stat.warn{color:var(--ink);text-decoration:underline;text-decoration-color:var(--warn);text-decoration-thickness:2px;text-underline-offset:3px}
+  .stat.bad{color:var(--bad)}
+  .lat{display:inline-flex;align-items:baseline;gap:8px;font-family:"JetBrains Mono",monospace;font-size:12px}
+  .lat .b{width:54px;height:1px;background:var(--line-2);position:relative;display:inline-block;vertical-align:middle}
+  .lat .b i{display:block;height:2px;margin-top:-.5px}
+  .lat .b i.ok{background:var(--ink)}
+  .lat .b i.warn{background:var(--warn);height:3px;margin-top:-1px}
+  .lat .b i.bad{background:var(--bad);height:4px;margin-top:-1.5px}
+
+  /* 名册 */
+  .person{display:grid;grid-template-columns:1fr auto;align-items:baseline;padding:14px 0;border-bottom:1px solid var(--line-2);gap:14px}
+  .person:last-child{border-bottom:0}
+  .person .info{display:grid;grid-template-columns:38px 1fr;gap:12px;align-items:center}
+  .person .initial{
+    width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--paper-2);
+    display:flex;align-items:center;justify-content:center;font-family:"Cormorant Garamond","Source Han Serif SC",serif;font-weight:500;font-size:17px;
+  }
+  .person b{font-family:"Cormorant Garamond","Source Han Serif SC",serif;font-weight:500;font-size:17px}
+  .person small{display:block;font-family:"Cormorant Garamond",serif;font-style:italic;font-size:13.5px;color:var(--ink-2);margin-top:1px}
+  .role-tx{font-family:"Inter",sans-serif;font-weight:600;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-2)}
+  .role-tx.r{color:var(--accent)}
+
+  /* 账单 */
+  .bill .ln{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line-2);font-size:15px}
+  .bill .ln span{font-family:"Cormorant Garamond",serif;font-style:italic;color:var(--ink-2)}
+  .bill .ln b{font-family:"Cormorant Garamond",serif;font-weight:500;font-size:17px;font-variant-numeric:tabular-nums}
+  .bill .total{margin-top:8px;padding-top:14px;border-top:1.5px solid var(--line);display:flex;justify-content:space-between;align-items:baseline}
+  .bill .total span{font-family:"Inter",sans-serif;font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--ink-2);font-weight:600}
+  .bill .total b{font-family:"Cormorant Garamond",serif;font-weight:400;font-size:38px;letter-spacing:-.02em;color:var(--ink)}
+  .bill .total b .acc{color:var(--accent)}
+  .gauge{margin-top:18px}
+  .gauge .top{display:flex;justify-content:space-between;font-family:"Inter",sans-serif;font-size:10.5px;color:var(--ink-2);letter-spacing:.22em;text-transform:uppercase;font-weight:600;margin-bottom:6px}
+  .gauge .bar{height:1.5px;background:var(--line-2);position:relative;overflow:hidden}
+  .gauge .bar i{display:block;height:100%;width:72%;background:var(--ink)}
+  .gauge .bar::after{content:"";position:absolute;top:-3px;bottom:-3px;left:72%;width:1px;background:var(--accent)}
+
+  .btn{
+    display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border:1px solid var(--line);background:transparent;color:var(--ink);
+    font-family:"Inter",sans-serif;font-weight:600;font-size:10.5px;letter-spacing:.28em;cursor:pointer;text-transform:uppercase;
+  }
+  .btn.b{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+
+  /* 页脚 = 杂志页码 */
+  footer{
+    margin-top:64px;padding-top:18px;border-top:1px solid var(--line);
+    display:flex;justify-content:space-between;font-family:"Inter",sans-serif;font-size:10.5px;letter-spacing:.32em;color:var(--ink-2);font-weight:600;text-transform:uppercase;
+  }
+  footer b{color:var(--ink);font-family:"Cormorant Garamond",serif;font-style:italic;font-weight:400;font-size:14px;letter-spacing:.04em;text-transform:none}
+
+  @media (max-width:1100px){
+    .app{grid-template-columns:1fr}
+    aside{border-right:0;border-bottom:1px solid var(--line)}
+    main{padding:24px 22px}
+    .feature h1{font-size:48px}
+    .figures{grid-template-columns:1fr 1fr;gap:18px}
+    .fig{border-right:0;border-bottom:1px solid var(--line-2);padding-bottom:18px;padding-right:0}
+    .article-grid{grid-template-columns:1fr;gap:48px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="brand">
+      <b>NORTHWIND</b>
+      <small>Quarterly · Vol. XII</small>
+    </div>
+
+    <div class="toc">Table of Contents</div>
+    <nav class="nav">
+      <a class="active"><span>仪表盘</span><span class="p">P.01</span></a>
+      <a><span>实时调用</span><span class="p">P.04</span></a>
+      <a><span>区域分布</span><span class="p">P.08</span></a>
+      <a><span>API 密钥</span><span class="p">P.12</span></a>
+      <a><span>Webhook</span><span class="p">P.14</span></a>
+      <a><span>数据导出</span><span class="p">P.18</span></a>
+      <a><span>名册</span><span class="p">P.20</span></a>
+      <a><span>账目</span><span class="p">P.24</span></a>
+      <a><span>偏好</span><span class="p">P.30</span></a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="issue">
+      <span>Northwind <b>Quarterly</b></span>
+      <span>Vol. <b>XII</b> · Issue <b>06.19</b></span>
+      <span>Sheet <b>I / IX</b></span>
+      <span><b>¥ 0</b> · Complimentary</span>
+    </div>
+
+    <section class="feature">
+      <span class="kicker">Cover Feature · 本期封面</span>
+      <h1>本月运行<br>一份 <em>简短观察</em></h1>
+      <p class="lede">六月十九日，星期五。生产环境在过去三十日里
+        共接收 <b>2,418,902</b> 次调用——较上月同期上扬一成二。
+        24h 错误率维持在 <b>0.42%</b>，仍处阈下。
+        我们看到了什么，又遗漏了什么？</p>
+      <div class="byline">文 / 林安琪 · 摄 / Northwind Studio</div>
+    </section>
+
+    <div class="photo">
+      <!-- 抽象编辑摄影：等距条纹排版 + 三色块 + 大圆 -->
+      <svg viewBox="0 0 1200 280" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="m" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#7E5532"/>
+            <stop offset="100%" stop-color="#3D2618"/>
+          </linearGradient>
+        </defs>
+        <rect width="1200" height="280" fill="#F3F1EA"/>
+        <!-- 大圆 -->
+        <circle cx="280" cy="140" r="120" fill="url(#m)"/>
+        <!-- 半月叠加 -->
+        <circle cx="280" cy="140" r="120" fill="#FAFAF7" clip-path="inset(0 0 0 120)"/>
+        <!-- 横向数据条 -->
+        <g>
+          <rect x="500" y="60" width="650" height="3" fill="#1A1A18"/>
+          <rect x="500" y="80" width="500" height="3" fill="#1A1A18"/>
+          <rect x="500" y="100" width="580" height="3" fill="#1A1A18"/>
+          <rect x="500" y="120" width="420" height="3" fill="#7E5532"/>
+          <rect x="500" y="140" width="650" height="3" fill="#1A1A18"/>
+          <rect x="500" y="160" width="540" height="3" fill="#1A1A18"/>
+          <rect x="500" y="180" width="610" height="3" fill="#1A1A18"/>
+          <rect x="500" y="200" width="380" height="3" fill="#A8362C"/>
+          <rect x="500" y="220" width="560" height="3" fill="#1A1A18"/>
+        </g>
+        <!-- 大数字 -->
+        <text x="650" y="55" font-family="Cormorant Garamond, serif" font-size="34" fill="#1A1A18" font-weight="500">2,418,902</text>
+        <!-- 小色块 -->
+        <rect x="1100" y="240" width="30" height="30" fill="#7E5532"/>
+      </svg>
+      <div class="caption"><span>FIG. 01</span><span><b>本月调用走势</b> · 30 日</span></div>
+    </div>
+    <div class="credit">— 摄影 / Northwind Studio, 06.19</div>
+
+    <section class="figures">
+      <div class="fig">
+        <div class="l">CALLS · MTD</div>
+        <div class="v">2,418,<span class="acc">902</span></div>
+        <div class="d">+12.4% MoM · target 3.0M</div>
+      </div>
+      <div class="fig">
+        <div class="l">CREW</div>
+        <div class="v">38<small>/50</small></div>
+        <div class="d">+4 this week · idle 12</div>
+      </div>
+      <div class="fig">
+        <div class="l">ERROR · 24H</div>
+        <div class="v"><span class="acc">0.42</span><small>%</small></div>
+        <div class="d">+0.08% · threshold 0.5%</div>
+      </div>
+      <div class="fig">
+        <div class="l">BILL · MTD</div>
+        <div class="v">¥ 2,879<small>.50</small></div>
+        <div class="d">auto-renew · T-11</div>
+      </div>
+    </section>
+
+    <section class="article-grid">
+      <div class="col">
+        <h2>调用日志 <span class="num">P. 01-A</span></h2>
+        <p class="sub">"最近 100 条 · 生产环境 · 由系统实时整理。"</p>
+        <table>
+          <thead><tr><th>时</th><th>来者</th><th>端点</th><th>状</th><th>耗</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">14:02:11</td><td class="client">京东数科</td><td class="mono">POST /v2/orders/sync</td>
+              <td><span class="stat ok">200</span></td>
+              <td><span class="lat">92 ms<span class="b"><i class="ok" style="width:18%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:09</td><td class="client">内部 dashboard</td><td class="mono">GET /v2/metrics/window</td>
+              <td><span class="stat ok">200</span></td>
+              <td><span class="lat">140 ms<span class="b"><i class="ok" style="width:28%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:08</td><td class="client">ACME</td><td class="mono">POST /v2/events/batch</td>
+              <td><span class="stat warn">429</span></td>
+              <td><span class="lat">318 ms<span class="b"><i class="warn" style="width:65%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:07</td><td class="client">Office</td><td class="mono">DELETE /v2/keys/ak_3f…</td>
+              <td><span class="stat ok">204</span></td>
+              <td><span class="lat">58 ms<span class="b"><i class="ok" style="width:12%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:05</td><td class="client">顺丰</td><td class="mono">GET /v2/orders?status=open</td>
+              <td><span class="stat bad">500</span></td>
+              <td><span class="lat">1.42 s<span class="b"><i class="bad" style="width:88%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:03</td><td class="client">京东数科</td><td class="mono">POST /v2/webhooks/test</td>
+              <td><span class="stat ok">200</span></td>
+              <td><span class="lat">110 ms<span class="b"><i class="ok" style="width:22%"></i></span></span></td></tr>
+            <tr><td class="mono">14:02:01</td><td class="client">平安</td><td class="mono">PUT /v2/orders/12489</td>
+              <td><span class="stat ok">200</span></td>
+              <td><span class="lat">181 ms<span class="b"><i class="ok" style="width:34%"></i></span></span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="col">
+        <h2>名册 <span class="num">P. 01-B</span></h2>
+        <p class="sub">"当月在岗 38 人，空缺 12 席。"</p>
+        <div>
+          <div class="person">
+            <div class="info"><div class="initial">林</div><div><b>林安琪</b><small>liananqi · 2 分钟前</small></div></div>
+            <span class="role-tx r">Owner</span>
+          </div>
+          <div class="person">
+            <div class="info"><div class="initial">陈</div><div><b>陈维</b><small>chenwei · 1 小时前</small></div></div>
+            <span class="role-tx">Admin</span>
+          </div>
+          <div class="person">
+            <div class="info"><div class="initial">蒋</div><div><b>蒋克</b><small>jiangke · 昨日</small></div></div>
+            <span class="role-tx">Dev</span>
+          </div>
+          <div class="person">
+            <div class="info"><div class="initial">袁</div><div><b>袁倩</b><small>vendor · 待复</small></div></div>
+            <span class="role-tx">Read</span>
+          </div>
+        </div>
+
+        <h2 style="margin-top:48px">账目 <span class="num">P. 01-C</span></h2>
+        <p class="sub">"本期 06.01 – 06.30 · 自动续费。"</p>
+        <div class="bill">
+          <div class="ln"><span>Growth 套餐</span><b>¥ 1,980.00</b></div>
+          <div class="ln"><span>超量调用 · 418,902</span><b>¥ 837.80</b></div>
+          <div class="ln"><span>Webhook 重试 · 12,341</span><b>¥ 61.70</b></div>
+          <div class="total"><span>Total</span><b>¥ 2,879<span class="acc">.50</span></b></div>
+          <div class="gauge">
+            <div class="top"><span>Quota</span><span>72%</span></div>
+            <div class="bar"><i></i></div>
+          </div>
+          <div style="margin-top:24px;display:flex;gap:10px"><button class="btn b">领回执</button><button class="btn">升级</button></div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <span>Northwind Quarterly · Vol. <b>XII</b></span>
+      <span><b>06.19 · 14:02 UTC+8</b></span>
+      <span>Sheet I / IX</span>
+    </footer>
+  </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>18 · 文档式 — Northwind Cloud 控制台</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --bg:#FFFFFF;
+    --bg-2:#FBFBFA;
+    --side:#F7F6F3;
+    --hover:#F0EFEB;
+    --ink:#37352F;
+    --ink-2:#787774;
+    --ink-3:#9B9A97;
+    --line:#EBEAE5;
+    --line-2:#E0DEDA;
+    --emoji-bg:#F1F0EC;
+    --blue:#2383E2;
+    --blue-soft:#E7F3FB;
+    --ok-bg:#DDEDEA;
+    --ok:#0F7B6C;
+    --warn-bg:#FBECDD;
+    --warn:#8C5A14;
+    --bad-bg:#FBE4E4;
+    --bad:#9F3838;
+    --pink-bg:#F5E0E9;
+    --pink:#AD1A72;
+    --purple-bg:#EAE4F2;
+    --purple:#6940A5;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;color:var(--ink);
+    font-family:-apple-system,"SF Pro Text","Inter","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg)}
+  body{min-height:100vh;font-size:14.5px;line-height:1.6}
+  .app{display:grid;grid-template-columns:248px 1fr;min-height:100vh}
+
+  /* 侧边栏 */
+  aside{background:var(--side);padding:14px 8px;border-right:1px solid var(--line)}
+  .ws{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;margin-bottom:8px}
+  .ws:hover{background:var(--hover)}
+  .ws-em{
+    width:22px;height:22px;border-radius:5px;background:#3D4144;color:#fff;
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;
+  }
+  .ws b{font-weight:600;font-size:14px}
+  .ws small{display:block;font-size:11.5px;color:var(--ink-2);margin-top:1px}
+  .ws .chev{margin-left:auto;color:var(--ink-3);font-size:11px}
+
+  .quick{padding:6px 8px;display:flex;flex-direction:column;gap:1px;margin-bottom:8px}
+  .quick a{
+    display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:5px;text-decoration:none;color:var(--ink-2);font-size:14px;
+  }
+  .quick a:hover{background:var(--hover)}
+  .quick a .ic{font-size:14px;width:18px;text-align:center;color:var(--ink-3)}
+
+  .tree-section{padding:0 8px}
+  .tree-h{
+    display:flex;align-items:center;gap:6px;padding:4px 6px;font-size:12px;color:var(--ink-3);font-weight:600;letter-spacing:.04em;
+    margin-top:14px;
+  }
+  .tree-h .add{margin-left:auto;width:16px;height:16px;display:flex;align-items:center;justify-content:center;border-radius:3px;color:var(--ink-3);font-size:13px}
+  .tree-h .add:hover{background:var(--hover);color:var(--ink)}
+  .tree a{
+    display:flex;align-items:center;gap:6px;padding:5px 6px;border-radius:5px;text-decoration:none;color:var(--ink);font-size:14px;
+  }
+  .tree a:hover{background:var(--hover)}
+  .tree a.active{background:var(--hover);font-weight:600}
+  .tree a .em{width:18px;text-align:center;font-size:14px}
+  .tree a .chev{color:var(--ink-3);font-size:10px;margin-right:2px;width:10px;text-align:center}
+  .tree .sub{padding-left:18px}
+
+  /* 主区 */
+  main{padding:0;min-width:0;display:flex;flex-direction:column}
+  .breadcrumb{
+    display:flex;align-items:center;gap:6px;padding:10px 60px;border-bottom:1px solid var(--line);font-size:13.5px;color:var(--ink-2);
+  }
+  .breadcrumb b{color:var(--ink);font-weight:500}
+  .breadcrumb .spacer{flex:1}
+  .breadcrumb .actions{display:flex;gap:6px;align-items:center;color:var(--ink-2)}
+  .breadcrumb .actions span{padding:4px 8px;border-radius:4px;cursor:pointer;font-size:13px}
+  .breadcrumb .actions span:hover{background:var(--hover);color:var(--ink)}
+  .breadcrumb .share{background:var(--blue);color:#fff;padding:4px 10px;border-radius:4px;font-weight:600;font-size:13px;cursor:pointer}
+
+  /* 文档头 */
+  .doc{padding:48px 60px 80px;max-width:1100px}
+  .cover{
+    height:96px;border-radius:6px;margin-bottom:16px;
+    background:linear-gradient(135deg,#FFE9D6 0%,#FAD8B6 35%,#FFCC8A 70%,#FFB36B 100%);
+  }
+  .icon-big{font-size:64px;margin-bottom:14px;line-height:1;display:inline-block;cursor:pointer;border-radius:6px;padding:4px}
+  .icon-big:hover{background:var(--hover)}
+  h1.doc-title{
+    margin:0 0 14px;font-size:40px;font-weight:700;letter-spacing:-.02em;line-height:1.15;
+  }
+  h1.doc-title:focus{outline:0}
+  .doc-meta{
+    display:grid;grid-template-columns:140px 1fr;gap:4px 18px;color:var(--ink-2);font-size:13.5px;margin-bottom:32px;
+  }
+  .doc-meta .k{display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:4px;cursor:pointer}
+  .doc-meta .k:hover{background:var(--hover);color:var(--ink)}
+  .doc-meta .k .ic{font-size:13px;color:var(--ink-3)}
+  .doc-meta .v{padding:4px 6px;border-radius:4px;cursor:pointer;color:var(--ink)}
+  .doc-meta .v:hover{background:var(--hover)}
+  .tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:13px;font-weight:500;margin-right:6px}
+  .tag.blue{background:var(--blue-soft);color:#1B5FA8}
+  .tag.green{background:var(--ok-bg);color:var(--ok)}
+  .tag.warn{background:var(--warn-bg);color:var(--warn)}
+  .tag.bad{background:var(--bad-bg);color:var(--bad)}
+  .tag.pink{background:var(--pink-bg);color:var(--pink)}
+  .tag.purple{background:var(--purple-bg);color:var(--purple)}
+
+  /* 文档段落标题 */
+  h2.h{margin:32px 0 8px;font-size:22px;font-weight:700;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
+  h2.h .em{font-size:18px}
+  p.lead{margin:0 0 20px;font-size:15.5px;line-height:1.75;color:var(--ink)}
+  p.lead b{font-weight:600}
+  p.lead .high-blue{background:var(--blue-soft);padding:0 4px;border-radius:3px}
+  p.lead .high-yellow{background:#FBF3DB;padding:0 4px;border-radius:3px}
+
+  /* Callout */
+  .callout{
+    display:grid;grid-template-columns:32px 1fr;gap:12px;padding:14px 16px;background:var(--bg-2);border-radius:6px;margin:14px 0 24px;
+  }
+  .callout .em{font-size:22px;line-height:1}
+  .callout b{font-weight:600}
+
+  /* 内联属性面板（用于 KPI） */
+  .props{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-bottom:28px;
+  }
+  .prop{padding:12px 16px;border-right:1px solid var(--line);background:var(--bg)}
+  .prop:last-child{border-right:0}
+  .prop .l{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink-2);margin-bottom:2px}
+  .prop .l .ic{font-size:13px;opacity:.8}
+  .prop .v{font-size:22px;font-weight:700;letter-spacing:-.01em;line-height:1.2;font-variant-numeric:tabular-nums}
+  .prop .v small{font-size:12px;color:var(--ink-2);font-weight:500;margin-left:3px}
+  .prop .d{font-size:12px;color:var(--ink-2);margin-top:2px;display:flex;justify-content:space-between}
+  .d .up{color:var(--ok)}
+  .d .down{color:var(--bad)}
+
+  /* 数据库视图（表格） */
+  .db{
+    margin:0 0 28px;border:1px solid var(--line);border-radius:6px;overflow:hidden;
+  }
+  .db-head{
+    display:flex;align-items:center;gap:14px;padding:8px 14px;border-bottom:1px solid var(--line);font-size:13.5px;color:var(--ink-2);
+  }
+  .db-head b{color:var(--ink);font-weight:600;font-size:14.5px}
+  .db-head .tabs{display:flex;gap:4px;margin-left:6px}
+  .db-head .tabs span{padding:3px 8px;border-radius:4px;cursor:pointer;font-size:13px}
+  .db-head .tabs span:hover{background:var(--hover)}
+  .db-head .tabs span.active{background:var(--hover);font-weight:600;color:var(--ink)}
+  .db-head .spacer{flex:1}
+  .db-head .actions{display:flex;gap:4px}
+  .db-head .actions span{padding:3px 8px;border-radius:4px;cursor:pointer;color:var(--ink-2);font-size:13px}
+  .db-head .actions span:hover{background:var(--hover);color:var(--ink)}
+  .db-head .new{background:var(--ink);color:#fff;padding:4px 10px;border-radius:4px;font-weight:600;font-size:13px;cursor:pointer}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th{
+    text-align:left;font-weight:500;font-size:12px;color:var(--ink-2);padding:8px 14px;
+    background:var(--bg-2);border-bottom:1px solid var(--line);
+  }
+  th::before{content:""; display:inline-block;width:12px;height:12px;background:transparent;margin-right:6px;vertical-align:-2px}
+  td{padding:10px 14px;border-bottom:1px solid var(--line)}
+  tr:last-child td{border-bottom:0}
+  tr:hover td{background:var(--bg-2)}
+  td.mono{font-family:"JetBrains Mono","SF Mono",monospace;font-size:12.5px;color:var(--ink)}
+  .lat{display:inline-flex;align-items:center;gap:8px;font-family:"JetBrains Mono",monospace;font-size:12px}
+  .lat .b{width:50px;height:5px;border-radius:99px;background:var(--line);overflow:hidden}
+  .lat .b i{display:block;height:100%;border-radius:99px}
+  .lat .b i.ok{background:var(--ok)}
+  .lat .b i.warn{background:var(--warn)}
+  .lat .b i.bad{background:var(--bad)}
+
+  /* 双栏 */
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+
+  /* 成员表（行高更紧） */
+  .members td{padding:8px 14px}
+  .person{display:flex;align-items:center;gap:8px}
+  .av{
+    width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:11px;flex-shrink:0;
+  }
+  .av.a1{background:#9F6B53}
+  .av.a2{background:#3D7A99}
+  .av.a3{background:#508668}
+  .av.a4{background:#9D5DA7}
+  .person b{font-weight:500}
+  .person small{color:var(--ink-2);margin-left:4px}
+
+  /* 账单：用 callout + toggle */
+  .ledger{padding:0;border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-bottom:18px}
+  .ledger .head{padding:10px 14px;border-bottom:1px solid var(--line);font-size:14px;font-weight:600;background:var(--bg-2);display:flex;justify-content:space-between;align-items:center}
+  .ledger .ln{display:flex;justify-content:space-between;padding:9px 14px;border-bottom:1px solid var(--line);font-size:13.5px}
+  .ledger .ln:last-of-type{border-bottom:0}
+  .ledger .ln b{font-weight:600;font-variant-numeric:tabular-nums}
+  .ledger .total{padding:12px 14px;background:#F7F6F3;display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid var(--line)}
+  .ledger .total b{font-size:22px;font-weight:700;letter-spacing:-.01em}
+
+  /* 可点击的 / 模拟可编辑 */
+  .editable{padding:1px 4px;border-radius:3px;cursor:text}
+  .editable:hover{background:var(--hover)}
+  .ph{color:var(--ink-3)}
+
+  @media (max-width:1100px){
+    .app{grid-template-columns:1fr}
+    aside{border-right:0;border-bottom:1px solid var(--line)}
+    .breadcrumb,.doc{padding-left:18px;padding-right:18px}
+    .props{grid-template-columns:1fr 1fr}
+    .two-col{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="ws">
+      <div class="ws-em">N</div>
+      <div><b>Northwind</b><small>liananqi@…</small></div>
+      <span class="chev">⌄</span>
+    </div>
+    <div class="quick">
+      <a><span class="ic">🔍</span>搜索</a>
+      <a><span class="ic">⏱</span>更新</a>
+      <a><span class="ic">✦</span>AI 建议</a>
+      <a><span class="ic">🏠</span>主页</a>
+      <a><span class="ic">📥</span>收件箱</a>
+      <a><span class="ic">⚙</span>设置与成员</a>
+    </div>
+
+    <div class="tree-section">
+      <div class="tree-h">收藏 <span class="add">+</span></div>
+      <div class="tree">
+        <a><span class="chev">▾</span><span class="em">📊</span>仪表盘</a>
+        <a><span class="chev">▸</span><span class="em">📜</span>API 文档</a>
+      </div>
+
+      <div class="tree-h">工作区 <span class="add">+</span></div>
+      <div class="tree">
+        <a class="active"><span class="chev">▾</span><span class="em">📊</span>仪表盘</a>
+        <div class="sub tree">
+          <a><span class="chev">▸</span><span class="em">⚡</span>实时调用</a>
+          <a><span class="chev">▸</span><span class="em">🌏</span>区域分布</a>
+          <a><span class="chev">▸</span><span class="em">⚠️</span>异常排查</a>
+        </div>
+        <a><span class="chev">▸</span><span class="em">🔐</span>API 密钥</a>
+        <a><span class="chev">▸</span><span class="em">🪝</span>Webhook</a>
+        <a><span class="chev">▸</span><span class="em">📦</span>数据导出</a>
+        <a><span class="chev">▾</span><span class="em">🏢</span>账户</a>
+        <div class="sub tree">
+          <a><span class="chev">▸</span><span class="em">🧑</span>成员与角色</a>
+          <a><span class="chev">▸</span><span class="em">💳</span>计费与发票</a>
+          <a><span class="chev">▸</span><span class="em">🎛</span>偏好设置</a>
+        </div>
+      </div>
+
+      <div class="tree-h">共享 <span class="add">+</span></div>
+      <div class="tree">
+        <a><span class="chev">▸</span><span class="em">🤝</span>合作伙伴页</a>
+      </div>
+    </div>
+  </aside>
+
+  <main>
+    <div class="breadcrumb">
+      <span>Northwind</span><span>/</span><span>仪表盘</span>
+      <span class="spacer"></span>
+      <div class="actions">
+        <span>编辑于 14:02</span>
+        <span>★</span>
+        <span>···</span>
+        <span class="share">Share</span>
+      </div>
+    </div>
+
+    <div class="doc">
+      <div class="cover"></div>
+      <span class="icon-big">📊</span>
+      <h1 class="doc-title editable">仪表盘 — 06.19 实时</h1>
+
+      <div class="doc-meta">
+        <div class="k"><span class="ic">🏷</span>状态</div>
+        <div class="v"><span class="tag green">● 正常</span> <span class="tag blue">生产环境</span> <span class="tag warn">⚠ 错误率上升中</span></div>
+
+        <div class="k"><span class="ic">👤</span>所有者</div>
+        <div class="v"><div class="person"><div class="av a1">LA</div><b>林安琪</b></div></div>
+
+        <div class="k"><span class="ic">🌏</span>区域</div>
+        <div class="v">ap-southeast-1</div>
+
+        <div class="k"><span class="ic">⏱</span>更新于</div>
+        <div class="v">2026 / 06 / 19 14:02:11 · 实时流</div>
+
+        <div class="k"><span class="ic">🔗</span>关联</div>
+        <div class="v"><span class="tag purple">📜 API 文档</span> <span class="tag pink">🪝 Webhook 调试</span></div>
+      </div>
+
+      <h2 class="h"><span class="em">📌</span>本周概览</h2>
+      <p class="lead">
+        本月调用累计 <b>2,418,902</b> 次，对比上月同期 <span class="high-blue">▲ 12.4%</span>。
+        24h 错误率上升至 <b>0.42%</b>，主要来自 <span class="editable">顺丰 GET /v2/orders</span> 的 500 异常，
+        建议追溯并联系上游。成员名册 <span class="high-yellow">本周净增 4 人</span>，
+        当前 38 / 50 席。本月账单 <b>¥ 2,879.50</b>，将于 11 天后自动结算。
+      </p>
+
+      <div class="callout">
+        <div class="em">💡</div>
+        <div><b>提示：</b>按当前调用速度，本月将于 6 月 27 日 触顶 3,000,000 的套餐上限。
+          点击 <span class="editable" style="color:var(--blue)">/upgrade</span> 评估 Scale 套餐，预计可省 <b>¥640 / 月</b>。</div>
+      </div>
+
+      <h2 class="h"><span class="em">📊</span>关键指标</h2>
+      <div class="props">
+        <div class="prop">
+          <div class="l"><span class="ic">⚡</span>本月调用</div>
+          <div class="v">2,418,902</div>
+          <div class="d"><span class="up">▲ 12.4%</span><span>tgt 3.0M</span></div>
+        </div>
+        <div class="prop">
+          <div class="l"><span class="ic">🧑</span>活跃成员</div>
+          <div class="v">38<small>/50</small></div>
+          <div class="d"><span class="up">▲ 4 本周</span><span>空闲 12</span></div>
+        </div>
+        <div class="prop">
+          <div class="l"><span class="ic">⚠️</span>错误率 24h</div>
+          <div class="v" style="color:var(--bad)">0.42<small>%</small></div>
+          <div class="d"><span class="down">▲ 0.08%</span><span>阈值 0.5%</span></div>
+        </div>
+        <div class="prop">
+          <div class="l"><span class="ic">💳</span>本月账单</div>
+          <div class="v">¥ 2,879<small>.50</small></div>
+          <div class="d"><span>自动续费</span><span>T-11</span></div>
+        </div>
+      </div>
+
+      <h2 class="h"><span class="em">📋</span>最近调用日志</h2>
+      <div class="db">
+        <div class="db-head">
+          <b>access_log</b>
+          <span style="color:var(--ink-3)">数据库</span>
+          <div class="tabs">
+            <span class="active">▦ 全部</span>
+            <span>⚠ 错误</span>
+            <span>🐢 慢请求</span>
+            <span>＋</span>
+          </div>
+          <div class="spacer"></div>
+          <div class="actions">
+            <span>筛选</span>
+            <span>排序</span>
+            <span>搜索</span>
+          </div>
+          <span class="new">＋ 新建</span>
+        </div>
+        <table>
+          <thead><tr><th>⏱ 时间</th><th>👤 调用方</th><th>🔗 端点</th><th>🏷 状态</th><th>⌛ 耗时</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">14:02:11</td><td>京东数科</td><td class="mono">POST /v2/orders/sync</td>
+              <td><span class="tag green">● 200</span></td>
+              <td><span class="lat"><span class="b"><i class="ok" style="width:18%"></i></span>92 ms</span></td></tr>
+            <tr><td class="mono">14:02:09</td><td>内部 dashboard</td><td class="mono">GET /v2/metrics/window</td>
+              <td><span class="tag green">● 200</span></td>
+              <td><span class="lat"><span class="b"><i class="ok" style="width:28%"></i></span>140 ms</span></td></tr>
+            <tr><td class="mono">14:02:08</td><td>ACME</td><td class="mono">POST /v2/events/batch</td>
+              <td><span class="tag warn">● 429</span></td>
+              <td><span class="lat"><span class="b"><i class="warn" style="width:65%"></i></span>318 ms</span></td></tr>
+            <tr><td class="mono">14:02:07</td><td>Office</td><td class="mono">DELETE /v2/keys/ak_3f…</td>
+              <td><span class="tag green">● 204</span></td>
+              <td><span class="lat"><span class="b"><i class="ok" style="width:12%"></i></span>58 ms</span></td></tr>
+            <tr><td class="mono">14:02:05</td><td>顺丰</td><td class="mono">GET /v2/orders?status=open</td>
+              <td><span class="tag bad">● 500</span></td>
+              <td><span class="lat"><span class="b"><i class="bad" style="width:88%"></i></span>1.42 s</span></td></tr>
+            <tr><td class="mono">14:02:03</td><td>京东数科</td><td class="mono">POST /v2/webhooks/test</td>
+              <td><span class="tag green">● 200</span></td>
+              <td><span class="lat"><span class="b"><i class="ok" style="width:22%"></i></span>110 ms</span></td></tr>
+            <tr><td class="mono">14:02:01</td><td>平安</td><td class="mono">PUT /v2/orders/12489</td>
+              <td><span class="tag green">● 200</span></td>
+              <td><span class="lat"><span class="b"><i class="ok" style="width:34%"></i></span>181 ms</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="two-col">
+        <div>
+          <h2 class="h"><span class="em">🧑</span>名册</h2>
+          <div class="db members">
+            <div class="db-head"><b>members</b><span style="color:var(--ink-3)">38 行 · 表格视图</span><div class="spacer"></div><span class="new">＋ 邀请</span></div>
+            <table>
+              <thead><tr><th>名字</th><th>邮箱</th><th>角色</th><th>上次活跃</th></tr></thead>
+              <tbody>
+                <tr><td><div class="person"><div class="av a1">LA</div><b>林安琪</b></div></td><td class="mono">liananqi@…</td><td><span class="tag pink">所有者</span></td><td style="color:var(--ink-2)">2 分钟前</td></tr>
+                <tr><td><div class="person"><div class="av a2">CW</div><b>陈维</b></div></td><td class="mono">chenwei@…</td><td><span class="tag blue">管理员</span></td><td style="color:var(--ink-2)">1 小时前</td></tr>
+                <tr><td><div class="person"><div class="av a3">JK</div><b>蒋克</b></div></td><td class="mono">jiangke@…</td><td><span class="tag green">开发者</span></td><td style="color:var(--ink-2)">昨日</td></tr>
+                <tr><td><div class="person"><div class="av a4">YQ</div><b>袁倩</b></div></td><td class="mono">yuanqian@…</td><td><span class="tag purple">只读</span></td><td style="color:var(--ink-2)">待接受</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div>
+          <h2 class="h"><span class="em">💳</span>本期账单</h2>
+          <div class="ledger">
+            <div class="head"><span>2026 / 06 · 自动续费</span><span style="color:var(--ink-2);font-size:12.5px">/invoice 导出</span></div>
+            <div class="ln"><span>Growth 套餐</span><b>¥ 1,980.00</b></div>
+            <div class="ln"><span>超量调用 · 418,902</span><b>¥ 837.80</b></div>
+            <div class="ln"><span>Webhook 重试 · 12,341</span><b>¥ 61.70</b></div>
+            <div class="total"><span style="font-weight:600">合计</span><b>¥ 2,879.50</b></div>
+          </div>
+          <div class="callout">
+            <div class="em">📈</div>
+            <div><b>套餐用量 72%</b> · 2,418,902 / 3,000,000 次 · 距月末 11 天。<br>
+              <span style="color:var(--ink-2)">预计 27 日 触顶。</span></div>
+          </div>
+        </div>
+      </div>
+
+      <h2 class="h"><span class="em">📝</span>本周笔记</h2>
+      <p class="lead editable">
+        <span class="ph">输入「/」 创建块。或直接写下你的发现…</span>
+      </p>
+    </div>
+  </main>
+</div>
+</body>
+</html>

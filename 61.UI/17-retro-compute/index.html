@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>17 · 复古运算 — Northwind Cloud 控制台</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --bg:#0F385C;            /* PC-98 桌面深蓝 */
+    --bg-2:#1A4F7A;
+    --win:#E6E4D4;           /* 主窗体米黄 */
+    --win-2:#DDDAC8;
+    --win-3:#C8C5B0;
+    --ink:#1A1A1A;
+    --ink-2:#5C5C50;
+    --hi:#FFFFFF;
+    --lo:#828072;
+    --title-active:#000080;
+    --title-text:#FFFFFF;
+    --accent:#C00000;        /* 经典红强调 */
+    --green:#008000;
+    --blue:#000080;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;color:var(--ink);font-family:"VT323","Pixelify Sans","Press Start 2P","MS PGothic","Microsoft YaHei",monospace;background:var(--bg)}
+  body{
+    min-height:100vh;font-size:18px;line-height:1.35;
+    background:
+      /* 网格点阵 */
+      radial-gradient(circle, rgba(255,255,255,.05) 1px, transparent 1px) 0 0/8px 8px,
+      linear-gradient(135deg, #0F385C 0%, #1A4F7A 100%);
+    background-attachment:fixed;
+    image-rendering:pixelated;
+    cursor:default;
+  }
+
+  /* 像素边框工具 */
+  .win{
+    background:var(--win);
+    border:0;
+    box-shadow:
+      inset -2px -2px 0 var(--lo),
+      inset 2px 2px 0 var(--hi),
+      inset -3px -3px 0 var(--ink),
+      inset 3px 3px 0 var(--win),
+      2px 2px 0 var(--ink);
+    padding:3px;
+  }
+  .win-inner{background:var(--win);padding:0}
+  /* 标题栏 */
+  .title-bar{
+    background:linear-gradient(90deg,var(--title-active) 0%,#1010C0 100%);
+    color:var(--title-text);font-family:"MS PGothic","Microsoft YaHei",monospace;
+    font-size:14px;font-weight:700;padding:3px 6px;display:flex;align-items:center;gap:6px;
+    letter-spacing:.04em;
+  }
+  .title-bar .ic{font-size:12px}
+  .title-bar .ctrl{margin-left:auto;display:flex;gap:2px}
+  .title-bar .ctrl span{
+    width:18px;height:16px;background:var(--win);color:var(--ink);
+    display:flex;align-items:center;justify-content:center;font-size:11px;font-family:monospace;
+    box-shadow:inset -1px -1px 0 var(--lo),inset 1px 1px 0 var(--hi);
+  }
+  .menu-bar{
+    background:var(--win);font-family:"MS PGothic","Microsoft YaHei",monospace;font-size:13px;
+    padding:2px 6px;display:flex;gap:14px;border-bottom:1px solid var(--win-3);
+  }
+  .menu-bar span{padding:1px 4px;cursor:pointer}
+  .menu-bar span:hover{background:var(--title-active);color:#fff}
+  .menu-bar span u{text-decoration:none;border-bottom:1px solid currentColor}
+
+  /* 桌面 */
+  .desktop{
+    padding:14px;display:grid;grid-template-columns:220px 1fr;gap:14px;align-items:start;min-height:100vh;
+  }
+
+  /* 左侧文件夹/快捷方式 */
+  aside{}
+  .folder{
+    color:#fff;font-family:"MS PGothic","Microsoft YaHei",monospace;font-size:13px;
+    padding:6px 6px;margin-bottom:6px;text-align:center;cursor:default;
+  }
+  .folder .ic{
+    display:block;margin:0 auto 4px;width:48px;height:40px;background:var(--win);
+    box-shadow:inset -2px -2px 0 var(--lo),inset 2px 2px 0 var(--hi);position:relative;
+    font-size:22px;color:var(--blue);display:flex;align-items:center;justify-content:center;
+  }
+  .folder.active .ic{
+    box-shadow:inset -2px -2px 0 var(--hi),inset 2px 2px 0 var(--lo);
+    background:var(--win-2);
+  }
+  .folder .lbl{padding:1px 4px;display:inline-block;line-height:1.2}
+  .folder.active .lbl{background:var(--title-active);color:#fff}
+
+  /* 主程序窗口 */
+  main{display:flex;flex-direction:column;gap:14px}
+
+  /* 状态栏 */
+  .statusbar{
+    background:var(--win);
+    box-shadow:inset -1px -1px 0 var(--hi),inset 1px 1px 0 var(--lo);
+    padding:3px 6px;display:flex;align-items:center;gap:12px;font-family:"MS PGothic",monospace;font-size:12px;color:var(--ink);
+  }
+  .statusbar .cell{
+    padding:1px 6px;background:var(--win);
+    box-shadow:inset -1px -1px 0 var(--hi),inset 1px 1px 0 var(--lo);
+  }
+  .statusbar .cell b{color:var(--blue);font-weight:700}
+  .statusbar .spacer{flex:1}
+  .blink{animation:blink 1.1s steps(2) infinite}
+  @keyframes blink{50%{opacity:0}}
+
+  /* KPI 窗口栅格 */
+  .grid-kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .panel-head-band{
+    background:var(--win-3);padding:4px 8px;font-family:"MS PGothic","Microsoft YaHei",monospace;font-size:13px;font-weight:700;
+    border-bottom:1px solid var(--lo);display:flex;justify-content:space-between;align-items:center;
+  }
+  .panel-head-band small{font-weight:400;font-size:11px;color:var(--ink-2)}
+  .panel-body{padding:10px 12px}
+
+  .kpi-card .v{font-family:"VT323","Press Start 2P",monospace;font-size:38px;letter-spacing:.02em;line-height:1;color:var(--blue);font-weight:700}
+  .kpi-card .v small{font-family:"MS PGothic",monospace;font-size:13px;color:var(--ink-2);margin-left:4px}
+  .kpi-card .v.warn{color:var(--accent)}
+  .kpi-card .lbl{font-family:"MS PGothic","Microsoft YaHei",monospace;font-size:12px;color:var(--ink-2);margin-top:2px}
+  .kpi-card .d{font-family:"MS PGothic",monospace;font-size:11px;color:var(--ink-2);margin-top:4px;display:flex;justify-content:space-between}
+  .up{color:var(--green)}
+  .down{color:var(--accent)}
+
+  /* 主窗 = 双栏 */
+  .two-col{display:grid;grid-template-columns:1.55fr 1fr;gap:14px}
+
+  /* 表格 */
+  table{width:100%;border-collapse:collapse;font-family:"MS PGothic","Microsoft YaHei",monospace;font-size:13px}
+  th{
+    text-align:left;background:var(--win-3);color:var(--ink);font-weight:700;font-size:12px;
+    padding:5px 8px;border-bottom:1px solid var(--lo);
+  }
+  th::after{content:" ▼";color:var(--ink-2);font-size:10px}
+  td{padding:5px 8px;border-bottom:1px dotted var(--win-3)}
+  tr:last-child td{border-bottom:0}
+  tr:nth-child(even) td{background:rgba(0,0,0,.03)}
+  td.mono{font-family:"VT323",monospace;font-size:16px;color:var(--ink)}
+  .stat{font-family:"VT323",monospace;font-size:16px;font-weight:700;padding:0 4px}
+  .stat.ok{color:var(--green)}
+  .stat.warn{color:#9E6818}
+  .stat.bad{color:var(--accent);background:#FFF;box-shadow:inset 0 -2px 0 var(--accent)}
+  /* 像素进度条 */
+  .lat-bar{display:inline-block;width:60px;height:10px;background:#FFF;border:1px solid var(--ink);position:relative;vertical-align:middle;margin-right:6px}
+  .lat-bar i{
+    display:block;height:100%;
+    background:repeating-linear-gradient(90deg,var(--blue) 0 2px,#fff 2px 4px);
+  }
+  .lat-bar.warn i{background:repeating-linear-gradient(90deg,#C28A2C 0 2px,#fff 2px 4px)}
+  .lat-bar.bad i{background:repeating-linear-gradient(90deg,var(--accent) 0 2px,#fff 2px 4px)}
+
+  /* 通讯录 */
+  .roster{padding:6px}
+  .person{display:grid;grid-template-columns:40px 1fr auto;gap:10px;align-items:center;padding:6px 8px;border-bottom:1px dotted var(--win-3)}
+  .person:last-child{border-bottom:0}
+  .px-av{
+    width:40px;height:40px;display:flex;align-items:center;justify-content:center;
+    font-family:"VT323",monospace;font-size:22px;color:var(--ink);background:var(--win);
+    box-shadow:inset -2px -2px 0 var(--lo),inset 2px 2px 0 var(--hi);
+  }
+  .px-av.a1{color:var(--blue)}
+  .px-av.a2{color:var(--green)}
+  .px-av.a3{color:var(--accent)}
+  .px-av.a4{color:#9E6818}
+  .person b{font-family:"MS PGothic",monospace;font-size:14px;font-weight:700}
+  .person small{display:block;font-family:"VT323",monospace;font-size:14px;color:var(--ink-2);margin-top:1px}
+  .role{font-family:"VT323",monospace;font-size:14px;background:var(--win-3);padding:2px 8px;color:var(--ink)}
+  .role.owner{background:var(--accent);color:#fff}
+
+  /* 账单 */
+  .bill{padding:10px 14px;font-family:"MS PGothic","Microsoft YaHei",monospace;font-size:13px}
+  .bill .ln{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px dotted var(--win-3)}
+  .bill .ln b{font-family:"VT323",monospace;font-size:18px;font-weight:700;color:var(--ink)}
+  .bill .total{
+    margin-top:6px;padding:6px 8px;background:var(--win-3);border:1px dashed var(--ink);
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .bill .total b{font-family:"VT323",monospace;font-size:30px;color:var(--blue);font-weight:700}
+  .gauge{margin-top:10px}
+  .gauge .top{display:flex;justify-content:space-between;font-size:11px;color:var(--ink-2);margin-bottom:3px}
+  .gauge .bar{height:14px;background:#FFF;border:1px solid var(--ink);position:relative}
+  .gauge .bar i{display:block;height:100%;width:72%;background:repeating-linear-gradient(90deg,var(--blue) 0 4px,#fff 4px 8px)}
+
+  /* 按钮 */
+  .btn{
+    font-family:"MS PGothic","Microsoft YaHei",monospace;font-size:13px;font-weight:400;
+    padding:3px 14px;background:var(--win);color:var(--ink);
+    border:0;cursor:pointer;display:inline-flex;align-items:center;gap:4px;
+    box-shadow:inset -2px -2px 0 var(--lo),inset 2px 2px 0 var(--hi);
+  }
+  .btn:active{box-shadow:inset 2px 2px 0 var(--lo),inset -2px -2px 0 var(--hi)}
+  .btn .key{text-decoration:underline}
+  .btn.red{background:var(--accent);color:#fff}
+
+  /* 程序图标小巧 */
+  .ic-folder::before{content:"📁"}
+
+  /* 系统时钟 */
+  .clock{font-family:"VT323",monospace;font-size:14px;background:var(--win-3);padding:1px 8px;color:var(--blue);font-weight:700;border:1px solid var(--lo)}
+
+  @media (max-width:1100px){
+    .desktop{grid-template-columns:1fr}
+    aside{display:flex;gap:8px;overflow-x:auto}
+    .folder{margin-bottom:0}
+    .grid-kpi{grid-template-columns:1fr 1fr}
+    .two-col{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="desktop">
+  <aside>
+    <div class="folder active">
+      <div class="ic">▦</div>
+      <div class="lbl">仪表盘.EXE</div>
+    </div>
+    <div class="folder">
+      <div class="ic">⚡</div>
+      <div class="lbl">实时调用</div>
+    </div>
+    <div class="folder">
+      <div class="ic">⚿</div>
+      <div class="lbl">API_KEYS</div>
+    </div>
+    <div class="folder">
+      <div class="ic">↻</div>
+      <div class="lbl">WEBHOOKS</div>
+    </div>
+    <div class="folder">
+      <div class="ic">☺</div>
+      <div class="lbl">成员名册</div>
+    </div>
+    <div class="folder">
+      <div class="ic">¥</div>
+      <div class="lbl">计费.TXT</div>
+    </div>
+    <div class="folder">
+      <div class="ic">⚙</div>
+      <div class="lbl">CONFIG.SYS</div>
+    </div>
+    <div class="folder">
+      <div class="ic">🗑</div>
+      <div class="lbl">回收站</div>
+    </div>
+  </aside>
+
+  <main>
+    <!-- 程序主窗 -->
+    <div class="win">
+      <div class="win-inner">
+        <div class="title-bar">
+          <span class="ic">▦</span>
+          <span>NORTHWIND.EXE — 控制台 / 仪表盘 / 生产 / ap-southeast-1</span>
+          <span class="ctrl"><span>—</span><span>□</span><span>×</span></span>
+        </div>
+        <div class="menu-bar">
+          <span><u>F</u>ile</span><span><u>E</u>dit</span><span><u>V</u>iew</span><span><u>R</u>esource</span><span><u>A</u>ccount</span><span><u>H</u>elp</span>
+        </div>
+        <div class="statusbar">
+          <span class="cell">USR <b>liananqi</b></span>
+          <span class="cell">ENV <b>PROD</b></span>
+          <span class="cell">RGN <b>AP-SE-1</b></span>
+          <span class="cell">STREAM <b class="blink" style="color:var(--green)">● LIVE</b></span>
+          <span class="spacer"></span>
+          <span class="clock">06/19/2026 · 14:02:11</span>
+        </div>
+
+        <div class="panel-body" style="padding:12px">
+          <!-- KPI -->
+          <div class="grid-kpi">
+            <div class="kpi-card win">
+              <div class="win-inner">
+                <div class="panel-head-band">本月调用<small>MTD</small></div>
+                <div class="panel-body">
+                  <div class="v">2,418,902</div>
+                  <div class="lbl">requests</div>
+                  <div class="d"><span class="up">▲ 12.4%</span><span>tgt 3.0M</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="kpi-card win">
+              <div class="win-inner">
+                <div class="panel-head-band">活跃成员<small>组织</small></div>
+                <div class="panel-body">
+                  <div class="v">38 <small>/50</small></div>
+                  <div class="lbl">在岗 · 12 席空闲</div>
+                  <div class="d"><span class="up">▲ 4 本周</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="kpi-card win">
+              <div class="win-inner">
+                <div class="panel-head-band">错误率<small>24h</small></div>
+                <div class="panel-body">
+                  <div class="v warn">0.42<small>%</small></div>
+                  <div class="lbl">阈值 0.5%</div>
+                  <div class="d"><span class="down">▲ 0.08%</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="kpi-card win">
+              <div class="win-inner">
+                <div class="panel-head-band">月度账单<small>MTD</small></div>
+                <div class="panel-body">
+                  <div class="v">¥ 2,879<small>.50</small></div>
+                  <div class="lbl">自动续费</div>
+                  <div class="d"><span>结算 T-11</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="two-col" style="margin-top:14px">
+            <div class="win">
+              <div class="win-inner">
+                <div class="title-bar">
+                  <span class="ic">≣</span>
+                  <span>access.log — Notepad</span>
+                  <span class="ctrl"><span>—</span><span>□</span><span>×</span></span>
+                </div>
+                <div class="panel-head-band">最近调用 · 实时 · 最近 100 条<small>·  按 F5 刷新</small></div>
+                <div class="panel-body" style="padding:6px 8px">
+                  <table>
+                    <thead><tr><th>时间</th><th>调用方</th><th>端点</th><th>状态</th><th>耗时</th></tr></thead>
+                    <tbody>
+                      <tr><td class="mono">14:02:11</td><td>京东数科</td><td class="mono">POST /v2/orders/sync</td>
+                        <td><span class="stat ok">200</span></td>
+                        <td><span class="lat-bar"><i style="width:18%"></i></span>92ms</td></tr>
+                      <tr><td class="mono">14:02:09</td><td>内部 dashboard</td><td class="mono">GET /v2/metrics/window</td>
+                        <td><span class="stat ok">200</span></td>
+                        <td><span class="lat-bar"><i style="width:28%"></i></span>140ms</td></tr>
+                      <tr><td class="mono">14:02:08</td><td>ACME</td><td class="mono">POST /v2/events/batch</td>
+                        <td><span class="stat warn">429</span></td>
+                        <td><span class="lat-bar warn"><i style="width:65%"></i></span>318ms</td></tr>
+                      <tr><td class="mono">14:02:07</td><td>Office</td><td class="mono">DELETE /v2/keys/ak_3f…</td>
+                        <td><span class="stat ok">204</span></td>
+                        <td><span class="lat-bar"><i style="width:12%"></i></span>58ms</td></tr>
+                      <tr><td class="mono">14:02:05</td><td>顺丰</td><td class="mono">GET /v2/orders?status=open</td>
+                        <td><span class="stat bad">500</span></td>
+                        <td><span class="lat-bar bad"><i style="width:88%"></i></span>1.42s</td></tr>
+                      <tr><td class="mono">14:02:03</td><td>京东数科</td><td class="mono">POST /v2/webhooks/test</td>
+                        <td><span class="stat ok">200</span></td>
+                        <td><span class="lat-bar"><i style="width:22%"></i></span>110ms</td></tr>
+                      <tr><td class="mono">14:02:01</td><td>平安</td><td class="mono">PUT /v2/orders/12489</td>
+                        <td><span class="stat ok">200</span></td>
+                        <td><span class="lat-bar"><i style="width:34%"></i></span>181ms</td></tr>
+                    </tbody>
+                  </table>
+                  <div style="margin-top:10px;display:flex;gap:6px">
+                    <button class="btn"><u>R</u>efresh</button>
+                    <button class="btn">仅看 <u>E</u>rror</button>
+                    <button class="btn"><u>S</u>ave As…</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:14px">
+              <div class="win">
+                <div class="win-inner">
+                  <div class="title-bar">
+                    <span class="ic">☺</span>
+                    <span>members.dbf — Roster</span>
+                    <span class="ctrl"><span>—</span><span>□</span><span>×</span></span>
+                  </div>
+                  <div class="panel-head-band">38 在岗 · 12 席空闲<small>F2 邀请</small></div>
+                  <div class="roster">
+                    <div class="person"><div class="px-av a1">林</div><div><b>林安琪</b><small>liananqi · 2 min</small></div><span class="role owner">OWNER</span></div>
+                    <div class="person"><div class="px-av a2">陈</div><div><b>陈维</b><small>chenwei · 1 hr</small></div><span class="role">ADMIN</span></div>
+                    <div class="person"><div class="px-av a3">蒋</div><div><b>蒋克</b><small>jiangke · 1 d</small></div><span class="role">DEV</span></div>
+                    <div class="person"><div class="px-av a4">袁</div><div><b>袁倩</b><small>vendor · pending</small></div><span class="role">READ</span></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="win">
+                <div class="win-inner">
+                  <div class="title-bar">
+                    <span class="ic">¥</span>
+                    <span>billing.txt — Notepad</span>
+                    <span class="ctrl"><span>—</span><span>□</span><span>×</span></span>
+                  </div>
+                  <div class="panel-head-band">2026-06 · 自动续费<small>F3 导出</small></div>
+                  <div class="bill">
+                    <div class="ln"><span>Growth 套餐</span><b>¥ 1,980.00</b></div>
+                    <div class="ln"><span>超量调用 · 418,902</span><b>¥ 837.80</b></div>
+                    <div class="ln"><span>Webhook 重试 · 12,341</span><b>¥ 61.70</b></div>
+                    <div class="total"><span style="font-weight:700">TOTAL · 06</span><b>¥ 2,879.50</b></div>
+                    <div class="gauge">
+                      <div class="top"><span>套餐用量 72%</span><span>2.42M / 3M</span></div>
+                      <div class="bar"><i></i></div>
+                    </div>
+                    <div style="margin-top:10px;display:flex;gap:6px">
+                      <button class="btn red">下载发票</button>
+                      <button class="btn">套餐升级</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 任务栏底 -->
+          <div class="statusbar" style="margin-top:14px">
+            <button class="btn" style="font-weight:700"><b>▣ Start</b></button>
+            <span class="cell">NORTHWIND.EXE</span>
+            <span class="cell">access.log</span>
+            <span class="cell">members.dbf</span>
+            <span class="cell">billing.txt</span>
+            <span class="spacer"></span>
+            <span class="cell" style="color:var(--green)">CAPS</span>
+            <span class="cell" style="color:var(--ink-2)">NUM</span>
+            <span class="clock">14:02:11</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>
