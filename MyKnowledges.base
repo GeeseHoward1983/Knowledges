@@ -1,0 +1,20 @@
+views:
+  - type: table
+    name: 表格
+    groupBy:
+      property: file.folder
+      direction: ASC
+    order:
+      - file.name
+      - file.folder
+      - file.basename
+    sort: []
+  - type: cards
+    name: 视图
+    cardSize: 350
+    imageAspectRatio: 1.05
+    imageFit: contain
+  - type: list
+    name: 视图 2
+    indentProperties: true
+    markers: number
