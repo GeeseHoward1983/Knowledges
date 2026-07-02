@@ -283,6 +283,217 @@ IMAGE_COR20_HEADER
 3. **支持多种运行模式**：`Flags` 一个字段即可区分纯 IL、混合模式（C++/CLI）、AnyCPU prefer-32bit 等多种部署场景。
 4. **安全验证锚点**：强名称签名和 `STRONGNAMESIGNED` 标志共同构成 CLR 程序集完整性校验的基础。
 
+## CLR 元数据流
+
+### 元数据根（Metadata Root）结构
+
+`IMAGE_COR20_HEADER.MetaData.VirtualAddress` 指向**元数据根**，它是整个 .NET 类型系统的入口。元数据根以固定签名 `BSJB`（Blob Signature Java Byte-stream，历史遗留名称）开头：
+
+```text
+元数据根布局
+偏移   大小   字段
+0x00   4      Signature       = 0x424A5342 ("BSJB")
+0x04   2      MajorVersion    = 1
+0x06   2      MinorVersion    = 1
+0x08   4      Reserved        = 0
+0x0C   4      VersionLength   = N（版本字符串长度，4 字节对齐）
+0x10   N      Version         = "v4.0.30319\0..."（CLR 版本字符串，以 0 填充至对齐）
+0x10+N 2      Flags           = 0（保留）
+0x12+N 2      Streams         = K（流数量，通常 5）
+0x14+N ...    StreamHeaders   = IMAGE_STREAM_HEADER × K（流目录）
+
+IMAGE_STREAM_HEADER（每条）：
+  DWORD  Offset   ; 流相对于元数据根的偏移
+  DWORD  Size     ; 流字节大小
+  CHAR   Name[]   ; 流名（变长 ASCII，4 字节对齐，带 \0 结尾）
+```
+
+**常见流目录示例：**
+
+```text
+StreamHeaders（示例）：
+  Offset=0x6C, Size=0x3A4C, Name="#~"
+  Offset=0x3AB8, Size=0x1C40, Name="#Strings"
+  Offset=0x56F8, Size=0x30,   Name="#US"
+  Offset=0x5728, Size=0x10,   Name="#GUID"
+  Offset=0x5738, Size=0x8C0,  Name="#Blob"
+```
+
+### 五大元数据流详解
+
+.NET 元数据分成五个逻辑流，各司其职：
+
+| 流名 | 全称 | 内容 | 在反编译中的作用 |
+|------|------|------|----------------|
+| `#~` | Compressed Metadata Tables | 压缩格式的表格集合（类型定义/方法/字段等） | **核心**：所有类/方法/字段的结构化数据 |
+| `#Strings` | String Heap | UTF-8 字符串堆（以 `\0` 分隔） | 类名、方法名、字段名的存储池 |
+| `#US` | User Strings Heap | UTF-16 用户字符串（`ldstr` 指令引用） | 源码中的字符串字面量（`"Hello"` 等） |
+| `#GUID` | GUID Heap | 16 字节 GUID 数组 | 模块 GUID、接口标识 |
+| `#Blob` | Blob Heap | 任意二进制 blob（方法签名、自定义属性、常量等） | 方法签名、泛型约束、自定义 Attribute 的值 |
+
+> [!note] `#-`（非压缩流）
+> 除 `#~`（压缩）外，还存在 `#-`（非压缩/通用格式），内容相同但各表独立存储，常见于某些旧版编译器或混淆工具输出的程序集；`#~` 是现代编译器（Roslyn）的默认选择。
+
+#### `#~` 流：压缩元数据表
+
+`#~` 是最复杂的流，内部由多张表组成，以压缩二进制格式存储：
+
+```text
+#~ 流布局：
+  偏移   字段
+  0x00   Reserved      = 0
+  0x04   MajorVersion  = 2
+  0x05   MinorVersion  = 0
+  0x06   HeapSizes     ; 位标志：bit0=StringHeap>64KB, bit1=GUIDHeap>64KB, bit2=BlobHeap>64KB
+  0x07   Reserved      = 1
+  0x08   Valid         ; 64 位掩码，每位对应一张表是否存在
+  0x10   Sorted        ; 64 位掩码，每张表是否排序
+  0x18   Rows[]        ; 存在的表的行数（DWORD × popcount(Valid)）
+  ...    Tables[]      ; 各表的行数据（行宽度由各列类型和 HeapSizes 决定）
+```
+
+**常用表（Table ID）：**
+
+| Table ID | 表名 | 主要列 |
+|----------|------|--------|
+| 0x00 | `Module` | Name（StringIdx）、Mvid（GUIDIdx） |
+| 0x01 | `TypeRef` | ResolutionScope、Name、Namespace |
+| 0x02 | `TypeDef` | Flags、Name、Namespace、Extends、FieldList、MethodList |
+| 0x04 | `Field` | Flags、Name、Signature（BlobIdx） |
+| 0x06 | `MethodDef` | RVA、ImplFlags、Flags、Name、Signature、ParamList |
+| 0x0A | `MemberRef` | Class、Name、Signature |
+| 0x0B | `Constant` | Type、Parent、Value（BlobIdx） |
+| 0x14 | `StandAloneSig` | Signature（BlobIdx） |
+| 0x23 | `Assembly` | HashAlgId、MajorVersion、…、Name、Culture |
+| 0x24 | `AssemblyRef` | 引用外部程序集的版本+名称+公钥 token |
+
+> [!tip] 表行 Token 格式
+> CLR 中每个元数据实体用一个 32 位 Token 引用：`高 8 位 = Table ID`，`低 24 位 = 行号（1-based）`。  
+> 例如：`0x06000001` = MethodDef 表第 1 行（即第一个方法），正是 `EntryPointToken` 的典型值。
+
+#### `#Strings` 堆：类型名/方法名的存储池
+
+```text
+#Strings 堆布局：字节流，相邻字符串以 \0 分隔
+  偏移 0x00: \0                       （第一个字节恒为 \0，代表空字符串）
+  偏移 0x01: "Program\0"
+  偏移 0x09: "Main\0"
+  偏移 0x0E: "System\0"
+  ...
+
+引用方式：#~ 表的 StringIdx 列存储字节偏移，加载器到此偏移处读 \0 结尾的字符串
+```
+
+#### `#US` 堆：源码字符串字面量
+
+`ldstr` IL 指令的操作数是指向 `#US` 堆的 Token（`0x70xxxxxx`）：
+
+```text
+#US 堆布局：
+  每条目 = 前缀长度（7 位压缩整数，字节数，含末尾标志位） + UTF-16LE 字符串字节 + 1 字节尾标志
+  
+  例："Hello" (5 chars = 10 bytes UTF-16 + 1 flag = 11 bytes total):
+    0B                     ; 长度 = 11
+    48 00 65 00 6C 00 6C 00 6F 00   ; "Hello" UTF-16LE
+    01                     ; 尾标志（1 = 包含非 ASCII 字符，0 = 纯 ASCII）
+```
+
+逆向时，`#US` 堆是提取**明文字符串**（URL、命令、密钥片段）的第一优先级目标。
+
+### EntryPointToken vs EntryPointRVA：托管 vs 混合模式
+
+`IMAGE_COR20_HEADER` 中 `EntryPointToken/RVA` 字段（偏移 `0x14`）是一个 union，由 `Flags` 中的 `COMIMAGE_FLAGS_NATIVE_ENTRYPOINT`（`0x10`）位决定语义：
+
+```text
+COMIMAGE_FLAGS_NATIVE_ENTRYPOINT == 0（大多数纯托管程序集）
+────────────────────────────────────────────────────────
+EntryPointToken = 托管方法 Token（格式 0x06xxxxxx）
+  └─▶ 查 MethodDef 表第 xxxxxx 行
+        ├─ RVA 字段 → IL 方法体在 .text 节中的 RVA
+        └─ Name → 方法名（通常 "Main" 或 "<Main>$"）
+  CLR JIT 编译该 IL → 执行
+
+示例值：0x06000001 = MethodDef 表第 1 行 = 通常是 Program::Main
+
+COMIMAGE_FLAGS_NATIVE_ENTRYPOINT == 1（C++/CLI 混合模式）
+────────────────────────────────────────────────────────
+EntryPointRVA = 原生机器码入口点 RVA（不经 JIT）
+  └─▶ 直接指向 .text 中的原生 x86/x64 代码
+  CLR 直接跳转执行（用于 C++/CLI，允许托管/非托管互操作）
+```
+
+**判断入口类型的代码：**
+
+```c
+DWORD flags = pCor20->Flags;
+DWORD entry = pCor20->EntryPointToken; // union 中的值
+if (flags & COMIMAGE_FLAGS_NATIVE_ENTRYPOINT) {
+    printf("原生入口点 RVA = 0x%08X\n", entry);
+} else {
+    DWORD tableId  = (entry >> 24) & 0xFF;  // 应为 0x06 (MethodDef)
+    DWORD rowIndex = entry & 0x00FFFFFF;     // 1-based 行号
+    printf("托管入口 Token = 0x%08X (Table=%02X, Row=%u)\n",
+           entry, tableId, rowIndex);
+}
+```
+
+### .NET 反编译入口：从 CLR 头到 IL
+
+掌握元数据流后，反编译工具（ILSpy / dnSpy / de4dot）的工作路径可归纳为：
+
+```text
+.NET 程序集反编译路径
+═══════════════════════════════════════════════════════════════
+
+① 读 DataDirectory[14] → IMAGE_COR20_HEADER
+         │
+         ▼
+② MetaData.VirtualAddress → 元数据根（"BSJB"）
+         │
+         ├─ StreamHeader "#~"  → 所有元数据表（类型/方法/字段清单）
+         │       │
+         │       └─ MethodDef 表每行的 RVA → IL 方法体（.text 中）
+         │               │
+         │               └─ IL 字节码 → 反编译为 C# / VB.NET 伪源码
+         │
+         ├─ StreamHeader "#Strings" → 类名/方法名/字段名
+         ├─ StreamHeader "#US"      → 字符串字面量（提取敏感字符串）
+         ├─ StreamHeader "#GUID"    → 模块标识 GUID
+         └─ StreamHeader "#Blob"    → 方法签名、自定义属性、常量值
+
+③ EntryPointToken → MethodDef 表某行 → IL RVA → 入口 IL 方法体
+         │
+         ▼
+④ JIT（运行时）或反编译工具（静态）将 IL 还原为高级语言
+```
+
+**常用反编译工具与其入口点定位方式：**
+
+| 工具 | 定位入口点方式 | 特点 |
+|------|--------------|------|
+| **dnSpy** | 自动解析 `EntryPointToken`，Entry Point 标注在 UI 中 | 支持 IL 与 C# 双视图，可调试 |
+| **ILSpy** | 同上，左侧树状视图中 `[entrypoint]` 标注 | 开源，Roslyn 反编译质量高 |
+| **de4dot** | 先去混淆再交给 ILSpy/dnSpy | 处理 .NET 混淆器（ConfuserEx、SmartAssembly 等） |
+| **ildasm.exe** | `MSIL DISASSEMBLER` - `.entrypoint` 标注 | 微软官方，输出 IL 文本 |
+| **Ghidra** | 需要 .NET 插件；元数据解析后跳入 IL → p-code | 支持混合模式程序集的原生代码分析 |
+
+**用 ildasm 快速定位入口：**
+
+```bash
+# 输出包含 .entrypoint 伪指令的方法即为入口
+ildasm /text /tok hello.exe | findstr /C:".entrypoint" /C:"IL_0000"
+
+# 查看所有方法的 IL 代码（含 Token）
+ildasm /output=hello.il hello.exe
+```
+
+> [!example] dnSpy 实战：定位混淆程序集的真实入口
+> 1. 打开 dnSpy → File → Open → 拖入目标 .exe
+> 2. 左侧树：`<module>` → `<namespace>` → 找带 `[entrypoint]` 标注的方法
+> 3. 若被混淆（类名/方法名为随机字符），用 Edit → Find → 搜索 `[entrypoint]`
+> 4. 查看 IL 代码（View → IL）确认 `newobj` / `call` 的目标 Token，追溯真实逻辑
+> 5. 若 `COMIMAGE_FLAGS_NATIVE_ENTRYPOINT` 置位，切换到汇编视图分析原生代码
+
 > [!summary] 小结
 > `IMAGE_COR20_HEADER` 是 .NET 程序集在 PE 格式上的唯一扩展点，也是原生 PE 世界与托管 CLR 世界的分界线。**记住三个核心字段**：`MetaData`（找到所有类型信息的起点）、`Flags`（决定运行模式）、`EntryPointToken/RVA`（程序的第一行代码在哪）。回顾全局：[[07-详解PE文件(七)：数据目录]] 第 15 项的 RVA 指向本结构；[[06-详解PE文件(六)：可选头]] 决定了整个数据目录数组的位置。理解 CLR 运行时头，是分析 .NET 程序集、做 IL 级逆向、排查强名称验证失败的必备基础。
 

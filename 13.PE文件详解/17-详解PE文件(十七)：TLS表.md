@@ -413,6 +413,222 @@ TLS Table
 > 00000A24    00 00 00 00               Characteristics       = 0
 > ```
 
+## TLS 回调与反调试
+
+### AddressOfCallBacks 字段详解
+
+`IMAGE_TLS_DIRECTORY.AddressOfCallBacks` 是一个指向**以 NULL 结尾的函数指针数组**的虚拟地址（VA，非 RVA）。这是 TLS 机制中逆向分析最需关注的字段。
+
+```text
+AddressOfCallBacks（VA）
+        │
+        ▼
+ 内存中某地址处：
+ ┌─────────────────┬─────────────────┬─────┬─────────────────┐
+ │  Callback_1_VA  │  Callback_2_VA  │ ... │   0x00000000    │
+ │  (PIMAGE_TLS_   │  (PIMAGE_TLS_   │     │ (NULL 终止符)    │
+ │   CALLBACK)     │   CALLBACK)     │     │                 │
+ └─────────────────┴─────────────────┴─────┴─────────────────┘
+          │                 │
+          ▼                 ▼
+     TLS 回调 #1       TLS 回调 #2
+     函数体（代码）     函数体（代码）
+```
+
+> [!warning] VA 而非 RVA
+> `AddressOfCallBacks` 存储的是**绝对虚拟地址（VA）**，不是 RVA。这意味着从文件中解析时需要将 VA 减去 `ImageBase` 才能得到 RVA，再通过节表换算为文件偏移。手工解析时极易疏忽导致定位偏差。
+
+**读取回调数组的正确方式（运行时）：**
+
+```c
+// 在已加载进内存的模块中读取 TLS 回调
+void EnumTlsCallbacks(HMODULE hModule) {
+    PIMAGE_DOS_HEADER pDos = (PIMAGE_DOS_HEADER)hModule;
+    PIMAGE_NT_HEADERS pNt  = (PIMAGE_NT_HEADERS)((BYTE*)hModule + pDos->e_lfanew);
+
+    PIMAGE_DATA_DIRECTORY pTlsDir =
+        &pNt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_TLS];
+    if (!pTlsDir->VirtualAddress) return;
+
+    PIMAGE_TLS_DIRECTORY pTls =
+        (PIMAGE_TLS_DIRECTORY)((BYTE*)hModule + pTlsDir->VirtualAddress);
+
+    // AddressOfCallBacks 是 VA，直接解引用
+    PIMAGE_TLS_CALLBACK* ppCb = (PIMAGE_TLS_CALLBACK*)pTls->AddressOfCallBacks;
+    if (!ppCb) return;
+
+    for (int i = 0; *ppCb != NULL; ppCb++, i++) {
+        printf("[TLS Callback %d] VA = %p\n", i, (void*)*ppCb);
+    }
+}
+```
+
+### TLS 回调先于 OEP 执行的原理
+
+Windows 加载器（`ntdll!LdrInitializeThunk` → `ntdll!LdrpRunInitializeRoutines`）在调用进程入口点（OEP，`AddressOfEntryPoint`）之前，已经完成对所有已加载模块 TLS 回调的调用。执行顺序如下：
+
+```text
+ntdll!LdrInitializeThunk
+    │
+    ▼
+ntdll!LdrpInitializeProcess
+    │  ① 映射 EXE + 所有静态依赖 DLL
+    │  ② 应用基址重定位（.reloc）
+    │  ③ 填写 IAT（导入地址表）
+    │  ④ 调用 TLS 回调（所有 DLL 的，再是 EXE 的）◄── ★ 在 OEP 之前
+    │      LdrpCallTlsInitializers(DLL_PROCESS_ATTACH)
+    │  ⑤ 调用 DllMain (DLL_PROCESS_ATTACH)（各 DLL）
+    │
+    ▼
+调用 EXE 的 OEP（WinMain / main）
+```
+
+**关键时序**：TLS 回调在 `DllMain` 之前，更在 `WinMain` 之前。对于 EXE 来说，`DLL_PROCESS_ATTACH` 触发的 TLS 回调是进程中**第一个执行的用户代码**。
+
+### x64dbg 中"先于 OEP 断在 TLS 回调"的操作步骤
+
+**方法一：使用系统断点（推荐新手）**
+
+1. 打开 x64dbg → 拖入目标 EXE
+2. 默认会在 `ntdll` 系统断点（`DbgBreakPoint`）处停下
+3. 此时 TLS 回调**尚未执行**
+4. 在命令栏输入：
+   ```
+   bpx TlsCallback_0   ; 若 x64dbg 已识别符号
+   ```
+   或手工定位：Options → Preferences → Events → 勾选 **"TLS Callbacks"**
+5. 运行（F9），x64dbg 会在每个 TLS 回调入口处自动中断
+
+**方法二：手工计算 TLS 回调地址并下断点**
+
+```text
+步骤 1：静态分析找 AddressOfCallBacks
+   PE-bear / CFF Explorer → TLS Directory → AddressOfCallBacks = 0x00401060（示例 VA）
+   
+步骤 2：计算该 VA 存放的第一个回调指针
+   x64dbg 命令：db 00401060
+   → 读出 4/8 字节 VA：0x00401080（假设）= Callback_1 入口
+   
+步骤 3：在 0x00401080 下断点
+   bp 00401080
+   
+步骤 4：运行（F9），命中即在 TLS 回调入口
+```
+
+**方法三：Options 全局设置（最简）**
+
+```text
+x64dbg → Options → Preferences → Events
+  勾选: ☑ Entry Breakpoint（默认选中的 OEP 断点）
+  勾选: ☑ TLS Callbacks          ← 这一项保证回调入口处自动下断
+  勾选: ☑ System Breakpoint（用于抓最早的注入/TLS）
+```
+
+> [!tip] OllyDbg 同类操作
+> OllyDbg：Options → Debugging options → Events → 选择 **"Break on new module (DLL)"** 并在 `[TLS:xxx]` 注释处下断，或配合 OllyScript 在第一条指令处自动扫描 TLS 回调表。
+
+### 恶意软件用 TLS 回调反调试与解密的常见手法
+
+**手法一：IsDebuggerPresent 检测**
+
+```c
+void NTAPI AntiDebugCallback(PVOID hModule, DWORD Reason, PVOID Reserved)
+{
+    if (Reason == DLL_PROCESS_ATTACH) {
+        if (IsDebuggerPresent()) {
+            // 调试器存在时：修改 OEP 为 ExitProcess，让程序假装正常退出
+            PIMAGE_DOS_HEADER pDos = (PIMAGE_DOS_HEADER)hModule;
+            PIMAGE_NT_HEADERS pNt  = (PIMAGE_NT_HEADERS)((BYTE*)hModule + pDos->e_lfanew);
+            // 将 AddressOfEntryPoint 改写为 ExitProcess 的地址
+            FARPROC pfnExit = GetProcAddress(GetModuleHandleA("kernel32"), "ExitProcess");
+            // ...（此处省略实际写入逻辑，恶意样本中常见）
+        }
+    }
+}
+```
+
+**手法二：NtQueryInformationProcess 检测调试端口**
+
+```c
+void NTAPI NtDebugCheck(PVOID h, DWORD r, PVOID) {
+    if (r != DLL_PROCESS_ATTACH) return;
+    HANDLE hProc = GetCurrentProcess();
+    DWORD debugPort = 0;
+    // NtQueryInformationProcess(hProc, ProcessDebugPort, &debugPort, 4, NULL)
+    typedef NTSTATUS(WINAPI* pfnNQIP)(HANDLE, DWORD, PVOID, ULONG, PULONG);
+    pfnNQIP pNQIP = (pfnNQIP)GetProcAddress(GetModuleHandleA("ntdll"), "NtQueryInformationProcess");
+    if (pNQIP) {
+        NTSTATUS s = pNQIP(hProc, 7 /*ProcessDebugPort*/, &debugPort, sizeof(debugPort), NULL);
+        if (NT_SUCCESS(s) && debugPort) ExitProcess(0);
+    }
+}
+```
+
+**手法三：动态解密 OEP 代码**
+
+```c
+// 典型"TLS 解壳"流程：TLS 回调中解密真正的入口点代码
+void NTAPI DecryptCallback(PVOID hModule, DWORD Reason, PVOID) {
+    if (Reason != DLL_PROCESS_ATTACH) return;
+    // 找到加密的 .text 节
+    PIMAGE_NT_HEADERS pNt = /* ... */;
+    PIMAGE_SECTION_HEADER pSec = IMAGE_FIRST_SECTION(pNt);
+    for (int i = 0; i < pNt->FileHeader.NumberOfSections; i++, pSec++) {
+        if (memcmp(pSec->Name, ".enc", 4) == 0) {
+            BYTE* pCode = (BYTE*)hModule + pSec->VirtualAddress;
+            DWORD oldProt;
+            VirtualProtect(pCode, pSec->Misc.VirtualSize, PAGE_EXECUTE_READWRITE, &oldProt);
+            // XOR 解密
+            for (DWORD j = 0; j < pSec->Misc.VirtualSize; j++)
+                pCode[j] ^= 0xAA;
+            VirtualProtect(pCode, pSec->Misc.VirtualSize, PAGE_EXECUTE_READ, &oldProt);
+        }
+    }
+}
+```
+
+**手法四：检测沙箱/虚拟机（时间差测量）**
+
+```c
+void NTAPI SandboxDetect(PVOID h, DWORD r, PVOID) {
+    if (r != DLL_PROCESS_ATTACH) return;
+    LARGE_INTEGER t1, t2, freq;
+    QueryPerformanceFrequency(&freq);
+    QueryPerformanceCounter(&t1);
+    Sleep(100);
+    QueryPerformanceCounter(&t2);
+    // 真实机器 ~100ms；沙箱跳过 Sleep 则远小于此
+    double elapsed = (double)(t2.QuadPart - t1.QuadPart) / freq.QuadPart * 1000.0;
+    if (elapsed < 50.0) ExitProcess(0);  // 检测到加速执行
+}
+```
+
+### IDA Pro 中定位 TLS 回调
+
+IDA 在分析 PE 时会自动识别 TLS 回调：
+
+```text
+方法 1：查看 Functions 窗口
+  以 "TlsCallback_" 为前缀的函数即 TLS 回调（IDA 自动命名）
+
+方法 2：手动导航
+  View → Open subviews → Segments → 找 .tls 节
+  或直接 Ctrl+L 跳转到 AddressOfCallBacks 处的 VA
+
+方法 3：使用 IDC/Python 脚本枚举
+  import idc, idautils
+  for entry in idautils.Entries():
+      print(hex(entry[2]), idc.get_name(entry[2]))
+  # 带 "TlsCallback" 前缀的即为回调
+```
+
+> [!example] 真实样本特征（Dridex / Emotet 系列）
+> 常见 TLS 反调试特征（静态分析 IOC）：
+> - `.tls` 节存在且 `AddressOfCallBacks` 非零（PE-bear 可直接看到）
+> - TLS 回调函数内包含 `IsDebuggerPresent` / `CheckRemoteDebuggerPresent` 调用
+> - 回调函数异常短（< 20 字节）且直接 `jmp` 到解密桩
+> - TLS 回调中调用 `VirtualProtect` + 大循环（XOR/RC4 解密特征）
+
 > [!summary] 小结
 > TLS 表（数据目录索引 9）是 PE 文件中多线程支持的底层描述结构。核心由 `IMAGE_TLS_DIRECTORY` 的 6 个字段组成：模板数据区间（`Start/EndAddressOfRawData`）、TLS 槽位索引指针（`AddressOfIndex`）、回调函数数组指针（`AddressOfCallBacks`）以及零填充大小（`SizeOfZeroFill`）。
 >
