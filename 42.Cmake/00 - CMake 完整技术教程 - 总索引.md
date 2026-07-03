@@ -28,7 +28,7 @@ CMake 是一个**跨平台的构建系统生成器（build system generator）**
 
 ---
 
-## 🗂️ 完整目录（7 部分 · 19 章）
+## 🗂️ 完整目录（8 部分 · 24 章）
 
 ### 第一部分 · 基础入门
 
@@ -86,6 +86,18 @@ CMake 是一个**跨平台的构建系统生成器（build system generator）**
 
 ---
 
+### 第八部分 · 进阶专题
+
+| 章 | 标题 | 核心内容 |
+|----|------|----------|
+| 20 | [[42.Cmake/20 - C++20 模块支持.md\|C++20 模块支持]] | `FILE_SET CXX_MODULES`、BMI、Ninja 依赖扫描、`CMAKE_CXX_SCAN_FOR_MODULES`、模块 install |
+| 21 | [[42.Cmake/21 - cmake-file-api.md\|cmake-file-api]] | JSON API：query/reply、codemodel/cache/toolchains、IDE 集成 |
+| 22 | [[42.Cmake/22 - 代码生成 target.md\|代码生成 target]] | `add_custom_command(OUTPUT)` vs 钩子、protobuf/moc/flatbuffers recipe |
+| 23 | [[42.Cmake/23 - 大型项目与 monorepo 组织.md\|大型项目与 monorepo 组织]] | 100+ target 组织、`PROJECT_IS_TOP_LEVEL`、find/FetchContent 统一 |
+| 24 | [[42.Cmake/24 - CPack 进阶打包.md\|CPack 进阶打包]] | External 生成器、组件化、`file(GET_RUNTIME_DEPENDENCIES)`、签名 |
+
+---
+
 ## 🧭 推荐学习路径
 
 ```mermaid
@@ -120,4 +132,4 @@ graph LR
 
 ---
 
-> 📖 本教程共 19 章，逐章详解。点击上方任意链接进入对应章节。
+> 📖 本教程共 24 章，逐章详解。点击上方任意链接进入对应章节。

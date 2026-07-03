@@ -171,6 +171,149 @@ LD_PRELOAD=./libaudit.so curl https://example.com
 # stderr: [audit] connect 93.184.216.34:443
 ```
 
+### 2.6 运行时 GOT 改写——"加载后"直接 patch 跳转表
+
+`LD_PRELOAD` 属于"加载前"干预：在 ld.so 填充 GOT 之前插入自己的符号，让 resolver 把 GOT 槽填成我们的地址。而**运行时 GOT 改写**是另一条路——进程已经跑起来，GOT 槽已经被填为 libc 真实地址，我们直接用 `mprotect` 把那个槽所在内存页改为可写，然后手动覆盖。`ltrace` 的核心机制正是此类。
+
+#### 原理分步
+
+```
+进程启动完毕，PLT 已 resolve：
+  .got.plt[printf]  → 0x7f...c0a2b0   ← libc 的 printf
+                                       ← 我们要把这里改成 my_printf
+
+步骤：
+1. 找到目标符号的 GOT 槽虚拟地址
+   - 解析 /proc/self/maps 得到可执行文件映射基址
+   - 解析 ELF 动态段 DT_JMPREL（重定位表）+ DT_SYMTAB 定位 printf 的 GOT 槽偏移
+   - 槽绝对地址 = 映射基址 + 偏移
+2. mprotect(page_align(slot_addr), 4096, PROT_READ|PROT_WRITE)
+3. 保存原值：orig = *slot_addr
+4. *slot_addr = (uintptr_t)my_printf
+5. 卸载时恢复：*slot_addr = orig；再 mprotect 改回 PROT_READ
+```
+
+与 `LD_PRELOAD` 的本质区别：
+
+| | LD_PRELOAD | 运行时 GOT 改写 |
+|---|---|---|
+| 时机 | 加载前，改符号搜索顺序 | 运行后，直接写内存 |
+| 目标进程 | 必须重启 | **无需重启**，适合注入已运行进程 |
+| 生效范围 | 所有 DSO 里的调用 | 仅 patch 那个 GOT 槽所属映像的调用（同名符号其他 .so 内部调用不受影响）|
+| 实现复杂度 | 低（写一个 .so） | 中（要解析 ELF 动态段）|
+
+#### 完整 C 代码骨架（patch 本进程 printf）
+
+```c
+// got_patch.c
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+#include <dlfcn.h>
+#include <link.h>          // dl_iterate_phdr, ElfW
+#include <sys/mman.h>
+#include <unistd.h>
+#include <elf.h>
+
+/* 对齐到页边界 */
+static void *page_of(void *addr) {
+    long pgsz = sysconf(_SC_PAGESIZE);
+    return (void *)((uintptr_t)addr & ~(uintptr_t)(pgsz - 1));
+}
+
+/* 把 slot 所在页改为 RW，写入 newval，返回旧值 */
+static uintptr_t patch_slot(void **slot, void *newval) {
+    void *pg = page_of(slot);
+    mprotect(pg, sysconf(_SC_PAGESIZE), PROT_READ | PROT_WRITE);
+    uintptr_t old = *(uintptr_t *)slot;
+    *(uintptr_t *)slot = (uintptr_t)newval;
+    mprotect(pg, sysconf(_SC_PAGESIZE), PROT_READ);
+    return old;
+}
+
+/* 在 phdr 里找名为 sym_name 的符号的 GOT 槽地址 */
+typedef struct { const char *name; void **slot; uintptr_t base; } find_ctx;
+
+static int find_got_slot(struct dl_phdr_info *info, size_t sz, void *data) {
+    find_ctx *ctx = data;
+    /* 只处理主程序（第一个回调，name == ""） */
+    if (info->dlpi_name && info->dlpi_name[0] != '\0') return 0;
+
+    ctx->base = info->dlpi_addr;
+    const ElfW(Phdr) *phdr = info->dlpi_phdr;
+    for (int i = 0; i < info->dlpi_phnum; i++, phdr++) {
+        if (phdr->p_type != PT_DYNAMIC) continue;
+        ElfW(Dyn) *dyn = (ElfW(Dyn) *)(ctx->base + phdr->p_vaddr);
+
+        ElfW(Rela) *rela = NULL; size_t rela_cnt = 0;
+        ElfW(Sym)  *sym  = NULL;
+        char       *strtab = NULL;
+
+        for (; dyn->d_tag != DT_NULL; dyn++) {
+            if      (dyn->d_tag == DT_JMPREL)   rela     = (ElfW(Rela) *)(ctx->base + dyn->d_un.d_ptr);
+            else if (dyn->d_tag == DT_PLTRELSZ)  rela_cnt = dyn->d_un.d_val / sizeof(ElfW(Rela));
+            else if (dyn->d_tag == DT_SYMTAB)    sym      = (ElfW(Sym)  *)(ctx->base + dyn->d_un.d_ptr);
+            else if (dyn->d_tag == DT_STRTAB)    strtab   = (char       *)(ctx->base + dyn->d_un.d_ptr);
+        }
+        if (!rela || !sym || !strtab) return 0;
+
+        for (size_t j = 0; j < rela_cnt; j++) {
+            uint32_t idx = ELF64_R_SYM(rela[j].r_info);
+            const char *name = strtab + sym[idx].st_name;
+            if (strcmp(name, ctx->name) == 0) {
+                ctx->slot = (void **)(ctx->base + rela[j].r_offset);
+                return 1;   /* 找到，停止遍历 */
+            }
+        }
+    }
+    return 0;
+}
+
+/* hook 函数：替代 printf */
+static uintptr_t orig_printf_slot_val = 0;
+
+int my_printf(const char *fmt, ...) {
+    /* 直接调 libc fprintf 避免递归 */
+    fprintf(stderr, "[GOT-hook] printf intercepted, fmt=\"%s\"\n", fmt);
+    /* 调用原函数：通过保存的地址 */
+    typedef int (*printf_fn)(const char *, ...);
+    va_list ap;
+    va_start(ap, fmt);
+    int r = ((printf_fn)orig_printf_slot_val)(fmt, ap);  /* 注：可变参数直接转发需 vprintf */
+    va_end(ap);
+    return r;
+}
+
+int main(void) {
+    find_ctx ctx = { .name = "printf" };
+    dl_iterate_phdr(find_got_slot, &ctx);
+    if (!ctx.slot) { fprintf(stderr, "GOT slot for printf not found\n"); return 1; }
+
+    printf("=== before hook ===\n");
+    orig_printf_slot_val = patch_slot(ctx.slot, my_printf);
+    printf("=== after hook (this goes to my_printf) ===\n");
+    /* 卸载：恢复原值 */
+    patch_slot(ctx.slot, (void *)orig_printf_slot_val);
+    printf("=== after restore ===\n");
+    return 0;
+}
+```
+
+编译：
+```bash
+gcc -o got_patch got_patch.c -ldl
+./got_patch
+```
+
+#### 边界陷阱
+
+1. **RELRO（Relocation Read-Only）**：现代发行版默认开启 `-Wl,-z,relro,-z,now`（Full RELRO）。`BIND_NOW` 让 ld.so 在启动时就填满所有 GOT 槽，然后把整个 `.got.plt` 段映射为只读。此时 `mprotect` 调用会**失败（EPERM）**——内核的 `mmap` 保护位被 ld.so 设为不可更改（`PROT_READ` 只读区通过 `mprotect` 再改 RW 在 Full RELRO 下仍会成功，但需要注意部分内核安全模块如 LKRG 会拦截这类行为）。检测：`checksec --file=./target`；或看 `readelf -l target | grep GNU_RELRO`。
+2. **PIE（Position Independent Executable）**：主程序每次加载地址随机（ASLR）。上面的代码已通过 `dl_iterate_phdr` 获取基址，正确处理了 PIE。直接用 `readelf` 得到的偏移不能当绝对地址。
+3. **多线程原子性**：`patch_slot` 里写 8 字节指针在 x86_64 上是原子的（对齐的 8 字节写），但写前后的 `mprotect` 与写操作不是原子的——极小窗口内其他线程调用旧 PLT 桩可能拿到部分写入的值。生产实现应在 patch 前 `pause` 其他线程，或使用 compare-and-swap。
+4. **仅影响当前映像的调用**：如果 libfoo.so 内部直接调用 libc 里的 `printf`（不走主程序 GOT），则上述 patch 对 libfoo 内部调用无效——它有自己的 `.got.plt` 段，需要对每个 DSO 分别 patch。
+5. **与 LD_PRELOAD 同时使用**：若同时设置了 `LD_PRELOAD`，ld.so 会把 GOT 填成 preload.so 里的地址；运行时再 GOT 改写则覆盖了 preload，二者叠加顺序要注意。
+
 ---
 
 ## 3. ptrace —— 给已运行进程注入
@@ -272,6 +415,223 @@ GDB 内部走的就是 ptrace，但帮你做了 ABI 处理。
 
 - `/proc/sys/kernel/yama/ptrace_scope` 控制谁能 ptrace 谁。Ubuntu 默认 `1`（只允许 ptrace 自己的子进程），改 `0` 可任意 ptrace 同 uid 进程。
 - 同进程同时只能被一个 tracer 附加（你 attach 就会把 gdb 踢掉）。
+
+### 3.4 /proc/pid/mem 写入注入——批量内存读写的高效替代
+
+`ptrace(PTRACE_POKEDATA)` 每次只能写 8 字节（一个 word），注入几百字节的 shellcode 需要数十次 syscall。Linux 提供了另一条通道：直接 `open("/proc/<pid>/mem", O_RDWR)` 再用 `pread`/`pwrite` 批量操作目标进程内存，一次调用可以传输任意长度。
+
+#### 原理与权限约束
+
+```
+/proc/<pid>/mem 内部实现：
+  内核对每次 pread/pwrite 都调用 access_process_vm()
+  → 与 PTRACE_PEEKDATA/POKEDATA 使用同一条内核路径
+  → 权限检查完全相同：调用方必须能 ptrace 目标进程
+
+ptrace_scope 与 YAMA 对 /proc/pid/mem 同样生效：
+  scope=0 → 同 uid 可读写
+  scope=1 → 只能读写自己的子进程
+  scope=2 → 仅 root
+  scope=3 → 禁止一切非子进程 ptrace，mem 也拒绝
+```
+
+关键区别：`/proc/<pid>/mem` **不需要先 `PTRACE_ATTACH`**（Linux 3.6+ 改变了实现，仅凭权限检查即可访问），但对于已被其他 debugger attach 的进程仍然受 single-tracer 限制。
+
+#### 与 process_vm_writev 的横向对比
+
+| | `/proc/pid/mem` pwrite | `process_vm_writev(2)` | `ptrace PTRACE_POKEDATA` |
+|---|---|---|---|
+| 单次传输量 | 任意 | 任意（iovec 数组） | 8 字节/次 |
+| 是否需要 PTRACE_ATTACH | 否（3.6+）| 否 | 是 |
+| 跨越不连续地址 | 需多次 pwrite | 单次多 iovec | 每 8 字节一次 |
+| 访问 /proc 文件句柄开销 | 一次 open 复用 | 无句柄 | 无句柄 |
+| 典型用途 | 批量 patch 多段内存 | 高性能跨进程数据传输 | 调试器逐字节写 |
+
+`process_vm_writev` 是 Linux 3.2 引入的专用 syscall，权限约束与 `ptrace` 相同，语义更干净；`/proc/pid/mem` 的优势是可以复用 fd 并在循环中反复 seek。
+
+#### 代码示例：读取并 patch 目标进程的内存
+
+```c
+// memwrite.c — 通过 /proc/pid/mem 向目标进程写入数据
+// 用法: sudo ./memwrite <pid> <hex_addr> <hex_bytes...>
+// 示例: sudo ./memwrite 1234 0x7fff12340000 90 90 90
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <errno.h>
+
+int main(int argc, char **argv) {
+    if (argc < 4) {
+        fprintf(stderr, "usage: %s <pid> <addr_hex> <byte0> [byte1 ...]\n", argv[0]);
+        return 1;
+    }
+    pid_t pid  = (pid_t)atoi(argv[1]);
+    uintptr_t addr = strtoull(argv[2], NULL, 16);
+
+    /* 收集要写入的字节 */
+    int nbytes = argc - 3;
+    uint8_t *buf = malloc(nbytes);
+    for (int i = 0; i < nbytes; i++)
+        buf[i] = (uint8_t)strtoul(argv[3 + i], NULL, 16);
+
+    /* 先读出原始内容做备份 */
+    char mempath[64];
+    snprintf(mempath, sizeof(mempath), "/proc/%d/mem", pid);
+    int fd = open(mempath, O_RDWR);
+    if (fd < 0) { perror("open /proc/pid/mem"); return 1; }
+
+    uint8_t *orig = malloc(nbytes);
+    if (pread(fd, orig, nbytes, (off_t)addr) != nbytes)
+        { perror("pread"); return 1; }
+    printf("[*] original bytes at %#lx:", addr);
+    for (int i = 0; i < nbytes; i++) printf(" %02x", orig[i]);
+    putchar('\n');
+
+    /* 写入新内容（目标地址所在页必须可写，否则 pwrite 返回 EIO）*/
+    if (pwrite(fd, buf, nbytes, (off_t)addr) != nbytes)
+        { perror("pwrite"); return 1; }
+    printf("[+] patched %d byte(s) at %#lx\n", nbytes, addr);
+
+    close(fd);
+    free(buf); free(orig);
+    return 0;
+}
+```
+
+```bash
+gcc -o memwrite memwrite.c
+# 将 PID 1234 地址 0x401020 起的 3 字节改为 NOP (0x90)
+sudo ./memwrite 1234 0x401020 90 90 90
+```
+
+#### 边界陷阱
+
+1. **目标页权限**：`pwrite` 向只读页（如 `.text` 段）写入会返回 `EIO`。需要先通过 `ptrace` 让目标进程调用 `mprotect` 把目标页改为可写（或者先 COW 拷贝一页）——这正是注入工具的常见两步：`/proc/pid/mem` 负责批量传输，`ptrace` 负责修改页权限和跳转寄存器。
+2. **seek 偏移为 `off_t`**：`lseek` 在 32 位系统上最大 2 GB，`pread`/`pwrite` 的 `off_t` 参数同样。64 位系统无此限制。
+3. **多线程目标**：patch 目标地址时，其他线程可能正在执行该位置。生产实现需先 `PTRACE_ATTACH` + `PTRACE_INTERRUPT` 暂停所有线程再写。
+4. **vsyscall/vdso 页**：这些页映射在 `/proc/<pid>/mem` 里但是内核映射，`pwrite` 对其无效。
+
+### 3.5 seccomp-bpf——syscall 级拦截 hook 与沙箱
+
+seccomp（secure computing mode）从 Linux 3.5 起支持 **BPF 过滤器模式**，可以对每个 syscall 编写细粒度策略，既是"拦截 syscall 的 hook 机制"，也是沙箱的基础设施（Chrome 的进程沙箱、Docker 的默认 seccomp 策略、systemd `SystemCallFilter=` 都基于此）。
+
+#### 原理分步
+
+```
+用户态：
+  prctl(PR_SET_NO_NEW_PRIVS, 1)  // 禁止提权（execve 后也继承）
+  prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &prog)
+          ↓
+内核：
+  进程每次发起 syscall 前，内核运行 BPF 过滤程序
+  BPF 程序可以访问 seccomp_data 结构（syscall 号、参数、arch）
+  BPF 程序返回 action：
+    SECCOMP_RET_ALLOW        → 放行
+    SECCOMP_RET_ERRNO(e)     → 拒绝，返回 -e 给调用方
+    SECCOMP_RET_KILL_THREAD  → 杀死线程（SIGSYS）
+    SECCOMP_RET_KILL_PROCESS → 杀死整个进程组（5.0+）
+    SECCOMP_RET_TRAP         → 向进程发 SIGSYS（可自定义信号处理）
+    SECCOMP_RET_TRACE        → 通知 ptrace tracer（实现 syscall 级 hook）
+    SECCOMP_RET_LOG          → 记录日志后放行
+```
+
+`SECCOMP_RET_TRACE` 是将 seccomp 用作 **hook** 而非沙箱的关键：每当 syscall 命中该规则，内核暂停进程并通知已附加的 ptrace tracer；tracer 可以检查/修改参数，再决定是放行还是拦截——这是 `strace` 的实现基础，也是容器运行时做系统调用审计的常见方案。
+
+#### 最小过滤器示例（禁止 connect syscall）
+
+```c
+// seccomp_block_connect.c
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <errno.h>
+#include <sys/prctl.h>
+#include <linux/seccomp.h>
+#include <linux/filter.h>
+#include <linux/audit.h>
+#include <sys/syscall.h>
+
+/* BPF 辅助宏（来自 Linux samples/seccomp） */
+#define VALIDATE_ARCHITECTURE \
+    BPF_STMT(BPF_LD|BPF_W|BPF_ABS, (offsetof(struct seccomp_data, arch))), \
+    BPF_JUMP(BPF_JMP|BPF_JEQ|BPF_K, AUDIT_ARCH_X86_64, 1, 0), \
+    BPF_STMT(BPF_RET|BPF_K, SECCOMP_RET_KILL_PROCESS)
+
+#define EXAMINE_SYSCALL \
+    BPF_STMT(BPF_LD|BPF_W|BPF_ABS, (offsetof(struct seccomp_data, nr)))
+
+#define DENY_SYSCALL(name) \
+    BPF_JUMP(BPF_JMP|BPF_JEQ|BPF_K, __NR_##name, 0, 1), \
+    BPF_STMT(BPF_RET|BPF_K, SECCOMP_RET_ERRNO | (EPERM & SECCOMP_RET_DATA))
+
+#define ALLOW_ALL \
+    BPF_STMT(BPF_RET|BPF_K, SECCOMP_RET_ALLOW)
+
+static struct sock_filter filter[] = {
+    VALIDATE_ARCHITECTURE,
+    EXAMINE_SYSCALL,
+    DENY_SYSCALL(connect),       /* 禁止所有 connect */
+    DENY_SYSCALL(bind),          /* 同时禁止 bind */
+    ALLOW_ALL,
+};
+static struct sock_fprog prog = {
+    .len    = (unsigned short)(sizeof(filter) / sizeof(filter[0])),
+    .filter = filter,
+};
+
+int main(void) {
+    /* 必须先设置 no_new_privs，否则 PR_SET_SECCOMP 需要 CAP_SYS_ADMIN */
+    if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) < 0)
+        { perror("prctl NO_NEW_PRIVS"); return 1; }
+
+    if (prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &prog) < 0)
+        { perror("prctl SET_SECCOMP"); return 1; }
+
+    printf("[+] seccomp filter installed, connect/bind will fail with EPERM\n");
+
+    /* 验证：尝试 connect 一个本地端口，应该得到 EPERM */
+    int sock = syscall(__NR_socket, AF_INET, SOCK_STREAM, 0);
+    struct sockaddr_in addr = {
+        .sin_family = AF_INET, .sin_port = htons(80),
+        .sin_addr.s_addr = inet_addr("127.0.0.1")
+    };
+    int r = syscall(__NR_connect, sock, &addr, sizeof(addr));
+    printf("connect() returned %d, errno=%d (%s)\n", r, errno, strerror(errno));
+    /* 期望: connect() returned -1, errno=1 (Operation not permitted) */
+    return 0;
+}
+```
+
+编译：
+```bash
+gcc -o seccomp_test seccomp_block_connect.c
+./seccomp_test
+```
+
+#### 用 libseccomp 简化编写
+
+手写 BPF 字节码易出错，实际项目常用 **libseccomp**：
+
+```c
+#include <seccomp.h>  // apt install libseccomp-dev
+
+scmp_filter_ctx ctx = seccomp_init(SCMP_ACT_ALLOW);
+seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), SCMP_SYS(connect), 0);
+seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), SCMP_SYS(bind),    0);
+seccomp_load(ctx);    // 等价于上面的 prctl(PR_SET_SECCOMP, ...)
+seccomp_release(ctx);
+```
+
+#### 逆向与安全视角
+
+- **检测 seccomp**：`/proc/<pid>/status` 里的 `Seccomp:` 字段（0=无，1=strict，2=filter）；或 `seccomp_export_bpf()` 导出现有过滤器（需要 root 或 `CAP_SYS_ADMIN`）。
+- **绕过**：seccomp 对 syscall **号**做过滤，与具体 libc 包装无关。攻击者可以直接用 `syscall()` 或内联汇编发 syscall；多路复用 syscall（如 `socketcall` 在 32 位模式）可以绕过仅过滤 `connect` 的规则。
+- **与 eBPF 的关系**：seccomp-bpf 使用的是**经典 BPF（cBPF）**，而不是 eBPF——它更简单，只有 32 位寄存器和有限指令集，运行在不同的内核路径上，但 Linux 会在加载时自动把 cBPF 转为 eBPF 字节码执行。
 
 ---
 
@@ -586,6 +946,179 @@ int xdp_drop_icmp(struct xdp_md *ctx) {
 ```
 
 attach：`bpftool net attach xdp obj drop.o sec xdp dev eth0`。
+
+### 5.5 eBPF USDT——用户态静态定义追踪点
+
+**USDT（User Statically-Defined Tracing）**是将"稳定探针"编译进用户态二进制的技术，源于 DTrace，Linux 通过 `<sys/sdt.h>`（SystemTap SDT 宏）实现兼容接口。与 uprobe 依赖函数地址不同，USDT 探针有明确的 provider/probe 名字，跨版本兼容，语义显式——是用户态 tracepoint 的等价物。
+
+#### 原理：探针如何被埋入与激活
+
+```
+编译期（DTRACE_PROBE 宏展开）：
+  源码调用 DTRACE_PROBE2(myapp, request_start, conn_id, url)
+        ↓
+  编译器生成一条 NOP 指令（x86_64 上是 0x90 或多字节 nop）
+  同时在 ELF 的 .note.stapsdt section 写入元数据：
+    - provider 名: "myapp"
+    - probe 名:    "request_start"
+    - NOP 指令的地址（相对于 PT_LOAD 段，支持 PIE/ASLR）
+    - 参数的 location（寄存器/栈偏移 + 类型，类似 DWARF 表达式）
+        ↓
+运行时（未 attach 任何 tracer）：
+  执行到 NOP——零开销，代码流程不受影响
+
+attach 时（bpftrace / BCC / libbpf）：
+  tracer 解析 ELF .note.stapsdt 找到 NOP 地址
+  → 与 uprobe 一样，把 NOP 改为断点指令（int 3）
+  → 触发时运行 BPF 程序读取参数
+detach 时：
+  断点改回 NOP，回到零开销
+```
+
+#### 与 uprobe 的横向对比
+
+| | uprobe（地址探针） | USDT（静态探针）|
+|---|---|---|
+| 探针定位 | 函数名 / 偏移地址 | provider:probe 名字 |
+| 跨版本兼容 | 差（函数地址随版本变） | 好（名字是稳定 API，由库/应用维护）|
+| 内联函数 | 可能找不到 | 不受影响（DTRACE_PROBE 展开在调用点）|
+| 编译期开销 | 零（不埋点） | 极小（多条 NOP + .note section）|
+| 运行期开销（未 attach） | 零 | 零 |
+| 运行期开销（已 attach） | 相同（同为 int 3 陷阱） | 相同 |
+| 参数获取 | 需手动定位寄存器/栈 | 元数据里有参数 location |
+| 典型用户 | 任意函数，侵入性低 | MySQL、PostgreSQL、OpenJDK、Node.js、Python |
+
+#### 埋点示例：一个 HTTP 服务的请求追踪
+
+```c
+// server.c — 在关键路径埋 USDT 探针
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+// SDT 宏头文件；Ubuntu: apt install systemtap-sdt-dev
+#include <sys/sdt.h>
+
+// DTRACE_PROBE2(provider, probe_name, arg1, arg2)
+// provider 和 probe_name 必须是合法 C 标识符
+
+void handle_request(uint64_t conn_id, const char *path) {
+    // 探针：请求开始，参数：连接 ID（整数）、路径（字符串指针）
+    DTRACE_PROBE2(myhttp, request__start, conn_id, path);
+
+    // 模拟处理
+    printf("handling %s (conn=%lu)\n", path, conn_id);
+
+    // 探针：请求结束，参数：连接 ID、状态码
+    int status = 200;
+    DTRACE_PROBE2(myhttp, request__end, conn_id, status);
+}
+
+int main(void) {
+    for (uint64_t i = 1; i <= 5; i++) {
+        char path[32];
+        snprintf(path, sizeof(path), "/api/item/%lu", i);
+        handle_request(i, path);
+    }
+    return 0;
+}
+```
+
+编译，验证探针已埋入 ELF：
+```bash
+# Ubuntu
+sudo apt install systemtap-sdt-dev
+gcc -o server server.c
+# 查看 .note.stapsdt 中的探针元数据
+readelf -n server | grep -A 4 stapsdt
+# 期望输出类似:
+#   NT_STAPSDT (SystemTap probe descriptors)
+#     Provider: "myhttp"
+#     Name: "request__start"
+#     ...
+```
+
+#### 用 bpftrace 附加追踪
+
+```bash
+# 追踪 myhttp:request__start，打印 conn_id 和 path
+sudo bpftrace -e '
+usdt:/path/to/server:myhttp:request__start {
+    printf("conn=%d path=%s\n", arg0, str(arg1));
+}
+'
+# 另一个终端运行 ./server
+# 第一个终端输出：
+# conn=1 path=/api/item/1
+# conn=2 path=/api/item/2
+# ...
+```
+
+探针名里的 `__`（双下划线）会被 bpftrace 和 BCC 同等接受（DTrace 惯例用 `-` 分隔，但 C 标识符不允许，所以 SDT 用双下划线，bpftrace 两种写法都识别）。
+
+#### 用 BCC Python API 附加
+
+```python
+# usdt_trace.py
+from bcc import BPF, USDT
+
+u = USDT(path="./server")
+u.enable_probe(probe="request__start", fn_name="trace_start")
+
+prog = """
+#include <uapi/linux/ptrace.h>
+int trace_start(struct pt_regs *ctx) {
+    u64 conn_id = 0;
+    char path[64] = {};
+    // arg0 = conn_id（整数，在寄存器）
+    bpf_usdt_readarg(1, ctx, &conn_id);
+    // arg1 = path 指针（字符串，在用户态内存）
+    u64 path_ptr = 0;
+    bpf_usdt_readarg(2, ctx, &path_ptr);
+    bpf_probe_read_user_str(path, sizeof(path), (void *)path_ptr);
+    bpf_trace_printk("conn=%llu path=%s\\n", conn_id, path);
+    return 0;
+}
+"""
+
+b = BPF(text=prog, usdt_contexts=[u])
+print("Tracing... Ctrl-C to quit.")
+b.trace_print()
+```
+
+```bash
+sudo python3 usdt_trace.py &
+./server
+```
+
+#### libbpf CO-RE 方式附加 USDT（5.15+）
+
+```c
+// usdt_probe.bpf.c
+#include "vmlinux.h"
+#include <bpf/bpf_helpers.h>
+#include <bpf/usdt.bpf.h>    // libbpf 0.8+ 提供的 USDT 辅助宏
+
+SEC("usdt/./server:myhttp:request__start")
+int handle_start(struct pt_regs *ctx) {
+    long conn_id = 0;
+    bpf_usdt_arg(ctx, 0, &conn_id);
+    bpf_printk("USDT request__start conn=%ld\n", conn_id);
+    return 0;
+}
+
+char LICENSE[] SEC("license") = "GPL";
+```
+
+用户态 skeleton 加载器中：`bpf_program__set_attach_target(prog, 0, "myhttp:request__start")` 并传 pid；libbpf 会自动解析 ELF .note.stapsdt 定位 NOP 地址。
+
+#### 边界陷阱
+
+1. **SDT 头文件依赖**：`<sys/sdt.h>` 来自 `systemtap-sdt-dev`（Debian/Ubuntu）或 `systemtap-sdt-devel`（RHEL/Fedora）。如果只需要埋点（不需要 SystemTap 本体），仅装这个开发包即可。
+2. **strip 会删除 .note.stapsdt**：`strip --strip-debug` 会保留 USDT notes，但 `strip --strip-all` 不会。生产部署要么不 strip，要么使用 debuginfo 包分离符号。
+3. **探针名里不能用连字符**：USDT probe 名由 C 标识符构成，bpftrace 接受 `request__start`（双下划线）和 `request-start`（连字符，bpftrace 内部转换），但 BCC 和 libbpf 均按 C 标识符处理，统一用下划线。
+4. **PIE/ASLR 无需手动处理**：ELF note 里存的是相对于 PT_LOAD 段的偏移，tracer 加基址后 attach，全程自动处理。
+5. **semaphore 机制（可选）**：`DTRACE_PROBE_ENABLED(provider, probe)` 可以检测某探针是否有 tracer attach，用于跳过昂贵的参数构造——探针元数据里有一个 semaphore 变量地址，tracer attach 时递增，detach 时递减。
 
 ---
 

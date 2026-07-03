@@ -233,9 +233,169 @@ iat_hook.exe
 ```
 弹出的对话框文本变成 "(hooked)"。
 
-### 3.3 EAT Hook（导出表）
+### 3.3 EAT Hook（导出地址表改写）
 
-EAT（Export Address Table）是 DLL 自己暴露给外部的函数表。改 EAT 主要影响**之后**才用 `GetProcAddress` 查询的调用方——已经 IAT 绑定好的调用方不受影响。所以 EAT Hook 适合"我控制目标 DLL，但不知道谁会来调"的场景，实战不如 IAT 常见。
+#### 3.3.1 原理：IAT 与 EAT 的对称性
+
+IAT Hook 改的是**调用方**侧的函数指针（"你调 X，帮我改成调 Y"）；EAT Hook 改的是**被调方**侧的导出地址（"你暴露 X，帮我改成暴露 Y"）。二者是一枚硬币的两面：
+
+```
+IAT Hook：
+  调用方模块.IAT[MessageBoxW] = HookedMessageBoxW  ← 只影响此模块的调用
+
+EAT Hook：
+  user32.dll.EAT[MessageBoxW的RVA] = HookedMessageBoxW的RVA  ← 影响所有之后用 GetProcAddress 查询的调用方
+```
+
+PE 文件中导出目录结构（`IMAGE_EXPORT_DIRECTORY`）：
+
+```
+IMAGE_EXPORT_DIRECTORY
+  .NumberOfFunctions    = 总导出槽数
+  .NumberOfNames        = 按名导出数（≤ NumberOfFunctions）
+  .AddressOfFunctions   → RVA数组，下标是「序号 - Base」，存的是函数入口 RVA
+  .AddressOfNames       → 函数名字符串 RVA 数组
+  .AddressOfNameOrdinals→ 名字→序号的映射数组（AddressOfNames[i] 对应序号 AddressOfNameOrdinals[i]）
+```
+
+`GetProcAddress("MessageBoxW")` 的内部路径：
+1. 二分查找 `AddressOfNames` 找到 "MessageBoxW" 的下标 `i`
+2. 读 `ordinal = AddressOfNameOrdinals[i]`
+3. 读 `rva = AddressOfFunctions[ordinal]`
+4. 返回 `hMod + rva`
+
+**EAT Hook 就是修改第 3 步的 `rva`，让 `GetProcAddress` 返回你的 detour 地址。**
+
+#### 3.3.2 有效范围与局限
+
+EAT Hook **只影响 hook 写入之后**才调用 `GetProcAddress` 查询该函数的模块。原因：
+- 大多数 DLL 在 `LoadLibrary` 时就已经完成 IAT 解析，把函数地址缓存进了各模块的 IAT 槽里。改 EAT 后，这些已缓存的 IAT 指针不会更新。
+- 只有在 hook 写入后才新加载的模块（或运行时动态调用 `GetProcAddress` 的代码）会受到影响。
+
+典型适用场景：你想拦截某 DLL 被其他（尚未加载的）插件调用的导出函数，且你能在那些插件加载前写入 EAT Hook。
+
+#### 3.3.3 完整代码骨架
+
+下面演示对自身进程内某 DLL 做 EAT Hook——将 `kernel32.dll` 导出的 `OutputDebugStringA` 改写，使所有之后 `GetProcAddress` 查询到的地址指向我们的 detour：
+
+```c
+// eat_hook.c
+#include <windows.h>
+#include <stdio.h>
+
+// ------- Detour 函数 -------
+typedef void (WINAPI *OutputDebugStringA_t)(LPCSTR);
+static OutputDebugStringA_t g_origOutputDebugStringA = NULL;
+
+void WINAPI HookedOutputDebugStringA(LPCSTR lpOutputString) {
+    printf("[EAT HOOK] OutputDebugStringA: %s\n",
+           lpOutputString ? lpOutputString : "(null)");
+    if (g_origOutputDebugStringA)
+        g_origOutputDebugStringA(lpOutputString);
+}
+
+// ------- EAT Hook 核心 -------
+// 返回 TRUE 表示成功，oldRVA 输出原 RVA（可用于卸载）
+BOOL HookEAT(HMODULE hMod, LPCSTR funcName, PVOID detour, DWORD *oldRVA) {
+    PIMAGE_DOS_HEADER dos = (PIMAGE_DOS_HEADER)hMod;
+    if (dos->e_magic != IMAGE_DOS_SIGNATURE) return FALSE;
+
+    PIMAGE_NT_HEADERS nt = (PIMAGE_NT_HEADERS)((BYTE*)hMod + dos->e_lfanew);
+    if (nt->Signature != IMAGE_NT_SIGNATURE) return FALSE;
+
+    DWORD expDirRVA = nt->OptionalHeader
+                         .DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT]
+                         .VirtualAddress;
+    if (!expDirRVA) return FALSE;
+
+    PIMAGE_EXPORT_DIRECTORY expDir =
+        (PIMAGE_EXPORT_DIRECTORY)((BYTE*)hMod + expDirRVA);
+
+    DWORD  *rvaFuncs    = (DWORD*)((BYTE*)hMod + expDir->AddressOfFunctions);
+    DWORD  *rvaNames    = (DWORD*)((BYTE*)hMod + expDir->AddressOfNames);
+    WORD   *nameOrdinals= (WORD*) ((BYTE*)hMod + expDir->AddressOfNameOrdinals);
+
+    // 按名查序号（线性扫描；函数数量有限，无需二分）
+    for (DWORD i = 0; i < expDir->NumberOfNames; i++) {
+        LPCSTR name = (LPCSTR)((BYTE*)hMod + rvaNames[i]);
+        if (strcmp(name, funcName) != 0) continue;
+
+        WORD ordinal = nameOrdinals[i];  // 相对于 Base 的 ordinal（已是 0-based 下标）
+
+        // 保存原 RVA
+        if (oldRVA) *oldRVA = rvaFuncs[ordinal];
+
+        // 计算 detour 的 RVA（必须是同一 hMod 基址内的地址，否则 RVA 意义不同）
+        // 注意：detour 可以是任意可执行地址，不必在 hMod 内；
+        // 但 GetProcAddress 若检测到 RVA 落在 Forwarded Export 范围则特殊处理——
+        // 为避免此问题，detour 地址应当位于 hMod 的映射范围外（或确认 RVA 不落入导出目录范围）。
+        DWORD newRVA = (DWORD)((BYTE*)detour - (BYTE*)hMod);
+
+        DWORD oldProt;
+        VirtualProtect(&rvaFuncs[ordinal], sizeof(DWORD), PAGE_READWRITE, &oldProt);
+        rvaFuncs[ordinal] = newRVA;
+        VirtualProtect(&rvaFuncs[ordinal], sizeof(DWORD), oldProt, &oldProt);
+        return TRUE;
+    }
+    return FALSE;  // 未找到该函数名
+}
+
+int main(void) {
+    HMODULE hK32 = GetModuleHandleW(L"kernel32.dll");
+
+    // 先保存原始函数指针（供 detour 调用原函数用）
+    g_origOutputDebugStringA =
+        (OutputDebugStringA_t)GetProcAddress(hK32, "OutputDebugStringA");
+
+    DWORD oldRVA = 0;
+    if (!HookEAT(hK32, "OutputDebugStringA", HookedOutputDebugStringA, &oldRVA)) {
+        puts("HookEAT failed");
+        return 1;
+    }
+    puts("EAT hook installed.");
+
+    // 验证：此后 GetProcAddress 返回的是 detour 地址
+    OutputDebugStringA_t fn =
+        (OutputDebugStringA_t)GetProcAddress(hK32, "OutputDebugStringA");
+    printf("GetProcAddress now returns: %p (detour: %p, match: %d)\n",
+           (void*)fn, (void*)HookedOutputDebugStringA,
+           fn == HookedOutputDebugStringA);
+
+    // 通过新地址调用——触发 hook
+    fn("hello from EAT hook\n");
+
+    // 卸载：恢复原 RVA
+    DWORD *rvaFuncs = NULL;
+    {
+        PIMAGE_DOS_HEADER dos = (PIMAGE_DOS_HEADER)hK32;
+        PIMAGE_NT_HEADERS nt  = (PIMAGE_NT_HEADERS)((BYTE*)hK32 + dos->e_lfanew);
+        DWORD expDirRVA = nt->OptionalHeader
+                             .DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT]
+                             .VirtualAddress;
+        PIMAGE_EXPORT_DIRECTORY expDir =
+            (PIMAGE_EXPORT_DIRECTORY)((BYTE*)hK32 + expDirRVA);
+        rvaFuncs = (DWORD*)((BYTE*)hK32 + expDir->AddressOfFunctions);
+        WORD *nameOrdinals = (WORD*)((BYTE*)hK32 + expDir->AddressOfNameOrdinals);
+        DWORD *rvaNames    = (DWORD*)((BYTE*)hK32 + expDir->AddressOfNames);
+        for (DWORD i = 0; i < expDir->NumberOfNames; i++) {
+            if (strcmp((LPCSTR)((BYTE*)hK32 + rvaNames[i]), "OutputDebugStringA") == 0) {
+                WORD ord = nameOrdinals[i];
+                DWORD oldProt;
+                VirtualProtect(&rvaFuncs[ord], sizeof(DWORD), PAGE_READWRITE, &oldProt);
+                rvaFuncs[ord] = oldRVA;
+                VirtualProtect(&rvaFuncs[ord], sizeof(DWORD), oldProt, &oldProt);
+                break;
+            }
+        }
+    }
+    puts("EAT hook removed.");
+    return 0;
+}
+```
+
+#### 3.3.4 一个重要陷阱：Forwarded Export
+
+PE 格式里，若 `AddressOfFunctions[i]` 的 RVA **落在导出目录本身的范围内**（`expDirRVA` 到 `expDirRVA + expDirSize`），`GetProcAddress` 把它当作**转发字符串**（如 `"NTDLL.RtlMoveMemory"`）而不是函数地址——这是一个完全不同的代码路径。如果你的 detour 地址计算出的 RVA 恰好落在这个窗口里，hook 会静默失效且行为不可预测。规避方法：确保 detour 位于目标模块的映射范围之外（即 RVA 超出模块大小），或者在写入前用 assert 检查 `newRVA < expDirRVA || newRVA >= expDirRVA + expDirSize`。
 
 ---
 
@@ -484,13 +644,181 @@ WaitForSingleObject(hThread, INFINITE);
 
 ### 6.4 NtMapViewOfSection / 反射式注入（Manual Map）
 
-绕过 `LoadLibrary`，自己实现 PE loader 把 DLL 映射进目标。无文件落地（DLL 可直接从内存中的字节流加载），常用于安全研究和某些 EDR 规避。
+#### 6.4.1 为什么要绕过 LoadLibrary
+
+`LoadLibrary`（内部走 `LdrLoadDll`）加载 DLL 时，Windows 做了以下**可被安全产品监控的动作**：
+
+1. 通知 `PsSetLoadImageNotifyRoutine` 注册的内核回调（EDR 驱动常用此处）
+2. 将模块插入进程的 `PEB.Ldr` 链表（`InLoadOrderModuleList` 等三条链）
+3. 调用 `DllMain(DLL_PROCESS_ATTACH)`——很多 AV 在此时扫描内存
+4. 留下可查询的模块记录，`CreateToolhelp32Snapshot`/`EnumProcessModules` 可枚举
+
+Manual Map（手工映射）完全自己实现这套逻辑，**只做业务逻辑必须做的步骤**，跳过一切会产生系统记录的路径。最终目标 DLL 在目标进程内存里执行，但对工具层完全不可见——是内存取证级别才能发现的存在。
+
+#### 6.4.2 完整步骤分解
 
 ```
-读 DLL 字节 → VirtualAllocEx → WriteProcessMemory → 解析 PE → fixup relocation → fixup IAT → CreateRemoteThread 调用 DllMain
+1. 读 DLL 字节流到注入进程内存（或直接内存中构造）
+2. OpenProcess → VirtualAllocEx 在目标进程分配足够空间（SizeOfImage）
+3. WriteProcessMemory 写入 PE 头和各节区（按节区对齐量）
+4. 修复重定位（若加载地址 ≠ DLL 的 ImageBase，遍历 .reloc 节做 delta 修正）
+5. 修复 IAT（解析 IMAGE_IMPORT_DESCRIPTOR，对每条 thunk 调用 GetProcAddress）
+6. 调用 DllMain：CreateRemoteThread 传入 DllMain 地址 + DLL_PROCESS_ATTACH
 ```
 
-实现复杂、易和 EDR 对抗，正常用途几乎不用。
+每一步都可能出错，且必须在目标进程的地址空间语境下理解——分配到的远程地址就是"加载基址"，所有 RVA 从它算起。
+
+#### 6.4.3 可运行骨架实现
+
+下面是一个自注入（注入自身进程）的最小 Manual Map 示例，方便在本地调试理解原理；实际远程注入只需把 `VirtualAlloc` 换成 `VirtualAllocEx`，内存写入换成 `WriteProcessMemory`，DllMain 调用换成 `CreateRemoteThread`。
+
+```c
+// manual_map_local.c
+// 自注入：把一个 DLL 字节流（不经 LoadLibrary）映射进当前进程并执行 DllMain。
+// 编译：cl /W4 /nologo manual_map_local.c
+#include <windows.h>
+#include <stdio.h>
+
+// 使用场景：szDllPath 是普通磁盘路径；实际对抗场景中字节流可来自网络/资源节。
+HMODULE ManualMap(LPCSTR szDllPath) {
+    // 1. 读 DLL 文件到堆缓冲区
+    HANDLE hFile = CreateFileA(szDllPath, GENERIC_READ, FILE_SHARE_READ,
+                               NULL, OPEN_EXISTING, 0, NULL);
+    if (hFile == INVALID_HANDLE_VALUE) { puts("open failed"); return NULL; }
+    DWORD fileSize = GetFileSize(hFile, NULL);
+    BYTE *rawBuf = (BYTE*)HeapAlloc(GetProcessHeap(), 0, fileSize);
+    DWORD bytesRead;
+    ReadFile(hFile, rawBuf, fileSize, &bytesRead, NULL);
+    CloseHandle(hFile);
+
+    PIMAGE_DOS_HEADER dos = (PIMAGE_DOS_HEADER)rawBuf;
+    PIMAGE_NT_HEADERS nt  = (PIMAGE_NT_HEADERS)(rawBuf + dos->e_lfanew);
+
+    // 2. 分配映射内存（IMAGE_OPTIONAL_HEADER.SizeOfImage 是节区全展开后的大小）
+    BYTE *base = (BYTE*)VirtualAlloc(NULL, nt->OptionalHeader.SizeOfImage,
+                                     MEM_COMMIT | MEM_RESERVE,
+                                     PAGE_EXECUTE_READWRITE);
+    if (!base) { puts("VirtualAlloc failed"); HeapFree(GetProcessHeap(),0,rawBuf); return NULL; }
+
+    // 3. 复制 PE 头（SizeOfHeaders 字节）
+    memcpy(base, rawBuf, nt->OptionalHeader.SizeOfHeaders);
+
+    // 4. 按节区复制各 section
+    PIMAGE_SECTION_HEADER sec = IMAGE_FIRST_SECTION(nt);
+    for (WORD i = 0; i < nt->FileHeader.NumberOfSections; i++, sec++) {
+        if (sec->SizeOfRawData == 0) continue;
+        memcpy(base + sec->VirtualAddress,
+               rawBuf + sec->PointerToRawData,
+               sec->SizeOfRawData);
+    }
+    HeapFree(GetProcessHeap(), 0, rawBuf);
+
+    // 5. 修复重定位
+    // delta = 实际加载基址 - 期望基址（ImageBase）
+    LONGLONG delta = (LONGLONG)(base - (BYTE*)(ULONG_PTR)nt->OptionalHeader.ImageBase);
+    if (delta != 0) {
+        DWORD relocRVA  = nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC].VirtualAddress;
+        DWORD relocSize = nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC].Size;
+        if (relocRVA && relocSize) {
+            PIMAGE_BASE_RELOCATION reloc = (PIMAGE_BASE_RELOCATION)(base + relocRVA);
+            while (reloc->VirtualAddress) {
+                WORD *entries = (WORD*)((BYTE*)reloc + sizeof(IMAGE_BASE_RELOCATION));
+                DWORD count = (reloc->SizeOfBlock - sizeof(IMAGE_BASE_RELOCATION)) / sizeof(WORD);
+                for (DWORD i = 0; i < count; i++) {
+                    WORD type   = entries[i] >> 12;
+                    WORD offset = entries[i] & 0x0FFF;
+                    if (type == IMAGE_REL_BASED_DIR64) {
+                        // x64：64 位绝对地址需要加 delta
+                        ULONGLONG *addr = (ULONGLONG*)(base + reloc->VirtualAddress + offset);
+                        *addr += (ULONGLONG)delta;
+                    } else if (type == IMAGE_REL_BASED_HIGHLOW) {
+                        // x86：32 位绝对地址
+                        DWORD *addr = (DWORD*)(base + reloc->VirtualAddress + offset);
+                        *addr += (DWORD)delta;
+                    }
+                    // IMAGE_REL_BASED_ABSOLUTE (type=0) 是填充项，跳过
+                }
+                reloc = (PIMAGE_BASE_RELOCATION)((BYTE*)reloc + reloc->SizeOfBlock);
+            }
+        }
+    }
+
+    // 6. 修复 IAT（Import Address Table）
+    DWORD impRVA = nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress;
+    if (impRVA) {
+        PIMAGE_IMPORT_DESCRIPTOR imp = (PIMAGE_IMPORT_DESCRIPTOR)(base + impRVA);
+        for (; imp->Name; imp++) {
+            LPCSTR modName = (LPCSTR)(base + imp->Name);
+            HMODULE hDep = LoadLibraryA(modName);  // 依赖库走正常 LoadLibrary
+            if (!hDep) { printf("LoadLibrary %s failed\n", modName); continue; }
+
+            PIMAGE_THUNK_DATA origThunk = imp->OriginalFirstThunk
+                ? (PIMAGE_THUNK_DATA)(base + imp->OriginalFirstThunk)
+                : (PIMAGE_THUNK_DATA)(base + imp->FirstThunk);
+            PIMAGE_THUNK_DATA iat = (PIMAGE_THUNK_DATA)(base + imp->FirstThunk);
+
+            for (; origThunk->u1.AddressOfData; origThunk++, iat++) {
+                if (IMAGE_SNAP_BY_ORDINAL(origThunk->u1.Ordinal)) {
+                    // 按序号导入
+                    iat->u1.Function = (ULONGLONG)GetProcAddress(
+                        hDep, MAKEINTRESOURCEA(IMAGE_ORDINAL(origThunk->u1.Ordinal)));
+                } else {
+                    // 按名称导入
+                    PIMAGE_IMPORT_BY_NAME byName =
+                        (PIMAGE_IMPORT_BY_NAME)(base + origThunk->u1.AddressOfData);
+                    iat->u1.Function = (ULONGLONG)GetProcAddress(hDep, (LPCSTR)byName->Name);
+                }
+            }
+        }
+    }
+
+    // 7. 调用 DllMain(DLL_PROCESS_ATTACH)
+    if (nt->OptionalHeader.AddressOfEntryPoint) {
+        typedef BOOL (WINAPI *DllMain_t)(HINSTANCE, DWORD, LPVOID);
+        DllMain_t dllMain = (DllMain_t)(base + nt->OptionalHeader.AddressOfEntryPoint);
+        dllMain((HINSTANCE)base, DLL_PROCESS_ATTACH, NULL);
+    }
+
+    return (HMODULE)base;
+}
+
+int main(void) {
+    // 示例：手工映射一个简单 DLL（需自行准备一个不依赖复杂 CRT 的测试 DLL）
+    HMODULE h = ManualMap("test_payload.dll");
+    if (!h) { puts("ManualMap failed"); return 1; }
+    printf("Mapped at %p\n", (void*)h);
+    // 调用导出函数（跳过 GetProcAddress——因为模块不在 PEB.Ldr 里）
+    // 需手动按 EAT 偏移找函数地址，这里略去
+    return 0;
+}
+```
+
+#### 6.4.4 反射式 DLL 注入变体
+
+"反射式"（Reflective）注入由 Stephen Fewer 在 2008 年提出：DLL 内部嵌入一段 `ReflectiveDllLoader` shellcode，注入者只需：
+
+```
+1. VirtualAllocEx + WriteProcessMemory 把 DLL 字节流写入目标
+2. CreateRemoteThread 传入 DLL 内部 ReflectiveDllLoader 函数的偏移
+3. ReflectiveDllLoader 在目标进程内自举（自己找 kernel32 的 GetProcAddress/LoadLibrary，
+   完成上面的第 4-7 步），无需注入者做 PE 解析
+```
+
+这样注入者代码极简，全部复杂逻辑在 payload DLL 内部完成，且在目标进程里不留任何 `LoadLibrary` 调用记录。
+
+#### 6.4.5 与内核监控的关系
+
+绕过了 `LdrLoadDll` 就绕过了 `PsSetLoadImageNotifyRoutine`，这是为什么 EDR 开始在内核里用 **ETW TI（Thread and Process telemetry）** 和 **内存扫描回调**（`MmRegisterSecureMemoryNotification` 等）来发现 Manual Map：
+
+| 监控手段 | 能否发现 Manual Map |
+|---|---|
+| `CreateToolhelp32Snapshot` 枚举模块 | 无法发现（不在 PEB.Ldr） |
+| `PsSetLoadImageNotifyRoutine`（内核） | 无法发现（绕过 Ldr） |
+| 内存页扫描（扫 MZ/PE 头） | **可以发现**（base 处仍有 MZ 头） |
+| ETW Process/Image 事件 | **部分可发现**（取决于 Windows 版本） |
+| 用户态钩子 `LdrLoadDll` | 无法发现（完全绕过） |
+
+防御建议：不依赖 API 调用路径做检测，而是直接扫进程内存中的 PE 头特征（`MZ + PE`）并与 PEB 模块列表交叉对比，未出现在列表中的映像即可疑。
 
 ---
 

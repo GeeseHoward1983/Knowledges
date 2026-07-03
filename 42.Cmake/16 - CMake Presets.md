@@ -370,6 +370,66 @@ CMakeUserPresets.json
 }
 ```
 
+### 16.5.4 `testPresets` 实战聚合示例与常用属性速查
+
+下面用一个"CI 用测试 preset"把 `output`、`filter`、`execution` 三个子对象的高频字段整合在一处，方便对照查阅。
+
+**常用属性速查表**：
+
+| 子对象 | 字段 | 等价 CTest 选项 | 用途 |
+| --- | --- | --- | --- |
+| `execution` | `jobs` | `-j` / `--parallel` | 并行测试数；version 11+ 接受空字符串表示"由 CTest 自决" |
+| `execution` | `stopOnFailure` | `--stop-on-failure` | 首个失败即终止，快速失败 |
+| `execution` | `timeout` | `--timeout <sec>` | 单个测试的全局超时秒数 |
+| `execution` | `repeat.mode` + `repeat.count` | `--repeat <mode>:<count>` | 重复策略：`"until-fail"` / `"until-pass"` / `"after-timeout"` |
+| `execution` | `scheduleRandom` | `--schedule-random` | 随机调度，用于检测测试间顺序依赖 |
+| `output` | `verbosity` | `-V` / `-VV` | `"default"` / `"verbose"` / `"extra"` |
+| `output` | `outputOnFailure` | `--output-on-failure` | 失败时打印测试标准输出，CI 最常开 |
+| `output` | `outputJUnitFile` | `--output-junit <file>` | 生成 JUnit XML，上传 CI 报告（version ≥ 6） |
+| `filter.include` | `name` | `-R <regex>` | 只跑名字匹配的测试 |
+| `filter.include` | `label` | `-L <regex>` | 只跑带此标签的测试 |
+| `filter.exclude` | `name` | `-E <regex>` | 排除名字匹配的测试 |
+| `filter.exclude` | `label` | `-LE <regex>` | 排除带此标签的测试 |
+
+**CI 聚合示例**（版本需 ≥ 6，`jobs` 空串需 ≥ 11）：
+
+```json
+{
+  "name": "ci-linux-release",
+  "configurePreset": "linux-release",
+  "displayName": "CI · Test (Linux Release)",
+  "output": {
+    "verbosity": "verbose",
+    "outputOnFailure": true,
+    "outputJUnitFile": "${sourceDir}/build/${presetName}/junit.xml",
+    "labelSummary": true
+  },
+  "filter": {
+    "include": { "label": "unit|integration" },
+    "exclude": { "label": "slow|manual" }
+  },
+  "execution": {
+    "jobs": "",
+    "stopOnFailure": false,
+    "timeout": 300,
+    "repeat": { "mode": "until-pass", "count": 2 },
+    "scheduleRandom": true
+  }
+}
+```
+
+调用：
+
+```bash
+# 用测试 preset 运行
+ctest --preset ci-linux-release
+
+# 查看可用 test preset 列表
+ctest --list-presets
+```
+
+> 实践要点：`jobs: ""` 让 CTest 自动决定并行度（CMake 4.3 / schema version 11 新能力）；`stopOnFailure: false` + `outputJUnitFile` 的组合确保即使有失败也跑完并生成完整 XML 报告，适合 CI；`repeat.mode: "until-pass"` 容忍偶发性抖动测试。
+
 ---
 
 ## 16.6 packagePresets（CPack）与 workflowPresets
@@ -426,6 +486,119 @@ CMakeUserPresets.json
 ```
 
 > ⚠️ 早期（CMake 3.25–3.26）的 schema 在 workflow step 里用的键是 `preset` 而非 `name`，且当时只支持 configure/build/test。**自 CMake 4.3 / 现代 schema，统一用 `name`**，并支持 package 步骤。本教程基准 4.3.4 一律用 `name`。
+
+### 16.6.3 `workflowPresets` 完整 CI 示例与 `cmake --workflow` 详解
+
+**`steps` 结构要点回顾**：每个 step 只有两个字段：
+
+- `type`：`"configure"` / `"build"` / `"test"` / `"package"`，决定调用哪个工具（`cmake`/`cmake --build`/`ctest`/`cpack`）。
+- `name`：对应类型 preset 的 `name`，CMake 会找那个 preset 并用它的参数驱动该步骤。
+
+**约束**：第一步必须是 `configure`；后续所有步骤的 `configurePreset` 字段必须与第一步的 preset 名一致（即整个工作流绑定在同一次配置上，CMake 4.3 会自动验证）。
+
+**完整 CI 工作流示例**（需 schema version ≥ 6）：
+
+```json
+{
+  "$schema": "https://cmake.org/cmake/help/latest/_downloads/schema.json",
+  "version": 6,
+
+  "configurePresets": [
+    {
+      "name": "ci",
+      "hidden": false,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/ci",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BUILD_TESTING": { "type": "BOOL", "value": "ON" },
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    }
+  ],
+
+  "buildPresets": [
+    {
+      "name": "ci",
+      "configurePreset": "ci",
+      "jobs": 8,
+      "targets": ["all"]
+    }
+  ],
+
+  "testPresets": [
+    {
+      "name": "ci",
+      "configurePreset": "ci",
+      "output": { "outputOnFailure": true, "outputJUnitFile": "${sourceDir}/build/ci/junit.xml" },
+      "execution": { "jobs": 8, "stopOnFailure": false }
+    }
+  ],
+
+  "packagePresets": [
+    {
+      "name": "ci",
+      "configurePreset": "ci",
+      "generators": ["TGZ"],
+      "packageDirectory": "${sourceDir}/build/ci/packages"
+    }
+  ],
+
+  "workflowPresets": [
+    {
+      "name": "ci",
+      "displayName": "CI 全流水线：configure → build → test → package",
+      "steps": [
+        { "type": "configure", "name": "ci" },
+        { "type": "build",     "name": "ci" },
+        { "type": "test",      "name": "ci" },
+        { "type": "package",   "name": "ci" }
+      ]
+    }
+  ]
+}
+```
+
+**调用方式**：
+
+```bash
+# 一条命令跑完 configure → build → test → package
+cmake --workflow --preset ci
+
+# 列出所有 workflow preset
+cmake --workflow --list-presets
+
+# 仅从 build 步骤重跑（跳过已完成的 configure）
+cmake --build --preset ci
+ctest --preset ci
+cpack --preset ci
+```
+
+**CI 脚本集成示例（GitHub Actions / GitLab CI）**：
+
+```yaml
+# .github/workflows/ci.yml（GitHub Actions 片段）
+steps:
+  - name: Configure, Build, Test & Package
+    run: cmake --workflow --preset ci
+  - name: Upload test results
+    uses: actions/upload-artifact@v4
+    with:
+      name: junit-results
+      path: build/ci/junit.xml
+```
+
+```yaml
+# .gitlab-ci.yml（GitLab CI 片段）
+build-and-test:
+  script:
+    - cmake --workflow --preset ci
+  artifacts:
+    reports:
+      junit: build/ci/junit.xml
+```
+
+> ✅ `cmake --workflow --preset ci` 是"零参数 CI 入口"的最终形态：不需要 shell 脚本串联四条命令，只需要一条，且配置完全由版本库里的 `CMakePresets.json` 决定。任何有 CMake 4.3+ 的环境都能以相同的方式运行。
 
 ---
 

@@ -360,6 +360,183 @@ MIPS64 相比 MIPS32 增加了以下特性：
 3. 扩展了寻址模式
 4. 更多的寄存器（可选的 MIPS64R2 规范）
 
+## HI/LO 寄存器与 MFHI/MFLO
+
+### 为何独立于通用寄存器
+
+MIPS 32×32 乘法产生 64 位结果，32×64 乘法产生 128 位结果，无法放入单个通用寄存器。设计者将乘除结果拆存于两个专用寄存器 HI（高半部）和 LO（低半部），与通用寄存器文件物理隔离，避免占用通用寄存器资源，也使流水线对乘除结果的旁路/写回更简单。
+
+### 乘除法与 HI/LO 读写指令
+
+```mipsasm
+# 有符号乘法：$rs × $rt → HI:LO（64 位结果）
+mult  $t0, $t1          # HI = 高32位，LO = 低32位
+
+# 无符号乘法
+multu $t0, $t1
+
+# 有符号除法：$rs ÷ $rt → LO = 商，HI = 余数
+div   $t0, $t1          # 注意：不检查除以零，需软件保护
+
+# 无符号除法
+divu  $t0, $t1
+
+# 从 HI/LO 读取结果（有 2 个流水线周期延迟要求，需避免紧跟依赖）
+mfhi  $v0               # $v0 = HI
+mflo  $v1               # $v1 = LO
+
+# 向 HI/LO 写入（用于恢复上下文或特殊初始化）
+mthi  $t2               # HI = $t2
+mtlo  $t3               # LO = $t3
+```
+
+### 64 位版本
+
+MIPS64 提供 `dmult`/`dmultu`/`ddiv`/`ddivu`，操作数与结果均为 64 位，HI/LO 同样存 128/64 位结果。读写接口不变（`mfhi`/`mflo`/`mthi`/`mtlo`）。
+
+### 注意事项
+
+- 两次连续的乘除指令之间，若后一条在前一条完成前就读 HI/LO，结果未定义（需 2 条无关指令间隔，或等流水线排空）。
+- MIPS R6 移除了 `MULT`/`DIV` + HI/LO 机制，改用直接写目标寄存器的新指令（详见下文 MIPS R6 变化小节）。
+
+---
+
+## CP0 协处理器（系统控制协处理器）
+
+### 定位与访问方式
+
+CP0（Coprocessor 0）是 MIPS 架构内置的特权控制单元，负责异常/中断处理、MMU 管理、缓存控制和处理器模式切换。用户态程序无法访问 CP0（触发 Reserved Instruction 或 Coprocessor Unusable 异常）。
+
+```mipsasm
+# 读 CP0 寄存器：MFC0（Move From Coprocessor 0）
+mfc0  $t0, $12          # $t0 = CP0 寄存器 12（Status）
+mfc0  $t1, $13          # $t1 = CP0 寄存器 13（Cause）
+
+# 写 CP0 寄存器：MTC0（Move To Coprocessor 0）
+mtc0  $t2, $12          # CP0 Status = $t2
+
+# MIPS64 双字访问（操作 64 位 CP0 寄存器）
+dmfc0 $t0, $5           # PageMask 等 64 位字段
+dmtc0 $t0, $5
+```
+
+### 关键寄存器速查
+
+| 寄存器编号 | 名称 | 主要用途 |
+|-----------|------|---------|
+| $8 | BadVAddr | 记录最近一次地址异常的错误虚拟地址 |
+| $9 | Count | 自由运行计数器，与 Compare 配合产生定时器中断 |
+| $11 | Compare | 与 Count 匹配时触发中断（写入同时清除中断挂起） |
+| $12 | Status | 全局中断使能（IE）、用户/内核模式（UM）、异常级（EXL）、错误级（ERL）等 |
+| $13 | Cause | 异常原因码（ExcCode）、挂起中断位（IP）、分支延迟槽标志（BD） |
+| $14 | EPC | 异常返回地址（Exception Program Counter），`eret` 跳回此地址 |
+| $10 | EntryHi | TLB 条目高半部：虚拟页号（VPN2）+ ASID |
+| $2/$3 | EntryLo0/1 | TLB 条目低半部：物理帧号（PFN）、有效位（V）、脏位（D）等 |
+| $0 | Index | TLB 操作索引 |
+| $4 | Context | 用于快速异常处理的页表基址 + 查询偏移 |
+
+### 异常/中断处理流程
+
+```mipsasm
+# 内核异常向量（简化示意）
+exception_handler:
+    mfc0  $k0, $13        # 读 Cause，获取 ExcCode
+    mfc0  $k1, $14        # 读 EPC，保存返回地址
+    andi  $k0, $k0, 0x7c  # 提取 ExcCode（bits[6:2]）
+    beq   $k0, $zero, int_handler  # ExcCode=0 → 外部中断
+    # ... 分发到各异常处理函数 ...
+
+    # 处理完毕后恢复并返回
+    mtc0  $k1, $14        # 恢复 EPC（若修改过）
+    eret                   # 异常返回：清 EXL，跳回 EPC
+```
+
+### MMU 操作（TLB 管理）
+
+```mipsasm
+# TLB 写操作
+mtc0  $t0, $10           # EntryHi = VPN2 + ASID
+mtc0  $t1, $2            # EntryLo0 = 偶页 PFN/V/D/C
+mtc0  $t2, $3            # EntryLo1 = 奇页 PFN/V/D/C
+tlbwi                    # 将上述值写入 Index 指定的 TLB 槽
+# 或 tlbwr               # 写入随机槽（Random 寄存器）
+
+# TLB 读操作
+tlbr                     # 将 Index 槽内容读入 EntryHi/Lo0/Lo1
+
+# TLB 查找
+mtc0  $t0, $10           # EntryHi = 查询 VPN2 + ASID
+tlbp                     # 探测匹配项，结果写入 Index（未命中则 Index[31]=1）
+mfc0  $t3, $0            # 读取 Index
+```
+
+---
+
+## MIPS R6 变化（MIPS32r6 / MIPS64r6）
+
+### 背景
+
+2014 年发布的 MIPS Release 6（R6）是对经典 MIPS 架构最大的一次"破坏性重构"，移除了若干历史包袱、重新编码了部分指令空间，并引入紧凑型分支指令，与 R2/R5 代码**二进制不兼容**。
+
+### 移除 MULT/DIV + HI/LO，改用直接写通用寄存器
+
+R6 彻底移除了 `MULT`/`MULTU`/`DIV`/`DIVU`/`MFHI`/`MFLO`/`MTHI`/`MTLO` 及 HI/LO 寄存器。替代指令直接将结果写入指定通用寄存器：
+
+```mipsasm
+# R2/R5 写法（HI:LO）
+mult  $t0, $t1
+mflo  $v0               # 取低32位（乘积低半）
+mfhi  $v1               # 取高32位
+
+# R6 写法（直接写目标寄存器）
+mul   $v0, $t0, $t1     # $v0 = ($t0 × $t1) 的低 32 位
+muh   $v1, $t0, $t1     # $v1 = ($t0 × $t1) 的高 32 位（有符号）
+mulu  $v0, $t0, $t1     # 无符号乘低位
+muhu  $v1, $t0, $t1     # 无符号乘高位
+
+div   $v0, $t0, $t1     # $v0 = 商（有符号）
+mod   $v1, $t0, $t1     # $v1 = 余数（有符号）
+divu  $v0, $t0, $t1     # 无符号除，商
+modu  $v1, $t0, $t1     # 无符号除，余数
+```
+
+### 分支延迟槽行为变化
+
+经典 MIPS（R1-R5）所有分支/跳转指令均有一个**分支延迟槽**：跳转指令执行时，其后紧跟的一条指令总会被执行，之后才真正跳转。R6 引入**紧凑型（Compact）分支指令**，无延迟槽：
+
+```mipsasm
+# R2/R5 分支（有延迟槽）
+beq   $t0, $t1, target  # 延迟槽指令总被执行
+  nop                   # 常见填充（或有用的指令）
+
+# R6 紧凑型分支（无延迟槽）
+beqc  $t0, $t1, target  # 立即跳转，无延迟槽
+bc    target             # R6 无条件紧凑跳转
+```
+
+> R6 并未完全移除带延迟槽的 `BEQ`/`BNE` 等，但新增了一批 `*C` 后缀紧凑变体以替代；部分传统指令被重新编码为 R6 专有语义。
+
+### 指令重编码与移除
+
+| 指令 | R2/R5 状态 | R6 变化 |
+|------|-----------|---------|
+| `MULT`/`MULTU` | 写 HI:LO | **移除**，用 `MUL`/`MUH` 替代 |
+| `DIV`/`DIVU` | 写 HI:LO | **移除**，用 `DIV`/`MOD` 替代 |
+| `MFHI`/`MFLO` | 读 HI/LO | **移除** |
+| `MADD`/`MSUB` | 乘加到 HI:LO | **移除** |
+| `LWL`/`LWR` | 非对齐加载 | **移除**（改用 `ALIGN` 指令） |
+| `LL`/`SC` | 独占加载/存储 | **保留但调整**：R6 的 `LL`/`SC` 取消了"地址必须与 R2 相同才成功"的隐式约束，改为更显式的失败条件 |
+| `JALR` | 跳转并链接 | 保留；`JALR.HB` 用于清 I-Cache 执行障碍 |
+
+### 区分 R2/R5 与 R6 代码的方法
+
+1. **反汇编器提示**：`objdump` 若遇到 R6 编码的旧指令位置会报 `<unknown>`，反之亦然；`-M` 选项可指定 ISA 版本。
+2. **ELF e_flags 字段**：`readelf -h` 查看 `e_flags`；R6 对应 `EF_MIPS_ARCH_32R6`（0x90000000）或 `EF_MIPS_ARCH_64R6`（0xa0000000）。
+3. **关键指令特征**：有 `mfhi`/`mflo` → R2/R5；有 `muh`/`mod` → R6；有 `beqc`/`bnec` 等紧凑分支 → R6。
+4. **工具链标志**：GCC `-march=mips32r6` / `-march=mips64r6` 生成 R6 代码；默认（`mips32r2`）生成 R2 兼容代码。
+
+---
+
 ## 总结
 
 MIPS 以“规整、正交、易于流水线化”著称，是经典 RISC 教学的范本：
